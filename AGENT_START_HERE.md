@@ -22,11 +22,11 @@ A private Pakistan FBR tax-and-wealth desk for **one owner**, with optional comm
 
 ## What has been done
 
-Requirements analysis, design decisions, proposed documents, high-level technical plan. **No repo creation, app implementation, infrastructure creation, uploads, or live tax computations are assumed complete.** The owner requested GitHub as source of truth; publish this package to a newly created **private** repository when permissions permit.
+Requirements analysis, design decisions, proposed documents, high-level technical plan. The source repository exists. The synthetic-only M1 implementation is merged; no production app or genuine tax computation exists. Owner approved temporarily public GitHub, with a future change back to private.
 
 ## Immediate next tasks
 
-- Establish private repository; commit initial planning documents, verify visibility and links.
+- Continue source-only development in the intentionally public repository; never commit financial documents or secrets.
 - Implement focused skeleton: Next.js + Python FastAPI + Postgres, test harness, encrypted local file adapter.
 - Deliver one end-to-end import using a synthetic CSV: raw document -> parsed rows -> reconciled immutable ledger -> categorized cashflow -> fiscal-year dashboard.
 - Add one real bank layout adapter only after receiving an approved **redacted** sample via secure input.
