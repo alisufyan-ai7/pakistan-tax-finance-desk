@@ -22,11 +22,11 @@ A private Pakistan FBR tax-and-wealth desk for **one owner**, with optional comm
 
 ## What has been done
 
-Requirements analysis, design decisions, proposed documents, high-level technical plan. **Private repository `alisufyan-ai7/pakistan-tax-finance-desk` is established and initial planning package committed to `main`. No app implementation, infrastructure creation, private financial uploads, or live tax computations have been completed.**
+Requirements analysis, design decisions, proposed documents, high-level technical plan. **No repo creation, app implementation, infrastructure creation, uploads, or live tax computations are assumed complete.** The owner requested GitHub as source of truth; publish this package to a newly created **private** repository when permissions permit.
 
 ## Immediate next tasks
 
-- Maintain this private repository as the source of truth; confirm existing documents before engineering changes.
+- Establish private repository; commit initial planning documents, verify visibility and links.
 - Implement focused skeleton: Next.js + Python FastAPI + Postgres, test harness, encrypted local file adapter.
 - Deliver one end-to-end import using a synthetic CSV: raw document -> parsed rows -> reconciled immutable ledger -> categorized cashflow -> fiscal-year dashboard.
 - Add one real bank layout adapter only after receiving an approved **redacted** sample via secure input.
@@ -36,3 +36,7 @@ Requirements analysis, design decisions, proposed documents, high-level technica
 ## How to report progress
 
 State actual tested behavior, URLs/commit hashes, remaining work, safeguards, and next action. Never claim live production, file submission or legal certainty without evidence. Keep `docs/CURRENT_HANDOFF.md` up to date.
+
+## Implemented local M1 (2026-11-15)
+
+Read `docs/IMPLEMENTATION_M1.md` and `docs/CURRENT_HANDOFF.md` for local synthetic-only implementation, exact pytest commands, honest limitations and next priorities. Preserve the local-only no-real-data restriction until MFA, encrypted storage, migrations and recovery are verified. Do not declare FBR calculations implemented from the synthetic year-to-date summary.

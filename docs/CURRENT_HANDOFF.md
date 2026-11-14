@@ -1,31 +1,35 @@
-# Current state and next chat / agent handoff — 2026-11-15
+# Current project handoff — 2026-11-15 — M1 implementation
 
-## What is known
+## Source of truth
 
-- Product is an owner-only private Pakistan FBR tax and personal wealth desk.
-- Primary normal workflow is bank statement uploads at irregular times; system must dedup and recalculate incrementally.
-- Historic coverage starts 2023-01-01 (initial), with optional earlier source data if investment cost basis or opening wealth requires.
-- Mixed income: salary, business, investments and other sources.
-- Every material financial item: loans owed/owing, donations/zakat, gifts, cash, investments, property/assets, debts, transfers, expenses and tax evidence.
-- Annual tax engine for applicable historic tax years, return + wealth statement preparation, investment planning assistant with no execution.
-- Private, owner-first; maybe public SaaS later but no commitment.
-- GitHub is engineering source of truth; never store real financial records in GitHub.
+Repository: `alisufyan-ai7/pakistan-tax-finance-desk` (private), default `main`. Read `AGENT_START_HERE.md` and `README.md` first; then `docs/IMPLEMENTATION_M1.md`, this handoff, `docs/SECURITY_PRIVACY.md`, `docs/IMPORT_PIPELINE.md` and `docs/ROADMAP_AND_ACCEPTANCE.md`.
 
-## Actions completed
+## Product requirements (binding)
 
-- Brainstorming and engineering documents prepared; official source entry points recorded.
-- Private GitHub repository `alisufyan-ai7/pakistan-tax-finance-desk` created by owner; authenticated connected GitHub access and **private** visibility verified.
-- Initial 22-file planning/documentation package is committed on `main` in the project initialization. No application code, real import tests, financial data uploads, deployment, or verified tax calculations yet.
+Private owner-only Pakistan tax and wealth management software. Historical records start January 2023 (earlier evidence permitted). Mixed salary, business, investment and other income; full ledger for loans taken and given, donations/zakat, gifts, cash, transfers, debts, holdings, expenses, tax evidence, wealth and planning. Routine input is irregular bank statement uploads. Multiple financial years, correct FBR year-specific taxes and wealth statement will be added only with legally reviewed rules and adequate evidence. Potential future SaaS is not approved scope. GitHub stores **code/documentation and synthetic fixtures only**, never real financial records.
 
-## Next concrete action
+## What was implemented in this milestone
 
-1. Verify initial planning package commit and 22 expected files on `main`; repo must remain private. Never use any unrelated repository.
-2. Start skeleton: Next.js + Python FastAPI + PostgreSQL, security baseline and automated test harness.
-3. Build an end-to-end synthetic import through normalized, idempotent financial ledger, cross-account transfers, loans, gifts and cashflow snapshots.
-4. Add verified effective-date FBR tax rules and historical calculation test cases before user tax estimates.
-5. Request anonymized/redacted bank layout only after protected upload route exists; never request real statements via GitHub issues.
-6. Maintain this handoff at every milestone with actual commit hashes, test evidence, blockers and next action.
+- Local synthetic-only FastAPI browser dashboard and APIs (private local loopback Basic auth, fail closed when owner password absent).
+- SQLite-backed relational financial accounts, provenance document hashes, normalized transactions, category review and audit events.
+- Normalized CSV and one-sheet XLSX importer (up to 4 MiB / 5000 rows) with explicit date format, PKR integer minor units, exclusive debit/credit, running balance check, declared periods, exact file replay and strong-reference cross-file dedup.
+- Weak ambiguous overlap queue with explicit confirmation/exclusion via audited corrections; never pretend ambiguous overlaps are resolved.
+- FY2023+ July–June selector; income/expense/nonincome category totals and month coverage observations; tax values explicitly **unavailable**, not guessed.
+- Responsive mobile-width UI, documented local run, synthetic CSV, backend CI and pytest regression tests.
 
-## Practical definition of done for MVP
+## Verification
 
-Owner signs in; uploads a synthetic statement; importer reports exact source balance and duplicates; finance dashboard updates for selected FY; amount classification and exception queue work; no bogus tax or market value claims. Production financial data and FBR-ready output require later gates.
+Local synthetic pytest executed: **11 tests passed** on local Python 3.13. CI must run against PR and/or main before treating the change as merged/released. No production deployment, user data access, financial tax calculations, encrypted storage, owner MFA or disaster restore has occurred. The local SQLite file is unencrypted; **DO NOT UPLOAD REAL BANK STATEMENTS**.
+
+## Next engineering milestone (M2)
+
+1. Establish PostgreSQL/Alembic migrations, encrypted document storage + key rotation, approved deployment and tested encrypted backup/restore; protect owner access with MFA, TLS/session/CSRF, and logging controls.
+2. Add first Pakistani bank-specific PDF/CSV adapters using synthetic format fixtures; safe handling of scanned/password-protected PDFs and non-deterministic layout failure.
+3. Fully model own-account transfers across accounts, loan receivables/payables and principal vs interest, gifts/donations/cash, legal entity separation and reconciliation.
+4. Add a verified FBR ruleset by tax year with official sources and independently reviewed calculations; no rates or credits invented.
+5. Build polished Next.js client atop stable API only after core data integrity and security gates, or preserve local UI until then.
+6. Update this handoff, implementation evidence and roadmap after each milestone, keeping open PRs minimal and test gates visible.
+
+## Operational note
+
+Current frontend is deliberately server-rendered by FastAPI, not a deployed Next.js app. This is a pragmatic local vertical slice, not a change to the approved long-term target (Next.js + FastAPI + PostgreSQL). No bank-specific Pakistani statement format is certified. Data has to be synthetic in the current prototype.

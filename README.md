@@ -46,3 +46,9 @@ A **private, single-owner-first** Pakistan tax preparation, lifetime transaction
 ## Working agreement
 
 Implement sequential vertical slices, keep docs synchronized with each architectural or product decision, run repeatable tests against synthetic data, track blockers explicitly, and never assert production readiness from mock screenshots. Avoid unnecessary cost or deployment complexity. No tax numbers, rules, or financial forecasts are certified by this planning repository.
+
+## Implementation status — M1 local synthetic ledger (2026-11-15)
+
+A **working synthetic-only local prototype** is now present in `backend/` and `frontend/index.html`: authenticated localhost UI, account onboarding, normalized CSV/XLSX uploads, balance checks, import deduplication and ambiguous overlap review, transaction categorization with audit, and historical tax-year summaries. See [`docs/IMPLEMENTATION_M1.md`](docs/IMPLEMENTATION_M1.md) for the exact run/test commands and limitations. Synthetic demo fixture: `samples/synthetic_bank_normalized.csv`.
+
+**Do not use with real financial data yet:** local SQLite is unencrypted and Basic authentication is localhost-only. Real statements need MFA, encrypted private storage, backups/restore and bank-specific import acceptance first. This version does **not** compute actual FBR tax or file returns. Long-term target remains Next.js/FastAPI/PostgreSQL; M1 uses a simple local browser UI to ship the core import/ledger vertical slice safely.

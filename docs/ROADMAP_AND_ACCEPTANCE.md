@@ -61,3 +61,17 @@ Audience research, data/privacy/compliance validation, multi-tenant architecture
 - Income tax rule for TY2024 cannot be overwritten by a TY2027 update.
 - Unreconciled wealth => filing status HOLD.
 - Tax estimates retain law version, audit trace, and source-completeness flags.
+
+
+## Actual M1 progress (2026-11-15)
+
+- [x] Private repository, GitHub source of truth, documentation initialized.
+- [x] Local synthetic-only account/import/transaction/summary web + API and unit/integration tests.
+- [x] CSV/XLSX normalized import; exact replay dedup, running balances, weak duplicate review, transaction corrections.
+- [x] Historic FY selector and month-observed/missing coverage, without false completeness.
+- [ ] MFA, encryption at rest, backup/restore proof, deployment readiness: **NOT DONE**.
+- [ ] PostgreSQL migrations and bank-specific PDF adapters: **NOT DONE**.
+- [ ] Independent full tax-year rule verification and FBR projections: **NOT DONE**.
+- [ ] Product-scale Next.js frontend and advisory engine: **NOT DONE**.
+
+M1 is a **development prototype**, not a live financial-data app. Refer to `docs/IMPLEMENTATION_M1.md` and `docs/CURRENT_HANDOFF.md`.
