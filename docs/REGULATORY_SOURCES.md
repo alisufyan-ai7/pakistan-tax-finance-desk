@@ -17,3 +17,9 @@
 ## Implementation protocol
 
 For each rule, record: tax_year, legal jurisdiction, rule id, section/regulation, source URL, publication/commencement date, effective date, taxpayer residency/entity applicability, reviewed_by, test case IDs and confidence. Charitable donation eligibility (including relevant section 61 terms), gift/loan treatment and wealth disclosure are not blanket assumed. Use professional/tax expert review before declaring FBR-ready. For financial-market productization, obtain an up-to-date legal/regulatory opinion.
+
+12. FBR — Income Tax Rules, 2002, including 2026 updated version: https://fbr.gov.pk/categ/income-tax-rules-2002/335
+13. FBR — official guidance on correcting/revising previously filed return and wealth statement: https://www.fbr.gov.pk/categ/file-income-tax-return/51147/80860/%2071161
+14. FBR — income return and wealth statement filing/reconciliation: https://www.fbr.gov.pk/categ/file-income-tax-return/51147/80860/71160
+
+**Source-gating note:** All provisions and their historic applicability must be checked against the version effective for the relevant tax year (and amendments/notifications). A general statement on an FBR help page is not automatically legal authorization for retrospective filings or a specific tax credit.

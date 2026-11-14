@@ -40,3 +40,9 @@ Fast incremental recalculation after uploads; parsing progress; deterministic re
 ## Deliberately excluded from initial personal release
 
 Public signup, payments, bank credential scraping, unsupported IRS/FBR auto-submission, direct investing/trading, public individualized securities recommendations, corporate/sales tax compliance product, promises of automated legal advice.
+
+## Added owner requirements 2026-11-15
+
+- Proactive personalized **lawful tax minimization** guidance: show potentially available credits, exemptions, deductions, withholding offsets, proper income characterization and tax-year filing scenarios with statutory references, eligibility conditions, required evidence, confidence, limitations and estimated savings only when supportable. No concealment or fabrication. Tax AI explanation cannot replace legally verified calculations or expert review.
+- Import three to four previous **filed FBR income tax returns and associated wealth statements** as confidential primary evidence for baseline opening/closing wealth, previously declared income and liabilities, paid taxes, carried values and cross-year audit; show filed-vs-observed-vs-estimated differences. Never auto-revise a return.
+- GitHub code repo temporarily PUBLIC by owner instruction for development; remains source-code/docs/synthetic-only with no private finance documents. Real records remain behind secure private application upload, still unimplemented.

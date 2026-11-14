@@ -2,7 +2,7 @@
 
 ## Source of truth
 
-Repository: `alisufyan-ai7/pakistan-tax-finance-desk` (private), default `main`. Read `AGENT_START_HERE.md` and `README.md` first; then `docs/IMPLEMENTATION_M1.md`, this handoff, `docs/SECURITY_PRIVACY.md`, `docs/IMPORT_PIPELINE.md` and `docs/ROADMAP_AND_ACCEPTANCE.md`.
+Repository: `alisufyan-ai7/pakistan-tax-finance-desk` (**temporarily PUBLIC by explicit owner decision** for source development), default `main`. Read `AGENT_START_HERE.md` and `README.md` first; then `docs/IMPLEMENTATION_M1.md`, this handoff, `docs/SECURITY_PRIVACY.md`, `docs/IMPORT_PIPELINE.md` and `docs/ROADMAP_AND_ACCEPTANCE.md`.
 
 ## Product requirements (binding)
 
@@ -48,3 +48,18 @@ Current frontend is deliberately server-rendered by FastAPI, not a deployed Next
 - **Critical repository visibility mismatch:** GitHub API returned `visibility=public` and `private=false` after merge. Original owner requirement is PRIVATE. GitHub file connector cannot change visibility. Owner must change Settings → General → Danger Zone → Change repository visibility → Private; reverify before handling sensitive data.
 - CI remains NOT GREEN: the new PR run also returned failure without executed steps, consistent with runner assignment/platform restriction. Underlying cause unverified. Local tests passed; merge was a consciously documented local-only exception, not release readiness.
 - Next tasks: verify visibility private, fix Actions runner availability, then M2 security foundations before real bank statements.
+
+## New owner decisions — 2026-11-15 (supersede earlier privacy alert)
+
+- The owner **intentionally keeps GitHub PUBLIC during development**, stating this was to try to enable GitHub Actions. They intend to switch it to private after work is finished. Earlier language treating PUBLIC GitHub as an accidental security emergency is **superseded**. Continue development using code/docs/synthetic fixtures only. A public source repo cannot hold financial records, actual previous returns, secrets or customer documents. A hardened private *application* must handle those.
+- Actions remains unverified/failed (latest previously observed runs never received runners); public status alone did not demonstrate a green workflow. Investigate separately without reclassifying public visibility as an accidental blocker.
+- Owner explicitly requires **proactive LEGAL tax minimization suggestions** (tax planning, not evasion) with documented law, appropriate TY, eligibility evidence, estimated impact, constraints and human approval. Never recommend concealment, fake donations/expenses, misclassification, illegal backdating or artificial historic revisions.
+- Owner will supply their **last three to four already-filed FBR income tax returns**, preferably with corresponding wealth statements and tax/withholding schedules, to establish the year-by-year filed baseline and compare against bank/investment activity from 2023 onward. The M1 synthetic-only application must NOT ingest real returns. `docs/TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md` contains the future secure intake contract and optimization backlog.
+- No real personal files received or processed as part of this documentation change; no tax benefit calculated or legal eligibility certified.
+
+## Next engineering tasks after this decision
+
+1. Keep M2 development running despite temporary public GitHub. Repair GitHub Actions separately and keep all fixtures synthetic.
+2. Build secure private historical-return import and document store after encryption, MFA, recoverability and correct account segregation; include return + wealth schedules and source fields with conflict marking.
+3. Build verified TY2023–TY2027 tax-rule registry and safe opportunity-detection workflow; initially show only opportunities requiring review, not computed savings from unverified law.
+4. Reconcile each filed tax-year return and opening/closing wealth with normalized historical ledger; preserve immutable filed-original and amendment history; highlight unexplained differences.

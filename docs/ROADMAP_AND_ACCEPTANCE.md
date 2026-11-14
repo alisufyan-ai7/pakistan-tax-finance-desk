@@ -65,7 +65,7 @@ Audience research, data/privacy/compliance validation, multi-tenant architecture
 
 ## Actual M1 progress (2026-11-15)
 
-- [ ] Repository must be restored to **PRIVATE** (GitHub API indicated PUBLIC on 2026-11-15); code/documentation initialized.
+- [x] GitHub repository established; **temporarily PUBLIC by owner's explicit decision** for development, no sensitive data; planned switch to PRIVATE later (track separately).
 - [x] Local synthetic-only account/import/transaction/summary web + API and unit/integration tests.
 - [x] CSV/XLSX normalized import; exact replay dedup, running balances, weak duplicate review, transaction corrections.
 - [x] Historic FY selector and month-observed/missing coverage, without false completeness.
@@ -75,3 +75,12 @@ Audience research, data/privacy/compliance validation, multi-tenant architecture
 - [ ] Product-scale Next.js frontend and advisory engine: **NOT DONE**.
 
 M1 is a **development prototype**, not a live financial-data app. Refer to `docs/IMPLEMENTATION_M1.md` and `docs/CURRENT_HANDOFF.md`.
+
+## New requirements prioritized 2026-11-15
+
+- [ ] Historical filed-return import: original files (private encrypted store), TY2023–TY2026 coverage, wealth statements and income/schedule extraction, field provenance, source confidence, confirmed filed values, no silent changes.
+- [ ] Historical reconciliation: prior-year closing wealth becomes next-year opening baseline; confirm assets, cash, bank balances, liabilities and tax withheld against bank/investment ledger; flag mismatches.
+- [ ] Legal tax optimization advisor: sourced, year-specific opportunity cards with evidence status, legal constraints, what-if scenarios, tax effect estimate only if verified, human review, and audit log.
+- [ ] Opportunity test fixtures: eligible vs ineligible donation; adjustable vs final withholding; bank-transfer vs income; personal vs legitimate business expense; refund/revision statute and timing guardrails; TY-specific provisions; multiple entity isolation; no invented savings.
+- [ ] Retest/review 2023–2027 rule sources against FBR official versions and amendments, independent fixture verification; no actual tax numbers until done.
+- [ ] Restore GitHub repository PRIVATE after development, as owner intends. This is distinct from immediate requirements to secure application/actual financial data; **never leak financial data to source control in any visibility state**.

@@ -41,6 +41,10 @@ State actual tested behavior, URLs/commit hashes, remaining work, safeguards, an
 
 Read `docs/IMPLEMENTATION_M1.md` and `docs/CURRENT_HANDOFF.md` for local synthetic-only implementation, exact pytest commands, honest limitations and next priorities. Preserve the local-only no-real-data restriction until MFA, encrypted storage, migrations and recovery are verified. Do not declare FBR calculations implemented from the synthetic year-to-date summary.
 
-## Repository visibility alert (verified 2026-11-15)
+## Owner decision: temporary PUBLIC source repository (2026-11-15)
 
-GitHub API currently reports `visibility=public`, `private=false`. Owner intended private. **No sensitive financial uploads or real data**. Owner must change visibility to private in repository Settings; future agents must verify it before real data or deployment. Do not claim repository is private unless independently rechecked.
+The owner explicitly chose to keep this GitHub repository **PUBLIC while developing**, hoping to make Actions work, and intends to switch it to PRIVATE later. This is authorized and not itself a blocker for code-only development. Keep public GitHub strictly source-code, architecture, documentation and synthetic-fixture only. **Never push actual tax returns, wealth statements, bank statements, secrets, personally identifiable records, raw file dumps or copied figures from the owner's documents**, including through issues/PRs/CI artifacts or error logs. The private *application* and encrypted storage must be separately secured before handling genuine data. Runner availability remains unconfirmed despite public visibility.
+
+## Binding new goals
+
+Build a proactive **lawful tax minimization** advisor (not tax evasion): year-effective law-backed exemptions, deductions, credits, adjustable withholding, business-expense opportunities and scenario comparisons with auditable source references and required evidence. The owner will provide **3–4 years of already-filed FBR returns and wealth statements** for confidential historical baseline/reconciliation. They must be stored only via secure private upload paths, with immutable original documents and explicit revision review. Read `docs/TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md` before implementing tax/return processing.
