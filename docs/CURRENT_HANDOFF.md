@@ -70,3 +70,20 @@ Current frontend is deliberately server-rendered by FastAPI, not a deployed Next
 - [Issue #2](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/2) now tracks GitHub Actions runner failures; public-source status is an intentional owner choice, not an accidental visibility incident.
 - [Issue #3](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/3) includes secure private historic-return ingestion; [Issue #5](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/5) covers evidence-based legal optimization and historical wealth reconciliation.
 - Keep real returns, statements, CNIC/NTN, account data and secrets out of GitHub and CI. Secure application importer for actual files is NOT yet built. No user tax records received in this milestone.
+
+## Engineering continuation — M2a synthetic historical filing foundation (2026-11-15)
+
+Owner confirmed previous income tax returns will be supplied later; **they are not a dependency for continuing development**. Proceed with synthetic fixtures and secure-by-design architecture without asking for genuine records. Public GitHub remains intentional for code/docs/synthetic data; never upload user files, identifiers, or secrets.
+
+**Implemented on feature branch** `implementation/m2-historical-synthetic-intake-20261115`:
+
+- `backend/app/evidence_vault.py`: AES-256-GCM encrypted synthetic evidence bytes with fresh nonce, document-context authenticated data, 0600 restrictive files, safe UUID filenames and no overwrite. Encryption key must come from environment; no key in GitHub.
+- `backend/app/historical.py`, `models.HistoricalFiling`: strictly normalized synthetic income-return/wealth-statement fixtures; TY>=2023, immutable originals, idempotent replay and same-TY/kind revision chain with no silent overwrite. Structured synthetic fields currently reside in **unencrypted SQLite**.
+- Read-only reconciliation endpoint compares prior TY closing wealth to current TY opening wealth, distinguishes missing from zero, and surfaces discrepancies without claiming a valid FBR wealth statement.
+- Read-only tax opportunity endpoint flags potential eligible-document reviews from verified transaction categories; every candidate has **NULL savings** and **not legally verified**. No tax calculation or real deductibility is asserted.
+- A synthetic-only API; **not a PDF importer, and not an approved real-file upload path**.
+- Local Python 3.13 `cd backend && pytest -q`: **18 passed** (11 original plus 7 M2a tests). `compileall` passed. GitHub-hosted CI still needs independent verification.
+
+Implementation and execution details: `docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.md`.
+
+**Next:** complete PostgreSQL/Alembic migrations, encrypted structured financial data strategy, owner MFA/TLS/session security, key rotation and private encrypted backup/restore. Add safe synthetic Pakistani bank/FBR layout adapters; only then can true documents be uploaded securely and their historic return values reconciled. User plans to provide 3–4 years of returns later, not in this engineering step.
