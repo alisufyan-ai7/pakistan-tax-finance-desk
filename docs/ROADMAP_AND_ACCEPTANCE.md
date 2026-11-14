@@ -84,3 +84,15 @@ M1 is a **development prototype**, not a live financial-data app. Refer to `docs
 - [ ] Opportunity test fixtures: eligible vs ineligible donation; adjustable vs final withholding; bank-transfer vs income; personal vs legitimate business expense; refund/revision statute and timing guardrails; TY-specific provisions; multiple entity isolation; no invented savings.
 - [ ] Retest/review 2023–2027 rule sources against FBR official versions and amendments, independent fixture verification; no actual tax numbers until done.
 - [ ] Restore GitHub repository PRIVATE after development, as owner intends. This is distinct from immediate requirements to secure application/actual financial data; **never leak financial data to source control in any visibility state**.
+
+## M2a tested incremental milestone (2026-11-15)
+
+- [x] Synthetic filed return + wealth statement structured import; TY2023+; original/revision chain and exact replay idempotency.
+- [x] Encrypted original **synthetic test evidence** with authenticated encryption (not an end-to-end real-data compliance claim).
+- [x] Cross-tax-year opening/closing wealth discrepancy state with missing != zero.
+- [x] Candidate tax-planning review flags from categorized transactions; `potential_tax_savings=null` and no unverified statutory conclusions.
+- [x] Local **18 pytest tests passed** for combined M1+M2a.
+- [ ] Genuine PDF historic returns, real personal numbers, MFA, Postgres/Alembic, encrypted structured DB, restore certification, audited FBR rule versions: **NOT implemented**.
+- [ ] Hosted GitHub Actions green run: **NOT verified**; code-only development permitted in intentionally public repository.
+
+User will provide prior filed returns in the future; there is **no development dependency** on seeing them before M2b security and adapter work.
