@@ -33,3 +33,11 @@ Local synthetic pytest executed: **11 tests passed** on local Python 3.13. CI mu
 ## Operational note
 
 Current frontend is deliberately server-rendered by FastAPI, not a deployed Next.js app. This is a pragmatic local vertical slice, not a change to the approved long-term target (Next.js + FastAPI + PostgreSQL). No bank-specific Pakistani statement format is certified. Data has to be synthetic in the current prototype.
+
+## M1 PR validation addendum
+
+- PR: https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/1
+- Local regression suite: **11 passed** (Python 3.13, synthetic-only).
+- Synthetic smoke: 5 accepted; opening and running balances verified; FY2024 summary correct; re-upload 0 accepted / 5 duplicates.
+- GitHub-hosted CI run [43652595185](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43652595185) returned `failure` before any steps ran; job has `runner_id=0`, steps=[], logs unavailable. **Do not claim CI passed.** The precise infrastructure/billing cause is unconfirmed and should be investigated. This is not evidence of a failing pytest assertion.
+- Production release and real bank-statement onboarding remain disallowed until security, migration, and bank-format gates are passed.
