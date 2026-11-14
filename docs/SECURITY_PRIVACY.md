@@ -27,3 +27,9 @@ Do not process actual statements or tax docs until key management, access contro
 ## Data retention
 
 FBR publishes six-year retention of tax return records for relevant taxpayers; exact exceptions, pending proceedings and other duties need current legal verification. Store document retention policy per applicable data and purpose, not indiscriminately forever; preserve exported user copies and deletion capability subject to legal obligations.
+
+## Source repository is temporarily PUBLIC (explicit owner instruction, 2026-11-15)
+
+The public status is intentional to facilitate development, with a later planned move to private. It is **not** permission to publish actual financial data. Public repo may contain code, reviewed documentation, synthetic statements and synthetic tax fixtures only. Do not allow personal tax returns/wealth statements into Git, GitHub issues, CI caches/artifacts, workflow logs, PR comments, sample PDFs or screenshots. Use fake identifiers in tests and fixtures; verify no committed secrets. Keep real files in restricted application storage with encryption, MFA, access auditing, backup/restore verification and private networking as appropriate. Changing visibility to private at a later date does **not** erase any past public exposure.
+
+Owner may provide 3–4 years' filed returns separately as conversational inputs to discuss, but full confidential versions should be processed by the secure application when ready. If supplied through chat for early analysis, minimize or redact personal identifiers and bank details; never upload, copy, paraphrase sensitive numbers into public GitHub. Application ingestion is **not yet implemented**; M1 SQLite prototype remains synthetic only.

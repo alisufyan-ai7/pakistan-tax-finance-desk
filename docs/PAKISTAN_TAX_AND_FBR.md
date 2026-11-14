@@ -40,3 +40,13 @@ Build a reproducible evidence-backed report with: tax year, taxpayer/entity, inc
 - Professional review before depending on outputs for actual filing, including unusual tax profiles.
 
 See `REGULATORY_SOURCES.md` for official sources. Update versions as tax law changes.
+
+## Proactive lawful tax minimization (owner priority)
+
+The product must go beyond tax liability computation and look for **legitimate ways to minimize tax**, always using actual, applicable tax-year law and verified evidence. Opportunity classes: qualifying tax credits (including eligible documented charitable donations), legitimate business expenditure, exemptions/special regimes subject to eligibility, adjustable withholding/advance payments, investment/dividend/capital-gain treatment, income-head classification, and year-bound filing or refund options. None are automatically available to every taxpayer. Avoid misleading headline tax savings when conditions are not satisfied; distinguish reduction in tax liability from refund/credit recovery and cash-flow deferral.
+
+Each suggestion MUST carry: `tax_year`, `taxpayer/entity`, `provision`, `source URL`, amendment/effective date, `eligibility_state` (`UNKNOWN`, `EVIDENCE_REQUIRED`, `REVIEWED_ELIGIBLE`, `INELIGIBLE`), missing proof, risk/caveats, illustrative benefit range or `null`, audit trail and human confirmation. Rule engine outputs must be versioned and deterministic; AI may explain opportunities, not fabricate rules or tax amounts. No false business expense, undocumented donation, fictitious loan, suppressed income, artificial historic revision or unsupportable filing. Full requirements in `TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md`.
+
+## Previously filed return import
+
+Historical FBR Return of Income and Wealth Statement are separate immutable evidence documents, not a replacement for the financial ledger. Index by TY, taxpayer/legal entity, filing status, submission date, return form/version, income heads, tax/withholding, assets/liabilities and reconciliation; use extraction-confidence and cross-source discrepancy statuses. Never silently treat inferred values as filed values or automatically amend. FBR provides return and wealth statement revision guidance with statutory constraints; review the particular TY, deadlines and revision permissions before proposing any action. See `TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md`.
