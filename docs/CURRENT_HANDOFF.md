@@ -63,3 +63,10 @@ Current frontend is deliberately server-rendered by FastAPI, not a deployed Next
 2. Build secure private historical-return import and document store after encryption, MFA, recoverability and correct account segregation; include return + wealth schedules and source fields with conflict marking.
 3. Build verified TY2023–TY2027 tax-rule registry and safe opportunity-detection workflow; initially show only opportunities requiring review, not computed savings from unverified law.
 4. Reconcile each filed tax-year return and opening/closing wealth with normalized historical ledger; preserve immutable filed-original and amendment history; highlight unexplained differences.
+
+## Documentation milestone verification — 2026-11-15
+
+- [PR #4](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/4) merged on `main` (`8dc9b250ec02c4a06351d29367f0b023031a17eb`), adding `docs/TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md` and recording lawful tax planning and historical filed-return intake.
+- [Issue #2](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/2) now tracks GitHub Actions runner failures; public-source status is an intentional owner choice, not an accidental visibility incident.
+- [Issue #3](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/3) includes secure private historic-return ingestion; [Issue #5](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/5) covers evidence-based legal optimization and historical wealth reconciliation.
+- Keep real returns, statements, CNIC/NTN, account data and secrets out of GitHub and CI. Secure application importer for actual files is NOT yet built. No user tax records received in this milestone.
