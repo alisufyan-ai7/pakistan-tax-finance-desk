@@ -87,3 +87,11 @@ Owner confirmed previous income tax returns will be supplied later; **they are n
 Implementation and execution details: `docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.md`.
 
 **Next:** complete PostgreSQL/Alembic migrations, encrypted structured financial data strategy, owner MFA/TLS/session security, key rotation and private encrypted backup/restore. Add safe synthetic Pakistani bank/FBR layout adapters; only then can true documents be uploaded securely and their historic return values reconciled. User plans to provide 3–4 years of returns later, not in this engineering step.
+
+## M2a merged and CI verified — 2026-11-15
+
+- [PR #6](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/6) **MERGED** into `main`; squash merge commit `4bd7820f5fc04d941e7d9dfa42a76949350fa855`.
+- GitHub Actions **success** on PR head: [run 43654581161](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43654581161) with actual assigned runner and pytest output **18 passed, 1 warning** (Python 3.12). Local Python 3.13 suite also **18 passed**. This supersedes previous pre-execution runner failures for this validated run; do not claim unrelated CI runs are fixed retroactively.
+- Code: synthetic-only historical filed return/wealth statement model; encrypted test evidence vault (AES-256-GCM), revisions, exact replay dedup, prior/current TY wealth continuity and tax opportunity candidate endpoint. `docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.md` has routes and limitations.
+- **No historical personal FBR documents needed yet.** Owner expects to share 3–4 years of returns later. Do not solicit them for engineering. Real return documents MUST NOT enter current prototype or public GitHub/CI; local SQLite structured fields are unencrypted, and MFA/backups/secure private production storage do not yet exist.
+- **M2b next:** PostgreSQL/Alembic migrations and encrypted structured fields, proper owner MFA/TLS secure sessions, encrypted backup+restore verification, and synthetic Pakistani bank/FBR document parsing. After these gates, enable private upload of the user's real statements/returns for historical reconciliation and verified tax-year-specific lawful tax optimization.
