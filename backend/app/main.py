@@ -22,6 +22,7 @@ from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
+from .bank_profiles import normalize_synthetic_csv, PROFILES
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "gift_received", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
@@ -53,7 +54,16 @@ def create_app(database_url: str | None = None):
     app = FastAPI(title="Pakistan Tax & Wealth Desk — synthetic local demo", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
     engine = build_engine(database_url)
-    Base.metadata.create_all(engine)  # Local MVP only. Replace with Alembic before live migration.
+    if os.getenv("APP_DATA_MODE", "synthetic") != "synthetic":
+        raise RuntimeError("Real-data mode is not implemented; refusing to run")
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(engine)  # Legacy local synthetic demo convenience only.
+    else:
+        # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
+        from sqlalchemy import inspect
+        with engine.connect() as connection:
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0001_initial":
+                raise RuntimeError("Database must be upgraded with Alembic before starting")
     sessions = session_factory(engine)
 
     def authenticate(request: Request, credentials: Annotated[HTTPBasicCredentials | None, Depends(security)]):
@@ -70,6 +80,12 @@ def create_app(database_url: str | None = None):
     def db_session():
         with sessions() as db:
             yield db
+
+    def _configured_vault():
+        try:
+            return EncryptedEvidenceVault.from_environment()
+        except VaultConfigurationError as exc:
+            raise HTTPException(503, str(exc)) from None
 
     Auth = Annotated[None, Depends(authenticate)]
     DB = Annotated[Session, Depends(db_session)]
@@ -100,6 +116,7 @@ def create_app(database_url: str | None = None):
     @app.post("/api/statements", status_code=201)
     async def import_statement(_: Auth, db: DB, account_id: Annotated[str, Form()], file: Annotated[UploadFile, File()],
                                date_format: Annotated[str, Form()] = "%Y-%m-%d", opening_balance: Annotated[str | None, Form()] = None,
+                               profile: Annotated[str, Form()] = "normalized",
                                period_start: Annotated[date | None, Form()] = None, period_end: Annotated[date | None, Form()] = None):
         account = db.get(Account, account_id)
         if not account:
@@ -117,7 +134,8 @@ def create_app(database_url: str | None = None):
             return JSONResponse(status_code=200, content={"file_duplicate": True, "accepted": 0, "duplicate_rows": previously_accepted, "potential_overlaps": 0,
                     "document_id": prior_document.id, "reconciliation": "already_imported", "warnings": ["Exact file already imported; economic ledger unchanged"]})
         try:
-            rows, reconciliation, warnings = parse_statement(raw, ext, date_format, opening_balance)
+            normalized, profile_date_format = normalize_synthetic_csv(raw, profile, ext)
+            rows, reconciliation, warnings = parse_statement(normalized, ext, profile_date_format or date_format, opening_balance)
         except ImportErrorDetail as error:
             raise HTTPException(422, detail=str(error)) from None
         if bool(period_start) != bool(period_end):
@@ -125,7 +143,7 @@ def create_app(database_url: str | None = None):
         if period_start and (period_start > rows[0].posted_on or period_end < rows[-1].posted_on or period_start > period_end):
             raise HTTPException(422, "Declared statement period must cover every imported transaction")
         doc = Document(id=str(uuid.uuid4()), account_id=account_id, sha256=digest, file_format=ext,
-                       parser_version=PARSER_VERSION, period_start=period_start or rows[0].posted_on,
+                       parser_version=PARSER_VERSION if profile == "normalized" else f"{PARSER_VERSION}:{profile}", period_start=period_start or rows[0].posted_on,
                        period_end=period_end or rows[-1].posted_on, coverage_declared=bool(period_start))
         db.add(doc)
         accepted = duplicated = overlap = 0
@@ -177,13 +195,13 @@ def create_app(database_url: str | None = None):
             HistoricalFiling.tax_year == tax_year
         ).order_by(HistoricalFiling.kind, HistoricalFiling.revision_number)).all()
         return {"tax_year": tax_year, "synthetic_only": True,
-                "filings": [_as_public(x) for x in filings],
+                "filings": [_as_public(x, _configured_vault()) for x in filings],
                 "note": "Synthetic normalized fixtures, not verified or ingested FBR documents"}
 
     @app.get("/api/historical/wealth-continuity")
     def year_wealth_continuity(_: Auth, db: DB, tax_year: int = 2027):
         fiscal_bounds(tax_year)
-        return wealth_continuity(db, tax_year)
+        return wealth_continuity(db, tax_year, _configured_vault())
 
     @app.get("/api/tax/opportunities")
     def tax_opportunity_candidates(_: Auth, db: DB, tax_year: int = 2027):

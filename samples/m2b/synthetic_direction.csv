@@ -1,0 +1,3 @@
+Transaction Date,Details,Amount,Type,Closing Balance,Trace
+05/03/2024,Synthetic investment distribution,300.00,CR,5200.00,SYN-INV-01
+06/03/2024,Synthetic loan disbursement,100.00,DR,5100.00,SYN-LOAN-01
