@@ -18,3 +18,8 @@ postgres = ["psycopg[binary]>=3.2,<4"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+# Alembic migrations is an operational directory, not a distributable Python
+# package. Explicit discovery avoids shipping it as a namespace package.
+[tool.setuptools]
+packages = ["app"]
