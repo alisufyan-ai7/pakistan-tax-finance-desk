@@ -64,3 +64,26 @@ class AuditEvent(Base):
     new_overlap_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False)
     note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+class HistoricalFiling(Base):
+    """Immutable synthetic-only historic filed-return metadata / normalized test values.
+
+    No original taxpayer document may enter this model until the full private
+    ingestion/MFA/Postgres/key-management/backup security gate is certified.
+    """
+    __tablename__ = "historical_filings"
+    __table_args__ = (
+        UniqueConstraint("tax_year", "kind", "source_sha256", name="uq_historical_filing_digest"),
+        UniqueConstraint("tax_year", "kind", "revision_number", name="uq_historical_filing_revision"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tax_year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    legal_entity: Mapped[str] = mapped_column(String(32), default="individual", nullable=False)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    filing_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision_of_id: Mapped[str | None] = mapped_column(ForeignKey("historical_filings.id"), nullable=True)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    # ONLY synthetic numerical fixtures in this stage; no actual filed figures or identifiers.
+    fields_json: Mapped[str] = mapped_column(Text, nullable=False)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
