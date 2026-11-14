@@ -65,7 +65,7 @@ Audience research, data/privacy/compliance validation, multi-tenant architecture
 
 ## Actual M1 progress (2026-11-15)
 
-- [x] Private repository, GitHub source of truth, documentation initialized.
+- [ ] Repository must be restored to **PRIVATE** (GitHub API indicated PUBLIC on 2026-11-15); code/documentation initialized.
 - [x] Local synthetic-only account/import/transaction/summary web + API and unit/integration tests.
 - [x] CSV/XLSX normalized import; exact replay dedup, running balances, weak duplicate review, transaction corrections.
 - [x] Historic FY selector and month-observed/missing coverage, without false completeness.

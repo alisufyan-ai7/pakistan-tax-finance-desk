@@ -40,3 +40,7 @@ State actual tested behavior, URLs/commit hashes, remaining work, safeguards, an
 ## Implemented local M1 (2026-11-15)
 
 Read `docs/IMPLEMENTATION_M1.md` and `docs/CURRENT_HANDOFF.md` for local synthetic-only implementation, exact pytest commands, honest limitations and next priorities. Preserve the local-only no-real-data restriction until MFA, encrypted storage, migrations and recovery are verified. Do not declare FBR calculations implemented from the synthetic year-to-date summary.
+
+## Repository visibility alert (verified 2026-11-15)
+
+GitHub API currently reports `visibility=public`, `private=false`. Owner intended private. **No sensitive financial uploads or real data**. Owner must change visibility to private in repository Settings; future agents must verify it before real data or deployment. Do not claim repository is private unless independently rechecked.

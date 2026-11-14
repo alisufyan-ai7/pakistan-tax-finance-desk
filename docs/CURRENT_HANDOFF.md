@@ -41,3 +41,10 @@ Current frontend is deliberately server-rendered by FastAPI, not a deployed Next
 - Synthetic smoke: 5 accepted; opening and running balances verified; FY2024 summary correct; re-upload 0 accepted / 5 duplicates.
 - GitHub-hosted CI run [43652595185](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43652595185) returned `failure` before any steps ran; job has `runner_id=0`, steps=[], logs unavailable. **Do not claim CI passed.** The precise infrastructure/billing cause is unconfirmed and should be investigated. This is not evidence of a failing pytest assertion.
 - Production release and real bank-statement onboarding remain disallowed until security, migration, and bank-format gates are passed.
+
+## M1 merge and immediate blocker (verified 2026-11-15)
+
+- PR #1 **merged** to `main`, merge commit [`13480f5`](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/commit/13480f5593ceb88216abcb682f8ff36cf939b720). Synthetic import code and test suite are available on main.
+- **Critical repository visibility mismatch:** GitHub API returned `visibility=public` and `private=false` after merge. Original owner requirement is PRIVATE. GitHub file connector cannot change visibility. Owner must change Settings → General → Danger Zone → Change repository visibility → Private; reverify before handling sensitive data.
+- CI remains NOT GREEN: the new PR run also returned failure without executed steps, consistent with runner assignment/platform restriction. Underlying cause unverified. Local tests passed; merge was a consciously documented local-only exception, not release readiness.
+- Next tasks: verify visibility private, fix Actions runner availability, then M2 security foundations before real bank statements.

@@ -1,6 +1,6 @@
 # Pakistan Tax & Wealth Desk
 
-**Status:** Requirements and engineering handoff established on 2026-11-15. **No application has been built, deployed, or tax returns filed.**
+**Status (2026-11-15):** M1 synthetic local-import prototype implemented and merged; no production app, real statement processing, validated FBR calculations, or tax returns filed.
 
 A **private, single-owner-first** Pakistan tax preparation, lifetime transaction ledger and personal wealth intelligence application. **GitHub is the source of truth for code, requirements, decisions, test fixtures and engineering handoffs; never for real statements or confidential financial data.**
 
@@ -52,3 +52,5 @@ Implement sequential vertical slices, keep docs synchronized with each architect
 A **working synthetic-only local prototype** is now present in `backend/` and `frontend/index.html`: authenticated localhost UI, account onboarding, normalized CSV/XLSX uploads, balance checks, import deduplication and ambiguous overlap review, transaction categorization with audit, and historical tax-year summaries. See [`docs/IMPLEMENTATION_M1.md`](docs/IMPLEMENTATION_M1.md) for the exact run/test commands and limitations. Synthetic demo fixture: `samples/synthetic_bank_normalized.csv`.
 
 **Do not use with real financial data yet:** local SQLite is unencrypted and Basic authentication is localhost-only. Real statements need MFA, encrypted private storage, backups/restore and bank-specific import acceptance first. This version does **not** compute actual FBR tax or file returns. Long-term target remains Next.js/FastAPI/PostgreSQL; M1 uses a simple local browser UI to ship the core import/ledger vertical slice safely.
+
+> **Repository visibility alert (2026-11-15):** GitHub currently reports this repository **PUBLIC** (`private=false`) although the owner intended private. Restore GitHub visibility to **Private** immediately via repository Settings → General → Danger Zone. The application is synthetic-data-only and must not receive personal finance records until visibility and production security controls are verified. The connected GitHub file tools cannot change repository visibility.
