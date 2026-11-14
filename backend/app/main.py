@@ -18,7 +18,9 @@ from sqlalchemy import and_, select, func
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
-from .models import Account, Document, Transaction, AuditEvent
+from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling
+from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
+from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "gift_received", "refund", "own_transfer"}
@@ -155,6 +157,58 @@ def create_app(database_url: str | None = None):
                 "duplicate_rows": duplicated, "potential_overlaps": overlap, "reconciliation": reconciliation,
                 "coverage_declared": doc.coverage_declared, "first_date": rows[0].posted_on.isoformat(),
                 "last_date": rows[-1].posted_on.isoformat(), "warnings": warnings}
+
+    @app.post("/api/historical/synthetic-filings", status_code=201)
+    def add_synthetic_filing(payload: SyntheticFilingInput, _: Auth, db: DB):
+        """Synthetic fixtures ONLY. Real historical FBR documents are not supported."""
+        try:
+            vault = EncryptedEvidenceVault.from_environment()
+        except VaultConfigurationError as exc:
+            raise HTTPException(503, str(exc)) from None
+        created, duplicate = register_filing(db, payload, vault)
+        if duplicate:
+            return JSONResponse(status_code=200, content={**created, "already_imported": True})
+        return {**created, "already_imported": False}
+
+    @app.get("/api/historical/filings")
+    def list_synthetic_filings(_: Auth, db: DB, tax_year: int = 2027):
+        fiscal_bounds(tax_year)
+        filings = db.scalars(select(HistoricalFiling).where(
+            HistoricalFiling.tax_year == tax_year
+        ).order_by(HistoricalFiling.kind, HistoricalFiling.revision_number)).all()
+        return {"tax_year": tax_year, "synthetic_only": True,
+                "filings": [_as_public(x) for x in filings],
+                "note": "Synthetic normalized fixtures, not verified or ingested FBR documents"}
+
+    @app.get("/api/historical/wealth-continuity")
+    def year_wealth_continuity(_: Auth, db: DB, tax_year: int = 2027):
+        fiscal_bounds(tax_year)
+        return wealth_continuity(db, tax_year)
+
+    @app.get("/api/tax/opportunities")
+    def tax_opportunity_candidates(_: Auth, db: DB, tax_year: int = 2027):
+        """Evidence requests only; no legal eligibility or tax saving is asserted."""
+        start, end = fiscal_bounds(tax_year)
+        rows = db.scalars(select(Transaction).where(Transaction.posted_on.between(start, end))).all()
+        hints = {
+            "donation": ("charitable_credit_review", "Recipient eligibility, donation receipt, relevant year provisions"),
+            "zakat": ("zakat_treatment_review", "Zakat evidence and correct statutory tax-year treatment"),
+            "business_expense": ("business_deduction_review", "Business-purpose support, allowable expense rules, legal entity"),
+            "tax_paid": ("withholding_or_advance_tax_review", "Payment type, CPR/withholding certificate, final vs adjustable treatment"),
+        }
+        output = []
+        for category, (type_name, required) in hints.items():
+            matched = [t for t in rows if t.category == category and t.reviewed and
+                       not t.excluded and (not t.overlap_possible or t.overlap_resolved)]
+            if matched:
+                output.append({"tax_year": tax_year, "opportunity_type": type_name,
+                               "status": "EVIDENCE_REQUIRED", "evidence_needed": required,
+                               "supporting_transaction_ids": [t.id for t in matched],
+                               "candidate_recorded_amount": cash(sum(t.debit_minor + t.credit_minor for t in matched)),
+                               "potential_tax_savings": None, "legal_eligibility_verified": False,
+                               "requires_review": True, "not_filing_advice": True})
+        return {"tax_year": tax_year, "opportunities": output,
+                "note": "Heuristic candidates only. No tax laws verified or tax benefit established."}
 
     @app.get("/api/transactions")
     def list_transactions(_: Auth, db: DB, tax_year: int = 2027, limit: int = 200):
