@@ -2,7 +2,7 @@
 
 ## P0 — Establish repository and safe skeleton
 
-- [ ] Create **private** repository and verify admin access, default branch, GitHub integration; publish docs and source links.
+- [x] Source repository created, admin/default branch/docs verified; temporarily PUBLIC by owner's choice for development, revert PRIVATE afterward.
 - [ ] App skeleton (frontend, API, DB migrations) and basic tests/CI.
 - [ ] MFA and protected storage/tested basic encrypted backup; use synthetic inputs only until verified.
 - [ ] Synthetic statement upload: import, source hashes, normalized transaction, account balance reconciliation, bulk re-upload idempotency.
