@@ -1,0 +1,41 @@
+# Secrets and identity data
+.env
+.env.*
+!.env.example
+*secret*
+*credentials*
+*token*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Financial uploads, exports and private data (NEVER COMMIT)
+data/
+uploads/
+backups/
+exports/
+statements/
+private/
+financial-records/
+*.bank.pdf
+*.bank.csv
+*.bank.xlsx
+*statement*.pdf
+*statement*.xlsx
+*fbr-return*.pdf
+*wealth-statement*.pdf
+*tax-certificate*.pdf
+*.sqlite
+*.db
+
+# Build / IDE
+__pycache__/
+.pytest_cache/
+.venv/
+node_modules/
+.next/
+dist/
+*.log
+.DS_Store
+.vscode/
