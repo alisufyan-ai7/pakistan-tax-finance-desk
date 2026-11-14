@@ -48,3 +48,9 @@ The owner explicitly chose to keep this GitHub repository **PUBLIC while develop
 ## Binding new goals
 
 Build a proactive **lawful tax minimization** advisor (not tax evasion): year-effective law-backed exemptions, deductions, credits, adjustable withholding, business-expense opportunities and scenario comparisons with auditable source references and required evidence. The owner will provide **3–4 years of already-filed FBR returns and wealth statements** for confidential historical baseline/reconciliation. They must be stored only via secure private upload paths, with immutable original documents and explicit revision review. Read `docs/TAX_OPTIMIZATION_AND_PRIOR_RETURNS.md` before implementing tax/return processing.
+
+## Current implementation status — M2a (2026-11-15)
+
+Historical uploaded returns are **not required to proceed**. M2a adds strictly synthetic FY2023+ historical income-return/wealth-statement records, encrypted synthetic evidence files, idempotent original/revision tracking, prior-to-current FY wealth continuity status, and tax-optimization *evidence-required* candidate API with **no calculated savings**. Local test suite: **18 passed**. Read `docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.md` and `docs/CURRENT_HANDOFF.md`.
+
+**Current synthetic-only restrictions remain non-negotiable:** local Basic auth, unencrypted structured SQLite data, incomplete MFA, backup/restore, migrations and real FBR parsing. Do NOT solicit genuine unredacted user returns into GitHub or prototype. Owner will supply 3–4 years of historical returns later; they will be reconciled after real-data security gates. Repository intentionally PUBLIC during development.
