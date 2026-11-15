@@ -36,3 +36,7 @@ The application is for the owner only at present, with optional later productiza
 ## Definition of done
 
 All domains must demonstrate provenance, reconciliation, unknown-vs-zero semantics, safe corrections, deterministic tests, security/permission acceptance, meaningful UI and usable exports where relevant. A future CFO recommendation must cite its evidence and assumptions, offer human-confirmable actions, avoid autonomous investment/tax moves and never assert guaranteed savings.
+## M2q progress update — 2026-11-16
+
+- The **investments/crypto/gold/property** row remains **PARTIAL**, not complete. Added an independently tested synthetic FIFO cost-lot pure engine (opening 2023/prior inventory, buys/sells, fees, partial quantities and year-grouped realized accounting results), [PR #24](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/24), [144-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920). This does NOT import brokers/NCCPL or certify taxable gain; no account-bank-asset integration or complete wealth calculation yet.
+- The **privacy and real-data** row remains **BLOCKING** because older bank/loan/cash metadata remain plaintext; adding private event and cost-lot simulators has not closed that gate.

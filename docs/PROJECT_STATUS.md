@@ -33,3 +33,9 @@
 - No real tax computation from mixed income, investment gains, market allocations or wealth-statement figure should be certified by current prototype.
 - Every developed capability needs acceptance tests, provenance, missing-vs-zero, source/interpretation separation, authenticated access and honest limits.
 - Keep PR count minimal, merge validated work to main, and update this file, AGENT_START_HERE and CURRENT_HANDOFF after each milestone.
+
+## M2q continuation — 2026-11-16
+
+The latest validated implementation now includes M2q [investment cost-lot engine](IMPLEMENTATION_M2Q_INVESTMENT_COST_LOTS.md), [PR #24](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/24), squash `bf00c08`; [CI run 43757173920](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920) **144 pytest PASS**, ephemeral PostgreSQL18 migration/schema PASS. Opening 2023+ fictional investment lots, partial FIFO trade matching, fees and realized *illustrative* result across tax years are now implemented in a pure, nonpersisted module. Not FBR gains, market values, NCCPL, verified holdings or investment advice.
+
+**Current P0 unchanged:** existing bank/loan/cash money/date/linkage SQL columns remain plaintext; no trustworthy live finance app, private deployed service, production backup/restore or verified real-bank/IRIS parser. `APP_DATA_MODE=real` must stay fail-closed. The modular personal-CFO scope and requirements coverage remain in this repository. Continue owner-independent secure source migration and document adapter groundwork before requesting actual personal financial records.

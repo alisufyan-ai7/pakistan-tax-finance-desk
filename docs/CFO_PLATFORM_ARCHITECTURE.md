@@ -53,3 +53,6 @@ Potential audiences: Pakistani salaried professionals; freelancers and consultan
 ## Acceptance principle
 
 An expanding feature cannot bypass the real-data safety gates. Add modules with stable domain contracts and tests, not new hard-coded assumptions that one market, bank, income source, year or tax law applies globally. A feature is NOT done solely because a type exists: require data ingestion, cross-source reconciliation, tests, audit, security and useful end-user flow.
+## M2q expansion — investment domain primitive (2026-11-16)
+
+The portfolio domain now has a **pure** FIFO accounting-cost-lot calculator (`app/investment_lots.py`) for fictional opening lots and broker-style buy/sell events. It is kept separate from immutable source imports, bank cashflows, encrypted asset valuations and legal tax calculation. When broker/NCCPL evidence becomes available, preserve source identity and acquisition lots, add corporate actions and FX provenance, reconcile bank cash contributions before computing trusted positions, and route tax consequences to the correct versioned FBR engine. No independent broker/market-data microservice is necessary for the current owner-only stage.

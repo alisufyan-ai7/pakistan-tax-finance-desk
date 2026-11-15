@@ -207,3 +207,11 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Requirements coverage matrix marks every owner goal as done/partial/blocked with acceptance gates (not a claim of end-to-end delivery).
 - [x] [CI run 43756223286](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43756223286) **136 tests PASS**, PostgreSQL 18 schema no-drift PASS.
 - [ ] Complete real-data security + private encrypted old bank/loan/cash schema, real PDF/bank/FBR/broker adapter acceptance, full tax/wealth/investment/obligation reconciliation, actual CFO advisory suitability and personal usable mobile UI.
+
+## M2q investment lot arithmetic acceptance — 2026-11-16
+
+- [x] Pure, versioned synthetic FIFO trade calculation with optional evidence-declared preexisting opening lots (from 2023 or earlier), exact buy-cost/fee and sell-proceeds arithmetic, 8-decimal units, partial-lot cost balance preservation.
+- [x] Multiasset classes, source IDs, same-day sequence, chronological opening source and July/June tax-year grouping; reject short/unsupported/malformed/future/duplicate entries.
+- [x] Explicit separation of illustrated realized accounting gains from FBR-taxable gains, verified brokerage holdings, unrealized valuations and net worth. Tax due/savings remain `null`.
+- [x] [CI run 43757173920](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920) **144 tests passed** and ephemeral PostgreSQL18 Alembic schema PASS (no migration).
+- [ ] Real broker/NCCPL evidence adapters, purchase/transfer matching to bank/asset records, corporate actions/rights/splits and FX, live holdings/market data rights, legally verified applicable investment capital-gains treatment and FBR annual reconciliation.

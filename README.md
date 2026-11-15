@@ -139,3 +139,9 @@ An explicit offline synthetic-only CLI now **backs up, independently restores, a
 **New code:** [PR #23](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/23) merged [136-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43756223286) — hypothetical cashflow/reserve/goal forecasting and private encrypted-journal-only CFO briefing. [Current status](docs/PROJECT_STATUS.md) · [Architecture](docs/CFO_PLATFORM_ARCHITECTURE.md) · [Coverage matrix](docs/REQUIREMENTS_COVERAGE_MATRIX.md).
 
 **Still synthetic-only:** no real documents or professional financial advice; earlier financial amounts/dates/links remain plaintext until protected migration. `APP_DATA_MODE=real` must remain disabled. Public GitHub holds no genuine owner financial/identity data.
+
+## M2q — Investment holdings and cost basis (2026-11-16)
+
+[PR #24 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/24) · [144-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920) · [implementation](docs/IMPLEMENTATION_M2Q_INVESTMENT_COST_LOTS.md).
+
+New synthetic FIFO cost-lot calculations can account for documented **opening investment holdings acquired before the first statement**, purchases, partial sales, fees and illustrative July–June realized arithmetic gain/loss, without automatically counting bank transfers or investment contributions as profit. They do not verify NCCPL/broker records, market values, applicable FBR capital-gains tax or suitability. Source financial information remains fictional, legacy monetary confidentiality is still incomplete and real-data mode remains disabled.
