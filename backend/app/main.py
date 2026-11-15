@@ -35,6 +35,7 @@ from .financial_links import (
 from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput,
     create_cash_holding, add_cash_movement, cash_view, reverse_cash_movement, cash_annual_bridge)
 from .wealth_position import observed_position, annual_position
+from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "loan_installment_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
@@ -240,6 +241,23 @@ def create_app(database_url: str | None = None):
     @app.get("/api/accounts")
     def list_accounts(_: Auth, db: DB):
         return [{"id": a.id, "name": a.name, "institution": a.institution, "currency": a.currency} for a in sorted(db.scalars(select(Account)).all(), key=lambda a: a.name.casefold())]
+
+    @app.post("/api/documents/synthetic-pdf/preview")
+    async def preview_pdf_synthetic_only(_: Auth, file: Annotated[UploadFile, File()],
+                                         document_type: Annotated[str, Form()]):
+        """Preview synthetic text-only fixtures; no storage or ledger mutation."""
+        if document_type not in {"bank", "income_return", "wealth_statement"}:
+            raise HTTPException(422, "Unknown synthetic PDF document type")
+        if Path(file.filename or "").suffix.lower() != ".pdf":
+            raise HTTPException(415, "Only synthetic .pdf files supported")
+        raw = await file.read(MAX_PDF_BYTES + 1)
+        if len(raw) > MAX_PDF_BYTES:
+            raise HTTPException(413, "Synthetic PDF exceeds 512 KiB")
+        try:
+            return (preview_synthetic_bank(raw) if document_type == "bank"
+                    else preview_synthetic_fbr(raw, document_type))
+        except SyntheticPdfError as exc:
+            raise HTTPException(422, detail=str(exc)) from None
 
     @app.post("/api/statements", status_code=201)
     async def import_statement(_: Auth, db: DB, account_id: Annotated[str, Form()], file: Annotated[UploadFile, File()],
