@@ -90,3 +90,12 @@ See [`ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md`](ACCOUNTANT_WORKING_PAP
 | True personal CFO financial planning (cash reserves, loans, goals, investments, savings/spend anomalies) with evidence and coverage-aware advice | Synthetic hypothetical CFO engine and investment FIFO primitive | **Partial synthetic**; G5 owner UX |
 
 **Primary user value / definition of done:** Owner can securely upload statements, resolve a manageable evidence queue, see documented year-by-year financial and **legally validated** tax/wealth positions, and export an accountant-ready review package **without re-creating separate annual worksheets**. The accountant remains free to inspect/review and the owner approves filing. No guessed refunds, capital gains, net worth, source account ownership, expired deadlines or workbook-final statuses.
+
+## G1-a/b tested security primitives — 2026-11-16
+
+| Security expectation | Verified progress | Still outstanding |
+| --- | --- | --- |
+| Encrypted operational financial storage | G1-a [PR #34](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/34): authenticated synthetic operational encrypted bank-source batches, HMAC identity, key-loss detection; 205 tests + PG18 PASS | **Only a separate bank source subset.** Old active M1 bank/loan/cash monetary/date/relationship fields plaintext, no complete typed protected canonical ledger or app switch |
+| Recoverable PostgreSQL financial data | G1-b [PR #35](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/35): encrypted synthetic full known-table data snapshot, independently migrated blank destination, verified all-table byte parity, transactional rollback and wrong-key checks; 209 tests + PG18 PASS | **Not production/offsite/PITR**, restored legacy SQL still plaintext; key rotation, live database cutover, recovery drill, full canonical migration and data retention policy pending |
+
+**Blocking:** G1 overall is **not done**. No authenticated actual personal bank/FBR files until G1+G2+G3. Next P0 tracked by [G1-c Issue #21](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/21). The owner remains responsible only for later private infrastructure/real-data acceptance, not synthetic code development.
