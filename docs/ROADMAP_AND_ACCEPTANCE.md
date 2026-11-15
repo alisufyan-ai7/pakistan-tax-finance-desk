@@ -152,3 +152,12 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Hosted [CI 43714829408](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43714829408): **68 tests pass**, PostgreSQL18 `0006_cash_wealth` migration/check PASS.
 - [ ] Complete wealth: property, gold, investments, bank closing coverage, loan receivable/liability, cash missing records, ownership/evidence and signed filing versions.
 - [ ] Real files blocked by residual unencrypted financial amounts/dates/metadata, unsupported bank/FBR PDFs, production MFA/backup/security and audited statutory tax rules.
+
+## M2h acceptance — 2026-11-15
+
+- [x] Registered individual PKR bank/cash/lent-loan/borrowed-loan **recorded-components** position with explicit as-of date and separate reported sources.
+- [x] Bank evidence rejects no rows, missing last balance, unresolved overlap, same-day export conflict and observations >35 days stale; reports provenance without invented balance.
+- [x] Annual FY opening/closing recorded component movement returns NULL when either side missing; full net worth and FBR wealth reconciliation remain explicitly unknown.
+- [x] Manual cash receipts flagged unverified; asset/liability categories not yet represented remain excluded with warnings, never claimed as known zero.
+- [x] [GitHub Actions run 43715555529](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43715555529): **76 tests PASS**; PostgreSQL 18 Alembic schema check PASS.
+- [ ] Protect numeric/date/reference metadata; implement assets beyond banks/cash/loans, independent source completeness and wealth reconciliation against secure prior actual filed FBR returns; production security.

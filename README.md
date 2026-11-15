@@ -101,3 +101,9 @@ Incorrect synthetic loan allocations and owner-account transfer confirmations ca
 [Documentation](docs/IMPLEMENTATION_M2G_CASH_WEALTH.md) · [Merged PR #13](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/13) · [68-test hosted CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43714829408).
 
 The synthetic app now maintains owner-declared dated cash openings, reviewed bank withdrawal/deposit allocations, unverified manual cash spending/receipts, audited corrections and a July–June cash wealth movement bridge. It returns **null rather than zero** when historical opening evidence is missing. This is **not** complete net worth, a verified FBR wealth statement, a tax deduction, or an invitation to upload actual private documents.
+
+## M2h — Historical partial financial position (2026-11-15)
+
+[Implementation details](docs/IMPLEMENTATION_M2H_RECORDED_WEALTH.md) · [Merged PR #14](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/14) · [76-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43715555529).
+
+The synthetic-only backend combines observed bank balances, declared cash and recorded borrowed/lent loan principal into a *registered-component position* as of any date, with historical FY opening/closing comparisons. Missing, conflicting or stale bank data propagates NULL, not fabricated money. This is **not verified net worth or an FBR wealth statement**, and legally verified tax calculations are not yet implemented.
