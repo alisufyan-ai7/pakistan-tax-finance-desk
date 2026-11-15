@@ -29,6 +29,7 @@ from .movement_analysis import analyze_movements, MAX_TRANSFER_DAYS
 from .financial_links import (
     LoanInput, LoanAllocationInput, TransferConfirmationInput, create_loan,
     add_allocation, loan_view, confirm_transfer, confirmed_transfers, source_locked,
+    ReversalInput, reverse_loan_allocation, reverse_transfer, link_audit,
 )
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "refund", "own_transfer"}
@@ -74,7 +75,7 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0004_finance_links":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0005_link_reversals":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
@@ -446,6 +447,30 @@ def create_app(database_url: str | None = None):
                   "status": "OWNER_CONFIRMED_NOT_INDEPENDENTLY_VERIFIED",
                   "no_tax_claim": True, "synthetic_only": True}
         return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.post("/api/finance/loans/{loan_id}/allocations/{allocation_id}/reverse", status_code=201)
+    def reverse_linked_loan_allocation(
+        loan_id: str, allocation_id: str, payload: ReversalInput, _: Auth, db: DB
+    ):
+        reversal, replay = reverse_loan_allocation(db, loan_id, allocation_id, payload)
+        result = {"id": reversal.id, "allocation_id": reversal.allocation_id,
+                  "already_reversed": replay, "status": "REVERSED",
+                  "audit_preserved": True, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.post("/api/finance/transfers/{transfer_id}/reverse", status_code=201)
+    def reverse_own_transfer_confirmation(
+        transfer_id: str, payload: ReversalInput, _: Auth, db: DB
+    ):
+        reversal, replay = reverse_transfer(db, transfer_id, payload)
+        result = {"id": reversal.id, "confirmation_id": reversal.confirmation_id,
+                  "already_reversed": replay, "status": "REVERSED",
+                  "audit_preserved": True, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.get("/api/finance/links/audit")
+    def financial_link_audit(_: Auth, db: DB):
+        return link_audit(db)
 
     @app.get("/api/finance/transfers/confirmed")
     def list_confirmed_transfers(_: Auth, db: DB, tax_year: int = 2027):
