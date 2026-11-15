@@ -99,3 +99,12 @@ Implementation and execution details: `docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.
 ## Final M2a main validation (2026-11-15)
 
 - GitHub Actions also **PASSED on `main`** after merge: [run 43654657148](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43654657148); PR [run 43654581161](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43654581161) confirmed `18 passed, 1 warning`. Earlier no-runner issue [#2](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/2) closed as resolved. Source remains intentionally public, synthetic-only. M2b security before real records remains pending.
+
+## M2b merged & independently validated — 2026-11-15
+
+- **PR #7 merged** to `main`, commit [`7745afb`](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/commit/7745afb12312194880779da85cc8670e2cc15a7b).
+- GitHub Actions [run 43655878445](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43655878445) **PASS**: **27 pytest passed, 1 warning**, and ephemeral PostgreSQL **18** Alembic migration + `alembic check` **PASS** with `POSTGRES_18_SYNTHETIC_SCHEMA=PASS`. Duplicate PR run 43655882368 also concluded success. Earlier packaging error corrected by explicit `app` package discovery.
+- Code delivered: immutable Alembic baseline; synthetic structured return fields encrypted at rest (AES-GCM), encrypted synthetic-only SQLite + evidence archive with bounded verified restore, two strict synthetic CSV bank-like import profiles in API/UI, `APP_DATA_MODE=real` fail-closed startup guard.
+- Documentation: [`docs/IMPLEMENTATION_M2B.md`](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/blob/main/docs/IMPLEMENTATION_M2B.md) with instructions and exact limitations. No real bank, FBR, tax or personal data was used.
+- **Important:** this is NOT production secure. Local Basic auth persists; SQLite M1 transaction descriptions and audit notes are plaintext; no complete MFA, cloud key management, remote backup, actual bank/FBR PDF adapters or certified income-tax calculations. Genuine files must NOT be uploaded.
+- **Next owner-independent engineering:** MFA / browser-session groundwork, encrypted sensitive transaction fields and migrations, synthetic PDF layout adapters, robust loan/transfer accounting, 2023+ verified FBR rule reference registry and valuation-ready model. No need to request owner returns now. GitHub remains temporarily public intentionally with only synthetic content.
