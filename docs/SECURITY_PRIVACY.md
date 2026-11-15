@@ -51,3 +51,11 @@ Each synthetic loan-allocation reversal or transfer revocation has an encrypted 
 ## M2g synthetic cash privacy boundary (2026-11-15)
 
 Cash holding labels, opening basis, cash movement evidence notes and append-only reversal reasons are encrypted with the existing AES-GCM key-ID envelope; source notes never enter GitHub. **Cash amounts, event dates, transaction IDs, and bank account linkages remain plaintext in the development database**. All cash figures are owner assertions or reviewed synthetic source relationships. No verified bank/FBR import, tax treatment or public-service access exists. `APP_DATA_MODE=real` remains fail-closed. Never upload personal cash ledgers, bank statements or previous returns to public GitHub/CI.
+
+## M2i–M2l actual security boundary (2026-11-15)
+
+- **M2i**: HMAC-SHA256 keyed bank import dedup IDs limit dictionary/guessing attacks against old raw hashes; does **NOT** encrypt original bank amounts/dates/metadata, and dedicated key changes require a controlled rebuild. `documents.digest_scheme` marks legacy records; no silent mixing.
+- **M2j**: `pypdf` PDF extractor with strict synthetic marker/preflight/size and form constraints is not a production sandbox. Actual hostile PDF conversion must be an isolated resource-limited worker with malware and unsupported format controls, no network, and private encrypted source vault.
+- **M2k**: new asset valuation snapshots are encrypted as a whole JSON envelope, including date, asset identity, quantity, cost basis, valuation and evidence. Existing legacy SQL bank/loan/cash monetary fields and relational IDs are **not encrypted**; no claim of full database protection.
+- **M2l**: statutory rule metadata, synthetic salary bracket values and candidate references contain **no actual owner tax data**; all inferred eligibility/savings remain false/null. Prior filed returns cannot be ingested yet.
+- The owner intentionally operates this GitHub repository PUBLIC temporarily for development; no real statements, tax forms, personal identities, secrets, unredacted screenshots or confidential records in source/CI. `APP_DATA_MODE=real` explicitly denies startup. Do not disable this gate without complete security QA and owner approval.

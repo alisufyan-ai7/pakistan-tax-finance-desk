@@ -23,3 +23,12 @@ For each rule, record: tax_year, legal jurisdiction, rule id, section/regulation
 14. FBR — income return and wealth statement filing/reconciliation: https://www.fbr.gov.pk/categ/file-income-tax-return/51147/80860/71160
 
 **Source-gating note:** All provisions and their historic applicability must be checked against the version effective for the relevant tax year (and amendments/notifications). A general statement on an FBR help page is not automatically legal authorization for retrospective filings or a specific tax credit.
+
+## M2l authoritative year-specific legal source index (reviewed 2026-11-15)
+
+- [FBR Income Tax Ordinance 2001 amended through 30 June 2026](https://download1.fbr.gov.pk/Docs/2026724177725705IncomeTaxOrdinanace2001.pdf) — First Schedule Part I Division I clause (2), PDF pages 526–527: salary rate table for TY2027 and historic TY2026 table it replaced; legal schedule applies to salaried individual when salary **exceeds 75%** of taxable income.
+- [FBR Income Tax Ordinance historical versions](https://fbr.gov.pk/Categ/Income-Tax--Income-Tax-Ordinance/326) — amendments covering 2022–2026; TY2023–TY2027 registry versions indexed.
+- [Finance Acts](https://www.fbr.gov.pk/Categ/Finance-Acts/620) — relevant historical source acts.
+- [FBR withholding-tax year card index](https://www.fbr.gov.pk/withholding-tax-rate-card/174298/174301) — withholding treatment requires source-specific verification, not assumptions from bank narratives.
+- [FBR IRIS income and wealth reconciliation](https://fbr.gov.pk/categ/file-income-tax-return/51147/80860/71160) — wealth reconciliation requirement.
+- Prototype computes a **hypothetical salary-bracket component** in TY2026/TY2027 for explicitly bounded scenarios; it is not full mixed-income tax due. TY2023–TY2025 numerical statutory rules, statutory tax credits and actual eligibility remain unimplemented/not independently verified. See `docs/IMPLEMENTATION_M2L_FBR_RULES.md`.

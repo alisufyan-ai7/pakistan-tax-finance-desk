@@ -161,3 +161,14 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Manual cash receipts flagged unverified; asset/liability categories not yet represented remain excluded with warnings, never claimed as known zero.
 - [x] [GitHub Actions run 43715555529](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43715555529): **76 tests PASS**; PostgreSQL 18 Alembic schema check PASS.
 - [ ] Protect numeric/date/reference metadata; implement assets beyond banks/cash/loans, independent source completeness and wealth reconciliation against secure prior actual filed FBR returns; production security.
+
+## M2i–M2l accepted synthetic-only engineering — 2026-11-15
+
+- [x] Keyed document and transaction HMAC fingerprints, explicit legacy scheme marker and refuse-mix; PR #15, **82 tests + PG18**.
+- [x] Synthetic text PDF bank/FBR IRIS preview-only strict format/parsing/unsupported rejection; PR #16 **89 tests + PG18**. This is NOT real-bank/FBR support or sandboxed production conversion.
+- [x] Encrypted immutable synthetic investments/property/vehicle/gold/crypto/other liability snapshot payloads (including valuations and dates), no unverified market values; PR #17 **95 tests + PG18**.
+- [x] TY2023–2027 official FBR version registry; narrow TY2026/TY2027 salary component based on independently checked legal schedule, no full tax claim; evidence-required lawful optimization source cards; PR #18 **108 tests + PG18**.
+- [ ] Protect ALL pre-existing account/transaction/loan/cash amounts, dates and associated identifiers at rest; design keyed query indexes and safe migration/backup.
+- [ ] Secure actual documents through sandboxed real bank and FBR IRIS layouts with proven provenance, malware controls, MFA/private hosting and encrypted offsite restore.
+- [ ] Complete holdings lot/basis/valuation source links and 2023–2027 historic income-tax engine for mixed income plus legit reductions, eligibility and proper withholding treatment, independently reviewed.
+- [ ] Real filing-ready FBR return + wealth reconciliation and export, human approval; no real data acceptance or automatic filing until complete.
