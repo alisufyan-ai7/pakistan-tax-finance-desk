@@ -37,4 +37,4 @@ Full **legacy PostgreSQL DATA MIGRATION** is a *different* milestone: from activ
 
 ## Verification record
 
-Before CI: **pending exact-head hosted pytest, PostgreSQL18 schema and data-backup/independent-restore test.** Do not claim this tool implements full G1 or supports real finance until separate acceptance is proven.
+[PR #35](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/35) merged to `main` `52d66aa3c5505714afb73c3d56b3f5ce83ef7e23`. Exact-head [GitHub Actions 43776281073](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43776281073) **SUCCESS: 209 pytest passed, 2 warnings; PG18 schema/no-drift PASS, encrypted operational G1-a read/write PASS, PG18 encrypted DATA snapshot + independent full-row restore parity PASS**, including deliberate rollback, wrong-key authentication and no-overwrite. The tool is **synthetic only**, not off-site/PITR or production-backed and does not encrypt live legacy SQL finance data. G1 still blocked until full canonical encrypted migration, reversible app cutover and recovery. `APP_DATA_MODE=real` prohibited.
