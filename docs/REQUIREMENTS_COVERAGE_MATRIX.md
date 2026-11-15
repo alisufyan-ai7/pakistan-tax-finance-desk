@@ -1,6 +1,7 @@
 # Owner requirements coverage and remaining gates — 2026-11-16
 
-The application is for the owner only at present, with optional later productization; use GitHub as the source of truth. **No real personal records may be uploaded to the public repository or the synthetic prototype.** This matrix is an execution checklist; a checked engineering primitive is NOT synonymous with an end-to-end user-ready feature.
+The application is for the owner only at present, with optional later productization; use GitHub as the source of truth. **Product Plan v2 (2026-11-16):** [The formal accountant-ready product plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md) adds product-level acceptance for ongoing statement-led bookkeeping, workbook/source diagnostics, tax-withholding reconciliation and a working accountant package. Existing partial technical foundations remain partial; these new workflows are **not built**.
+ **No real personal records may be uploaded to the public repository or the synthetic prototype.** This matrix is an execution checklist; a checked engineering primitive is NOT synonymous with an end-to-end user-ready feature.
 
 | Owner expectation / requirement | Current implementation | State and next acceptance gate |
 | --- | --- | --- |
@@ -73,3 +74,19 @@ The newspaper [source assessment](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md)
 | Secure communication/explanation queue | **PLANNED** | Private correspondence attachments are not bank/FBR evidence; owner approval, accountant collaboration optionally later; screenshots do not prove voice-message content |
 
 See [`ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md`](ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md), [Issue #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30). No authentic personal data is used in CI or committed; current real-data app remains disabled.
+
+## v2 coverage — source-led accountant-ready features (2026-11-16)
+
+| New or sharpened product requirement | Implementation as currently verified | State / gate |
+| --- | --- | --- |
+| Reliable intake of password-protected PDF, CSV, XLSX and fake legacy XLS exports by actual content signature | M2s synthetic CSV/XLSX preflight PR #32; synthetic text-PDF preview; no safe genuine encrypted-PDF intake | **Partial synthetic; real G1–G3 BLOCKED** |
+| Multi-bank fiscal-year coverage, page/source-row original linkage, duplicate/replayed batch and balance carry-forward | M1 synthetic normalized import, overlap and balance checks, per-year coverage | **Partial**; real multi-layout and multi-year owner acceptance G3 |
+| Independent accountant-workbook **draft diagnostics**: formula graph, broken refs, cached formula values, missing investment/wealth tabs, read-only comparison with financial ledger | None end-to-end | **PLANNED**; [#30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30) |
+| Distinct draft, accountant-accepted, owner-approved and **officially acknowledged filed** income/wealth versions | Synthetic historical filing model and continuity preview | **Partial foundation**; real source versions + FBR acknowledgement G3/G4 |
+| Tax withholding line evidence: unclaimed vs verified adjustable vs final/duplicate vs unknown | Source-indexed synthetic candidate opportunities only | **PLANNED COMPLETE ENGINE**; [#5](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/5) |
+| Evidence-linked review inbox for transfers, uncertain credits, loans, investments, asset purchases and tax treatment | Synthetic classification/weak-overlap and reviewed financial link components | **Partial**; owner/accountant decision workflow not implemented |
+| Accountant question, requested evidence, owner answer, resolution and exportable review working pack | No secure end-to-end service; requirements existing in accountant workflow spec | **PLANNED**; [#30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30) |
+| Automatic cumulative income/expense/tax/wealth recomputation as irregular statements arrive | Synthetic totals and narrow demonstration salary component | **NOT verified as real tax or full wealth**; G4/G5 |
+| True personal CFO financial planning (cash reserves, loans, goals, investments, savings/spend anomalies) with evidence and coverage-aware advice | Synthetic hypothetical CFO engine and investment FIFO primitive | **Partial synthetic**; G5 owner UX |
+
+**Primary user value / definition of done:** Owner can securely upload statements, resolve a manageable evidence queue, see documented year-by-year financial and **legally validated** tax/wealth positions, and export an accountant-ready review package **without re-creating separate annual worksheets**. The accountant remains free to inspect/review and the owner approves filing. No guessed refunds, capital gains, net worth, source account ownership, expired deadlines or workbook-final statuses.
