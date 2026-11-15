@@ -36,6 +36,7 @@ from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput
     create_cash_holding, add_cash_movement, cash_view, reverse_cash_movement, cash_annual_bridge)
 from .wealth_position import observed_position, annual_position
 from .asset_book import AssetInput, record_asset, asset_position
+from .tax_rules import SalaryPreviewInput, salary_preview, tax_rule_registry, opportunity_rule_index
 from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
@@ -353,6 +354,14 @@ def create_app(database_url: str | None = None):
         fiscal_bounds(tax_year)
         return wealth_continuity(db, tax_year, _configured_vault())
 
+    @app.get("/api/tax/rules")
+    def tax_law_registry(_: Auth, tax_year: int = 2027):
+        return tax_rule_registry(tax_year)
+
+    @app.post("/api/tax/salary-slab-preview")
+    def reviewed_synthetic_salary_preview(payload: SalaryPreviewInput, _: Auth):
+        return salary_preview(payload)
+
     @app.get("/api/tax/opportunities")
     def tax_opportunity_candidates(_: Auth, db: DB, tax_year: int = 2027):
         """Evidence requests only; no legal eligibility or tax saving is asserted."""
@@ -363,20 +372,23 @@ def create_app(database_url: str | None = None):
             "zakat": ("zakat_treatment_review", "Zakat evidence and correct statutory tax-year treatment"),
             "business_expense": ("business_deduction_review", "Business-purpose support, allowable expense rules, legal entity"),
             "tax_paid": ("withholding_or_advance_tax_review", "Payment type, CPR/withholding certificate, final vs adjustable treatment"),
+            "investment_income": ("investment_regime_review", "Broker/security/tax certificate, gain versus return of capital, separate or final treatment"),
         }
         output = []
         for category, (type_name, required) in hints.items():
             matched = [t for t in rows if t.category == category and t.reviewed and
                        not t.excluded and (not t.overlap_possible or t.overlap_resolved)]
             if matched:
+                rule = opportunity_rule_index(category, tax_year)
                 output.append({"tax_year": tax_year, "opportunity_type": type_name,
                                "status": "EVIDENCE_REQUIRED", "evidence_needed": required,
                                "supporting_transaction_ids": [t.id for t in matched],
                                "candidate_recorded_amount": cash(sum(t.debit_minor + t.credit_minor for t in matched)),
                                "potential_tax_savings": None, "legal_eligibility_verified": False,
-                               "requires_review": True, "not_filing_advice": True})
+                               "requires_review": True, "not_filing_advice": True,
+                               **rule})
         return {"tax_year": tax_year, "opportunities": output,
-                "note": "Heuristic candidates only. No tax laws verified or tax benefit established."}
+                "note": "FBR section index attached; eligibility, caps, tax benefit and year-specific rules require independent evidence and review."}
 
     @app.get("/api/transactions")
     def list_transactions(_: Auth, db: DB, tax_year: int = 2027, limit: int = 200):
