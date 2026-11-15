@@ -9,6 +9,7 @@ from io import BytesIO, StringIO
 import csv
 import re
 from openpyxl import load_workbook
+from .document_preflight import PreflightError, preflight_tabular
 
 PARSER_VERSION = "normalized-1"
 MAX_BYTES = 4 * 1024 * 1024
@@ -55,6 +56,10 @@ def parse_money(raw: object, *, optional: bool = False) -> int | None:
 def rows_from_upload(content: bytes, extension: str):
     if not content or len(content) > MAX_BYTES:
         raise ImportErrorDetail("Empty file or file exceeds 4 MiB limit")
+    try:
+        preflight_tabular(content, extension)
+    except PreflightError as exc:
+        raise ImportErrorDetail(str(exc)) from None
     if extension == ".csv":
         try:
             decoded = content.decode("utf-8-sig")
