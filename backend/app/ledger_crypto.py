@@ -31,6 +31,7 @@ ENCRYPTED_COLUMNS = {
     "cash_movements": ("evidence_note",),
     "cash_movement_reversals": ("reason",),
     "asset_snapshots": ("payload_json",),
+    "private_financial_events": ("payload_json",),
 }
 
 

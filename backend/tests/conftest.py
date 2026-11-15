@@ -9,6 +9,8 @@ os.environ.setdefault("LEDGER_FIELD_KEYS_JSON", json.dumps({
     "synthetic_test": base64.urlsafe_b64encode(b"S" * 32).decode("ascii")
 }))
 os.environ.setdefault("LEDGER_FIELD_ACTIVE_KEY", "synthetic_test")
+# Public fixture HMAC (not a credential): intentionally different from AES + bank dedup.
+os.environ.setdefault("PRIVATE_EVENT_HMAC_KEY", base64.urlsafe_b64encode(b"P" * 32).decode("ascii"))
 os.environ.setdefault("LEDGER_DEDUP_HMAC_KEY", base64.urlsafe_b64encode(b"D" * 32).decode("ascii"))
 from app.main import create_app
 
