@@ -1,6 +1,6 @@
 # Pakistan Tax & Wealth Desk
 
-**Status (2026-11-15):** M1 synthetic local-import prototype implemented and merged; no production app, real statement processing, validated FBR calculations, or tax returns filed.
+**Status (2026-11-15):** M1/M2a/M2b/M2c synthetic-only development foundations implemented and merged; no production application, genuine bank/FBR document ingestion, verified FBR tax computation, or filing.
 
 A **private, single-owner-first** Pakistan tax preparation, lifetime transaction ledger and personal wealth intelligence application. **GitHub is the source of truth for code, requirements, decisions, test fixtures and engineering handoffs; never for real statements or confidential financial data.**
 
@@ -66,3 +66,10 @@ The owner intends to provide three to four years of **already-filed income tax r
 The application now contains **synthetic-only** TY2023+ income-return/wealth-statement record versions with encrypted test-evidence files (AES-256-GCM), idempotent ingest, immutable revision lineage, cross-year wealth continuity statuses, and read-only *evidence-required* tax optimization hints. API tests run locally: **18 passed**. Full details: [M2a implementation](docs/IMPLEMENTATION_M2_SYNTHETIC_FILINGS.md).
 
 This **does not** accept real FBR returns or calculate tax yet. The prototype still stores structured values in unencrypted local SQLite and uses localhost Basic auth. Real document handling requires verified secure private application access, MFA, PostgreSQL migrations, encrypted structured data, backup recovery and parser validation. Your previous filed returns are **not required for development now**; they will serve as historical evidence once the secured application importer exists. Public GitHub is allowed temporarily for synthetic source-only development.
+
+## Latest engineering progress — M2b/M2c (2026-11-15)
+
+- [M2b: encrypted synthetic records, Alembic/PostgreSQL 18, synthetic bank layouts and encrypted backup/restore](docs/IMPLEMENTATION_M2B.md) — PR [#7](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/7) merged, 27 CI tests and PostgreSQL migration passed.
+- [M2c: opt-in owner MFA session foundation](docs/IMPLEMENTATION_M2C.md) — PR [#8](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/8) merged, 31 CI tests and PostgreSQL migrations passed.
+- Synthetic-only security features include an RFC6238 TOTP gateway, scrypt-hashed credentials, server-side hashed sessions, strict secure cookies, CSRF checks and logout revocation. **They are not certified for production**; current app still rejects real-data mode, and much of the M1 financial ledger is unencrypted at rest.
+- Owner tax returns are NOT a development dependency. Continue the private-data encryption, key lifecycle, bank/FBR adapter validation, accounting and FBR rule engine with synthetic evidence. No genuine financial data or secrets may enter this temporarily public source repository.
