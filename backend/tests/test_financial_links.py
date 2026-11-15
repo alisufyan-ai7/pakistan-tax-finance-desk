@@ -179,3 +179,35 @@ def test_real_mode_disabled(client, monkeypatch, tmp_path):
     import pytest
     with pytest.raises(RuntimeError, match='Real-data mode'):
         create_app(f'sqlite:///{tmp_path / "still-disabled.db"}')
+
+
+def test_new_financial_field_key_rotation(client, tmp_path, monkeypatch):
+    """Key rotation includes encrypted loan labels and allocation evidence."""
+    import base64
+    import json
+    import os
+    from sqlalchemy import create_engine
+    from app.rotate_ledger_keys import rotate_fields
+    a = account_at(client, 'Rotation Synthetic Account')
+    tx = bank_tx(client, a, '2024-05-01', 'rotation loan advance', '70.00', 'credit',
+                 'ROTATE-LN', 'loan_received')
+    loan_id = loan(client)
+    assert allocate(client, loan_id, tx, 7000).status_code == 201
+    old_keys = json.loads(os.environ['LEDGER_FIELD_KEYS_JSON'])
+    old_keys['rotation_v2'] = base64.urlsafe_b64encode(b"R" * 32).decode()
+    monkeypatch.setenv('LEDGER_FIELD_KEYS_JSON', json.dumps(old_keys))
+    engine = create_engine(f'sqlite:///{tmp_path / "test.db"}')
+    try:
+        pending = rotate_fields(engine, new_key_id='rotation_v2', dry_run=True)
+        assert pending['loan_accounts.counterparty_label'] == 1
+        assert pending['loan_allocations.evidence_note'] == 1
+        applied = rotate_fields(engine, new_key_id='rotation_v2', dry_run=False)
+        assert applied['loan_accounts.opening_basis'] == 1
+    finally:
+        engine.dispose()
+    with sqlite3.connect(tmp_path / 'test.db') as db:
+        label = db.execute('SELECT counterparty_label FROM loan_accounts').fetchone()[0]
+        note = db.execute('SELECT evidence_note FROM loan_allocations').fetchone()[0]
+    assert label.startswith('TFLE1:rotation_v2:')
+    assert note.startswith('TFLE1:rotation_v2:')
+    assert client.get(f'/api/finance/loans/{loan_id}').status_code == 200
