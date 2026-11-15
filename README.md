@@ -1,6 +1,6 @@
 # Pakistan Tax & Wealth Desk
 
-**Status (2026-11-15):** M1/M2a/M2b/M2c synthetic-only development foundations implemented and merged; no production application, genuine bank/FBR document ingestion, verified FBR tax computation, or filing.
+**Status (2026-11-15):** M1 through M2d-1 synthetic-only foundations merged (39-test PostgreSQL CI); no production application, genuine bank/FBR document ingestion, verified FBR tax computation, or filing.
 
 A **private, single-owner-first** Pakistan tax preparation, lifetime transaction ledger and personal wealth intelligence application. **GitHub is the source of truth for code, requirements, decisions, test fixtures and engineering handoffs; never for real statements or confidential financial data.**
 
@@ -73,3 +73,9 @@ This **does not** accept real FBR returns or calculate tax yet. The prototype st
 - [M2c: opt-in owner MFA session foundation](docs/IMPLEMENTATION_M2C.md) — PR [#8](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/8) merged, 31 CI tests and PostgreSQL migrations passed.
 - Synthetic-only security features include an RFC6238 TOTP gateway, scrypt-hashed credentials, server-side hashed sessions, strict secure cookies, CSRF checks and logout revocation. **They are not certified for production**; current app still rejects real-data mode, and much of the M1 financial ledger is unencrypted at rest.
 - Owner tax returns are NOT a development dependency. Continue the private-data encryption, key lifecycle, bank/FBR adapter validation, accounting and FBR rule engine with synthetic evidence. No genuine financial data or secrets may enter this temporarily public source repository.
+
+## M2d-1 — Encrypted ledger text and rotation
+
+[Implementation guide](docs/IMPLEMENTATION_M2D_ENCRYPTED_LEDGER.md) · [Merged PR #9](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/9) · [39-test GitHub Actions run](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43709171698)
+
+Sensitive account labels, transaction descriptions/references/categories, and audit text are encrypted with randomized AES-GCM envelopes and externally configured versioned keys; read-only strict schema migration and offline rotation helper included. **Numeric amounts, balances, dates and stable metadata are still unencrypted; the application is synthetic-only and deliberately rejects real financial records.** Your historical returns are not needed for continued development.
