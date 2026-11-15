@@ -35,3 +35,9 @@ pytest unit/integration; parsing fixture regressions; Postgres migration tests; 
 ## Multiuser-ready without premature SaaS
 
 Keep `owner_id`/`tenant_id` concept at domain boundaries (safe key constraints, defense in depth), but serve one private owner in v1. If public productization happens, design an audited migration to strong per-tenant isolation, authorization and deletion workflows; do not expose a multi-tenant endpoint in personal v1.
+
+## Standing engineering continuation policy and spend-intelligence expansion (2026-11-16)
+
+All agents **MUST** follow [root AGENTS.md](../AGENTS.md) and [the GitHub continuity protocol](CHAT_CONTINUITY_PROTOCOL.md). New chats and long sessions begin with committed `main` and end with a complete GitHub handoff; all substantive owner decisions, research, validation and next priorities are recorded before ending. Do not rely on assistant chat memory. This is a permanent architectural and operating constraint.
+
+Extend the domain list with **Spend Intelligence / Recurring Obligations** and optional **Bills & Household AI**. These consume only reviewed, immutable, private source evidence and bank coverage spans; suggestions return confidence, traceable source IDs, missing periods, and nonbinding owner actions. Keep the extension inside the modular monolith with versioned rules: **no new background service, model dependency, SaaS/tenant billing feature or automatic bank action** until a concrete scaling or product need is proven. See [research](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md), [decisions](PROJECT_DECISIONS_AND_SCOPE.md), [Issue #25](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/25).

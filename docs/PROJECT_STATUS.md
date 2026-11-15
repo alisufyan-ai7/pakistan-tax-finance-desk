@@ -1,3 +1,5 @@
+> **Latest owner policy (2026-11-16):** Every project conversation must leave a self-contained, verified GitHub handoff; a successor chat must read current `main` and proceed without the owner re-explaining decisions. [Mandatory protocol](CHAT_CONTINUITY_PROTOCOL.md) · [Owner scope/decisions](PROJECT_DECISIONS_AND_SCOPE.md) · [Daily Mail article assessment](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md). This is a documentation/roadmap change **only**; it does not complete new spending/subscription functionality.
+
 # Project status — personal CFO and Pakistan Tax & Wealth Desk
 
 **Authoritative engineering checkpoint: 2026-11-16.** Read [AGENT_START_HERE](../AGENT_START_HERE.md), [current handoff](CURRENT_HANDOFF.md), [CFO platform architecture](CFO_PLATFORM_ARCHITECTURE.md), and [requirements coverage matrix](REQUIREMENTS_COVERAGE_MATRIX.md). This is the latest status index; historical handoff sections remain useful evidence but may describe superseded limitations.

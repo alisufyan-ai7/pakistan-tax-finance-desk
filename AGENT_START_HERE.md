@@ -1,3 +1,5 @@
+> **MANDATORY FOR ALL FUTURE CHATS AND AGENTS:** GitHub is this project's complete source of truth. **Before implementing**, read [root AGENTS.md](AGENTS.md), [the continuity protocol](docs/CHAT_CONTINUITY_PROTOCOL.md), [owner decisions and scope](docs/PROJECT_DECISIONS_AND_SCOPE.md), [latest project status](docs/PROJECT_STATUS.md), [CFO architecture](docs/CFO_PLATFORM_ARCHITECTURE.md), [requirements matrix](docs/REQUIREMENTS_COVERAGE_MATRIX.md) and the **latest** [CURRENT_HANDOFF](docs/CURRENT_HANDOFF.md); verify `main`, issues, PRs and CI. **Before ending/approaching chat context limit**, commit important discussions, requirements, owner decisions, project direction, validated work, P0 blockers and next steps to GitHub. Do not rely on prior chats for handoff. PUBLIC repository means only synthetic data; real-data mode stays disabled. Read [research on AI household budgeting](docs/RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md) when working on spend intelligence. This instruction is a standing project rule.
+
 # AGENT START HERE — 2026-11-15
 
 ## Single authoritative context
