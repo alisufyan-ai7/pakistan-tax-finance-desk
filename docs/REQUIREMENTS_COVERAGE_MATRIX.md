@@ -40,3 +40,16 @@ All domains must demonstrate provenance, reconciliation, unknown-vs-zero semanti
 
 - The **investments/crypto/gold/property** row remains **PARTIAL**, not complete. Added an independently tested synthetic FIFO cost-lot pure engine (opening 2023/prior inventory, buys/sells, fees, partial quantities and year-grouped realized accounting results), [PR #24](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/24), [144-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920). This does NOT import brokers/NCCPL or certify taxable gain; no account-bank-asset integration or complete wealth calculation yet.
 - The **privacy and real-data** row remains **BLOCKING** because older bank/loan/cash metadata remain plaintext; adding private event and cost-lot simulators has not closed that gate.
+
+## Added requirements from external budgeting research — 2026-11-16
+
+| New requested/derived capability | Status as of this update | Evidence and acceptance / next step |
+| --- | --- | --- |
+| Recurring bills and subscriptions with upcoming due estimates | **PLANNED, NOT IMPLEMENTED** | Build synthetic reviewed-merchant cadence model; annualize only observed periods; missing statement coverage must lower confidence or return unknown. [Issue #25](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/25). |
+| Duplicate services, rising merchant costs, and category leakage | **PLANNED** | Source-linked observations, account/legal-entity ownership, rule/version provenance, review of essentials vs discretionary. Savings are hypothesis only until verified. |
+| Household/utility/telecom invoice explainer | **PLANNED after document security** | Real private PDFs sandboxed; date/amount/fee/withholding parsed with confidence and linked to reviewed bank payments, never invent tax credit. |
+| Natural-language personal CFO household-spending questions | **PARTIAL FOUNDATION ONLY** | M2p synthetic planning/briefing exists; real source grounded queries/approval still not built. |
+| Optional shopping, meal plan and administrative assistance | **IDEA / OPTIONAL FUTURE** | Explicit opt-in, Pakistan price provenance and privacy controls, no harm to core CFO/tax scope. |
+| Cross-chat GitHub source-of-truth handoff | **DOCUMENTED STANDING RULE** | Root `AGENTS.md`, `docs/CHAT_CONTINUITY_PROTOCOL.md`, `docs/PROJECT_DECISIONS_AND_SCOPE.md` require agents to read current GitHub and commit all material decisions/CI/next tasks before ending or chat cap. |
+
+The newspaper [source assessment](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md) is an idea input, **not evidence of realized AI savings, local market demand or the completion of these features**. Core original requirements and P0 financial privacy remain higher priority.

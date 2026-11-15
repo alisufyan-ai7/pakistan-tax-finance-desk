@@ -1,3 +1,5 @@
+> **Project continuity rule:** GitHub `main` is the source of truth, including material owner discussions and the future direction. Every new chat/agent must begin with [AGENTS.md](AGENTS.md) and [docs/CHAT_CONTINUITY_PROTOCOL.md](docs/CHAT_CONTINUITY_PROTOCOL.md); every completed milestone must update [current status](docs/PROJECT_STATUS.md), [owner decisions](docs/PROJECT_DECISIONS_AND_SCOPE.md) when changed, [requirements coverage](docs/REQUIREMENTS_COVERAGE_MATRIX.md), and [handoff](docs/CURRENT_HANDOFF.md). This remains a **personal CFO first**, expandable later and synthetic-only while the repository is public.
+
 # Pakistan Tax & Wealth Desk
 
 **Status (2026-11-15):** M1 through M2d-1 synthetic-only foundations merged (39-test PostgreSQL CI); no production application, genuine bank/FBR document ingestion, verified FBR tax computation, or filing.

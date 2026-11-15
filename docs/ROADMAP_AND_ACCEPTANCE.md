@@ -215,3 +215,11 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Explicit separation of illustrated realized accounting gains from FBR-taxable gains, verified brokerage holdings, unrealized valuations and net worth. Tax due/savings remain `null`.
 - [x] [CI run 43757173920](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920) **144 tests passed** and ephemeral PostgreSQL18 Alembic schema PASS (no migration).
 - [ ] Real broker/NCCPL evidence adapters, purchase/transfer matching to bank/asset records, corporate actions/rights/splits and FX, live holdings/market data rights, legally verified applicable investment capital-gains treatment and FBR annual reconciliation.
+
+## Research-backed spending intelligence and continuity acceptance (2026-11-16)
+
+- [x] Read exact user-shared Daily Mail Australia article and document which practical budget use cases it reports versus unverified anecdotal earnings/market claims. [Research note](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md).
+- [x] Add future coverage-aware subscription/recurring-bill and household expense intelligence design, with provenance, uncertainty and human action controls. [Issue #25](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/25). **No code implementation or acceptance test yet.**
+- [x] Write **mandatory project-wide GitHub continuity rule** at root `AGENTS.md`, `docs/CHAT_CONTINUITY_PROTOCOL.md`, `docs/PROJECT_DECISIONS_AND_SCOPE.md`, and surface it in agent-start, status, handoff and README.
+- [ ] Implement deterministic synthetic recurring cost detection only with reviewed ledger inputs and explicit coverage-gap handling, after risk-relevant P0 security scheduling.
+- [ ] Actual Pakistani bank/FBR PDF integration, complete privacy and real finance ingestion, registered financial advice/tax/wealth legal controls, and genuine household bill extraction remain pending.
