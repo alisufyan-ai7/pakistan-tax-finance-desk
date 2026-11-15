@@ -106,3 +106,11 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] PR #7 hosted CI 27 passed + PostgreSQL migration PASS; PR #8 hosted CI 31 passed + PostgreSQL migration PASS.
 - [ ] MFA provisioning/recovery and rate limiting for multiworker deployment; production TLS/session audit; encrypted all-sensitive ledger values, key rotation, off-site backup/restore evidence, actual bank/FBR parsing; genuine documents remain **PROHIBITED** in synthetic app.
 - [ ] Deterministic verified FBR rules for TY2023 onward and legal tax optimization estimates; monetary tax due must remain `null` until review.
+
+## M2d-1 validation — 2026-11-15
+
+- [x] Key-ID-bound AES-GCM encryption of synthetic account names/institutions, transaction descriptions/references/categories, audit classifications/notes, with safe ORM treatment and crypto-aware overlap checks.
+- [x] Non-destructive schema upgrade `0003_ledger_text`; fail closed on legacy plaintext, no automatic backfill; offline synthetic-only atomic key rotation with dry-run.
+- [x] GitHub Actions run 43709171698: **39 tests passed**; PostgreSQL 18 upgrade and Alembic schema validation PASS.
+- [ ] Monetary fields, balances/dates, identifiers and keyed dedup indexes remain unencrypted; no genuine bank/FBR ingestion permitted.
+- [ ] Multiworker MFA hardening, private production deployment, key recovery/rotation operations, confidential off-site backups, bank/FBR PDFs and legally reviewed TY2023+ calculations remain pending.
