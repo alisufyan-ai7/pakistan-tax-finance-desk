@@ -238,3 +238,27 @@ class PrivateFinancialEvent(Base):
     source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(EncryptedText("private_financial_events.payload_json"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+class ConfidentialBankKeyState(Base):
+    """HMAC-key continuity + encrypted-key sentinel for the active synthetic source."""
+    __tablename__ = "confidential_bank_key_state"
+    id: Mapped[str] = mapped_column(String(8), primary_key=True)
+    verifier_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    sentinel: Mapped[str] = mapped_column(EncryptedText("confidential_bank_key_state.sentinel"), nullable=False)
+
+
+class ConfidentialBankBatch(Base):
+    """Active encrypted operational source; not an M1 transaction or tax projection.
+
+    Source identity, bank name, account, money, statement dates, raw row refs,
+    descriptions and checked balances all live INSIDE the authenticated payload.
+    No unsafe, plaintext foreign keys to the legacy finance graph.
+    """
+    __tablename__ = "confidential_bank_batches"
+    __table_args__ = (Index("uq_confidential_bank_source_hmac", "source_hmac", unique=True),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    account_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(EncryptedText("confidential_bank_batches.payload_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
