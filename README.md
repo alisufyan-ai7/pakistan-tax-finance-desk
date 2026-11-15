@@ -147,3 +147,9 @@ An explicit offline synthetic-only CLI now **backs up, independently restores, a
 [PR #24 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/24) · [144-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43757173920) · [implementation](docs/IMPLEMENTATION_M2Q_INVESTMENT_COST_LOTS.md).
 
 New synthetic FIFO cost-lot calculations can account for documented **opening investment holdings acquired before the first statement**, purchases, partial sales, fees and illustrative July–June realized arithmetic gain/loss, without automatically counting bank transfers or investment contributions as profit. They do not verify NCCPL/broker records, market values, applicable FBR capital-gains tax or suitability. Source financial information remains fictional, legacy monetary confidentiality is still incomplete and real-data mode remains disabled.
+
+## M2r — progress toward confidential real-data readiness (2026-11-16)
+
+[PR #27 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/27) · [153-test PostgreSQL schema CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43761634183) · [sealed archive guide](docs/IMPLEMENTATION_M2R_ENCRYPTED_ONLY_ARCHIVE.md) · [delivery gates](docs/DELIVERY_GATES_AND_RELEASE_READINESS.md).
+
+Offline *synthetic-only* encrypted archival export can now preserve all recognized SQL tables/rows without exposing old bank/loan/cash amounts/dates/linkages in the archive. Source remains intact, including original PLAINTEXT columns; **this is not an operational encrypted PostgreSQL database or authorized real-data intake**. G1 active confidentiality, G2 private MFA/deployment and G3 genuine bank/IRIS parsing are next. No fabricated launch date based on initial development hours; release readiness is evidenced through G0–G5 acceptance.

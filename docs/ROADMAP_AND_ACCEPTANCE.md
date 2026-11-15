@@ -223,3 +223,11 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Write **mandatory project-wide GitHub continuity rule** at root `AGENTS.md`, `docs/CHAT_CONTINUITY_PROTOCOL.md`, `docs/PROJECT_DECISIONS_AND_SCOPE.md`, and surface it in agent-start, status, handoff and README.
 - [ ] Implement deterministic synthetic recurring cost detection only with reviewed ledger inputs and explicit coverage-gap handling, after risk-relevant P0 security scheduling.
 - [ ] Actual Pakistani bank/FBR PDF integration, complete privacy and real finance ingestion, registered financial advice/tax/wealth legal controls, and genuine household bill extraction remain pending.
+
+## M2r — full-table encrypted-only synthetic archive (2026-11-16)
+
+- [x] Explicit offline synthetic SQLite source export, independent encrypted backup and restore, full recognized SQL table/row inventory and source HMAC parity, bounded values and row counts, no source modifications.
+- [x] Sealed-only database with no old plaintext account/loan/cash/FBR amount/date/linkage fields and just two archive tables, authenticated AES-GCM row/manifest encryption plus blind HMAC row IDs.
+- [x] In-memory recovery/FK verification and reject unknown source table, tampering, missing row, reused or invalid key, real mode, output overwrite, injected failure; 0600 archive + receipt, redacted audit.
+- [x] Exact-head GitHub [CI 43761634183](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43761634183) **153 tests passed**, PostgreSQL18 Alembic check PASS (NO PostgreSQL data-copy test).
+- [ ] **Production blocking**: active legacy DB still plaintext; no authoritative encrypted read/write model, private web access/MFA/recovery, encrypted source PDF vault, actual bank and IRIS adapters, or complete mixed-income tax. Refer to [release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md).

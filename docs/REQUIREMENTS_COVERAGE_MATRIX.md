@@ -53,3 +53,10 @@ All domains must demonstrate provenance, reconciliation, unknown-vs-zero semanti
 | Cross-chat GitHub source-of-truth handoff | **DOCUMENTED STANDING RULE** | Root `AGENTS.md`, `docs/CHAT_CONTINUITY_PROTOCOL.md`, `docs/PROJECT_DECISIONS_AND_SCOPE.md` require agents to read current GitHub and commit all material decisions/CI/next tasks before ending or chat cap. |
 
 The newspaper [source assessment](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md) is an idea input, **not evidence of realized AI savings, local market demand or the completion of these features**. Core original requirements and P0 financial privacy remain higher priority.
+
+## M2r and release-readiness coverage — 2026-11-16
+
+- **Privacy:** PARTIAL (not done). M2r sealed-only archive contains no raw financial amount/date/linkage SQL fields, backed by independent encrypted source recovery, [PR #27](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/27) and [153-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43761634183). Active legacy source and candidate **still plaintext**; no real upload authority. Gate G1 still BLOCKED.
+- **Private deployment:** BLOCKED. Current local-only host/client restrictions are intentional; a remote proxy deployment would fail or require a reviewed authorization design, not a trivial port change. Gate G2 [Issue #28](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/28).
+- **Genuine bank/IRIS parsing:** BLOCKED. Synthetic fixed PDFs only; no authenticated real source layout certified. Gate G3 [Issue #29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29).
+- **Owner completion outlook:** tracked by [G0–G6 objectively tested release criteria](DELIVERY_GATES_AND_RELEASE_READINESS.md), not synthetic test-count-based percentage or ungrounded promised date. Personal CFO/wealth/tax MVP requires verified G1–G5.
