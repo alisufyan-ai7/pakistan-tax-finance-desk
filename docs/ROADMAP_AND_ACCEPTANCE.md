@@ -132,3 +132,12 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] GitHub Actions [run 43712136211](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43712136211): **55 pytest passed** and ephemeral PostgreSQL 18 Alembic `0004` + schema check PASS.
 - [ ] Corrections/reversal/relinking workflow with permanent audit, full loan amortization evidence and bank-supplied contractual documents.
 - [ ] Cash-in-hand and wealth provenance; confidentiality of amounts/dates/IDs; real secure document import, MFA recovery/production hosting, actual bank/FBR formats and audited TY2023+ tax rules.
+
+## M2f validation — 2026-11-15
+
+- [x] Authenticated, evidence-reasoned loan-allocation and own-transfer reversals leave originals and encrypted append-only correction records intact.
+- [x] Partial DB unique indexes enforce one *active* assignment per source transaction, including after corrected relinking; audited inactive records remain.
+- [x] Reversing an advance fails if historical principal would go negative, until dependent repayments are reversed; replayed reversals are idempotent.
+- [x] Source classification locks follow active links only; actual tax due and filing readiness remain unverified.
+- [x] Exact GitHub Actions [run 43713209678](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43713209678): **61 pytest passed** and PostgreSQL 18 migration `0005` / Alembic schema PASS.
+- [ ] End-to-end secure real financial data acceptance, private deploy and genuine evidence processing, protected amounts/date/IDs, verified FBR tax-year rules, commercial adviser licensing as needed.

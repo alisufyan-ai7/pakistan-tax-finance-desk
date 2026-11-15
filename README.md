@@ -88,4 +88,10 @@ Read-only [movement review endpoint](docs/IMPLEMENTATION_M2D2_MOVEMENTS.md) iden
 
 [Implementation documentation](docs/IMPLEMENTATION_M2E_LOANS_TRANSFERS.md) · [Merged PR #11](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/11) · [55-test successful CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43712136211)
 
-The synthetic-only backend now records loan obligations/receivables with explicitly stated opening balances, individual bank allocations of principal and markup, and owner-confirmed own-account transfer pairs. It never assumes loan disbursements are taxable income, treats markup as automatically deductible, or presents owner confirmation as independent evidence. No tax figures are certified. Loan/transfer records are append-only and lack a correction interface, so this remains a prototype. Real financial-record ingestion is **disabled** pending complete privacy/security and document-adapter acceptance.
+The synthetic-only backend now records loan obligations/receivables with explicitly stated opening balances, individual bank allocations of principal and markup, and owner-confirmed own-account transfer pairs. It never assumes loan disbursements are taxable income, treats markup as automatically deductible, or presents owner confirmation as independent evidence. No tax figures are certified. Loan/transfer links can now be corrected with a separate append-only encrypted audit; this remains a prototype. Real financial-record ingestion is **disabled** pending complete privacy/security and document-adapter acceptance.
+
+## M2f — Audited corrections to financial links (2026-11-15)
+
+[Implementation guide](docs/IMPLEMENTATION_M2F_REVERSALS.md) · [Merged PR #12](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/12) · [61-test GitHub Actions](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43713209678).
+
+Incorrect synthetic loan allocations and owner-account transfer confirmations can now be reversed with a documented reason and immutable audit history; active-only uniqueness allows corrected relinking. The original financial documents/transactions are never silently deleted. All such records remain **synthetic only**; there is no certified tax savings, tax computation or secure real-user upload workflow.

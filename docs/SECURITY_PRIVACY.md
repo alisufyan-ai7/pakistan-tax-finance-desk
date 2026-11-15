@@ -43,3 +43,7 @@ Owner may provide 3–4 years' filed returns separately as conversational inputs
 ## M2e data classification (2026-11-15)
 
 Loan counterparty labels, opening-balance basis text and allocation/transfer evidence notes are encrypted using existing versioned AES-GCM keys; the synthetic key-rotation utility now traverses these tables. **Loan amounts, markup, dates, transaction IDs, account linkage, file hashes and other metadata remain plaintext** in the current prototype. Agreement existence/identity and FBR tax treatment are not independently verified. No actual taxpayer, lender, bank, or personal financial information is permitted in temporarily public GitHub, CI or the synthetic-only app. The real-mode startup prohibition remains active. Audited corrections and private secured storage are mandatory before onboarding real records.
+
+## M2f audited reversal data (2026-11-15)
+
+Each synthetic loan-allocation reversal or transfer revocation has an encrypted reason in a dedicated append-only audit row, with a separate active flag controlling derived principal and transfer linkage. The app does not delete original bank transactions or original confirmation records. This is still **not a tamper-proof external audit journal**, and bank amounts, dates, identity/linkage and metadata remain plaintext pending broader redesign. No real financial-data intake or production deployment authorized; `APP_DATA_MODE=real` remains blocked. GitHub remains temporarily public for synthetic engineering only.
