@@ -18,6 +18,7 @@ from sqlalchemy import and_, select, func
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
+from .ledger_crypto import assert_encrypted_ledger, LedgerKeyError
 from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
@@ -68,8 +69,13 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0002_owner_mfa":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0003_ledger_text":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
+    try:
+        assert_encrypted_ledger(engine)
+    except LedgerKeyError as exc:
+        engine.dispose()
+        raise RuntimeError("Ledger field encryption unavailable or unsealed synthetic records detected") from exc
     sessions = session_factory(engine)
 
     def _local_only(request: Request):
@@ -214,7 +220,7 @@ def create_app(database_url: str | None = None):
 
     @app.get("/api/accounts")
     def list_accounts(_: Auth, db: DB):
-        return [{"id": a.id, "name": a.name, "institution": a.institution, "currency": a.currency} for a in db.scalars(select(Account).order_by(Account.name)).all()]
+        return [{"id": a.id, "name": a.name, "institution": a.institution, "currency": a.currency} for a in sorted(db.scalars(select(Account)).all(), key=lambda a: a.name.casefold())]
 
     @app.post("/api/statements", status_code=201)
     async def import_statement(_: Auth, db: DB, account_id: Annotated[str, Form()], file: Annotated[UploadFile, File()],
@@ -262,9 +268,12 @@ def create_app(database_url: str | None = None):
             weak = row.balance_minor is None and not row.reference
             possible = False
             if weak:
-                possible = db.scalar(select(Transaction.id).where(and_(Transaction.account_id == account_id, Transaction.document_id != doc.id,
+                # Random-nonce encrypted descriptions cannot use SQL equality.
+                candidates = db.scalars(select(Transaction).where(and_(
+                    Transaction.account_id == account_id, Transaction.document_id != doc.id,
                     Transaction.posted_on == row.posted_on, Transaction.debit_minor == row.debit_minor,
-                    Transaction.credit_minor == row.credit_minor, Transaction.description == row.description)).limit(1)) is not None
+                    Transaction.credit_minor == row.credit_minor))).all()
+                possible = any(item.description == row.description for item in candidates)
             overlap += int(possible)
             db.add(Transaction(id=str(uuid.uuid4()), account_id=account_id, document_id=doc.id,
                 row_number=row.row_number, fingerprint=fp, posted_on=row.posted_on, description=row.description,
