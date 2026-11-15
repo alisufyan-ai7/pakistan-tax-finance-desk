@@ -2,6 +2,9 @@
 
 **Stage:** planning, 2026-11-15. **Priority:** usable personal tool; productization deferred.
 
+**Product Plan v2 (2026-11-16):** The [accountant-ready Personal CFO product plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md) is the primary current user-journey and feature-priority contract. This historical PRD remains applicable where not superseded: bank-statement-led daily workflow, evidence-backed financial summaries, FBR calculations, investments, loans, cash, wealth and personal financial advice. All real-source workflows remain gated on G1–G3.
+
+
 ## User and goals
 
 One owner who has salary, business, investment and other receipts in Pakistan; many bank accounts, potentially multiple currencies; has investment history since 2023 or 2024; wants low-effort uploading, continuous financial awareness, accurate FBR tax preparation and useful financial advice.
@@ -46,3 +49,14 @@ Public signup, payments, bank credential scraping, unsupported IRS/FBR auto-subm
 - Proactive personalized **lawful tax minimization** guidance: show potentially available credits, exemptions, deductions, withholding offsets, proper income characterization and tax-year filing scenarios with statutory references, eligibility conditions, required evidence, confidence, limitations and estimated savings only when supportable. No concealment or fabrication. Tax AI explanation cannot replace legally verified calculations or expert review.
 - Import three to four previous **filed FBR income tax returns and associated wealth statements** as confidential primary evidence for baseline opening/closing wealth, previously declared income and liabilities, paid taxes, carried values and cross-year audit; show filed-vs-observed-vs-estimated differences. Never auto-revise a return.
 - GitHub code repo temporarily PUBLIC by owner instruction for development; remains source-code/docs/synthetic-only with no private finance documents. Real records remain behind secure private application upload, still unimplemented.
+
+## Revised owner MVP acceptance — continuous financial records and accountant support
+
+- One-time historical onboarding from 2023 onward, then irregular multi-bank PDF/CSV/XLSX batches; no routine manual bookkeeping, no dependence on accountant finishing a worksheet.
+- Source document authenticity/signature, encrypted originals, overlapping file and per-account-period coverage, bank balance parity, transfer/loan/investment exclusions, audit-linked review cases. Failure or missing evidence is visible, not silently replaced by zero.
+- **Accountant Workspace** added to information architecture: read-only, versioned draft workbook diagnostics, original formula/source-cell evidence, tax withholding status checks, source-backed requests, accountant-ready review/export pack. Filed status separately established by official FBR acknowledgement; do not modify accountant originals or file automatically.
+- Explainable owner questions on unknown deposits, transactions, asset purchases, loan relationships, transfers, cash and tax treatments; classify evidence certainty and make external accountant access invitation-based only in a later authorized version.
+- Lawful tax optimization and tax year/FBR wealth history keep their existing higher accuracy bar; each suggestion shows statute/year/evidence/uncertainty, with `null` for tax due/savings not yet supported.
+- A usable owner journey includes upload → automatic reconciliation → review a small set of exceptions → see trustworthy YTD/projected tax/wealth status → export accountant-ready package; tracked in [formal v2 plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md), [release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md) and [coverage matrix](REQUIREMENTS_COVERAGE_MATRIX.md).
+
+**Implementation state:** These are planned end-to-end features. Synthetic primitives exist but the confidential active ledger, real source import, private runtime, complete mixed-income tax and accountant-ready exports are NOT done. Never upload authentic personal files to this prototype.

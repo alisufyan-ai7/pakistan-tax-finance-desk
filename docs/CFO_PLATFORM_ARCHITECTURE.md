@@ -4,6 +4,10 @@
 
 ## Desired experience
 
+> **2026-11-16 architecture refinement:** Product-level priorities and source-to-accountant journeys are codified in [the accountant-ready Personal CFO v2 plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md). A strong **evidence/reconciliation/review spine** must precede any trustworthy tax or financial advice. This remains one modular private owner backend; no new microservices or accountant multiuser authentication is required for the owner MVP.
+
+
+
 **Owner's default workflow:** provide a one-time profile, upload multiple years of historical evidence (2023/2024 onward) and then upload bank statements occasionally or in bulk. Each accepted new statement is deduplicated, linked to prior periods and recalculates a historical ledger; genuine evidence gaps prompt rare targeted questions. The advisor may recommend what to *review or consider*, but NEVER assumes cash withdrawals are expenses, transfers are income, loans are earnings, or a donation is legally deductible without evidence. The system shows both *observed* and *unknown*, not invented tax or net worth.
 
 The owner may elect to use it for personal income/expense/net worth, freelance/sole-proprietor cash flow, investments, debts, insurance, donations, taxes and wealth statements. Later: budget/goal planning, reminders, risk/liquidity and portfolio health, evidence-backed legal tax planning, retirement, estate/document readiness, business dashboards, household shared views and independent accounting/adviser access. No automatic trades, transfers, tax filing or paid market-feed usage without separately approved integration, rights and user permissions.
@@ -66,3 +70,16 @@ Within the existing modular monolith, add a **Spend Intelligence / Recurring Obl
 Add later optional **Bills & Household Productivity** domain: invoice/utility/telecom explanation, cost-aware shopping/meal lists, everyday admin with explicit preferences and local verified prices. Do not infer personal health details, use foreign-Australian prices as Pakistani market facts or prioritize this over security and real-bank/FBR integration. All advice runs through suitability/evidence/human-approval controls. [Issue #25](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/25) tracks the first spend-intelligence engineering slice.
 
 This scope is also committed as an owner direction in [PROJECT_DECISIONS_AND_SCOPE.md](PROJECT_DECISIONS_AND_SCOPE.md) and governed across new chats by [CHAT_CONTINUITY_PROTOCOL.md](CHAT_CONTINUITY_PROTOCOL.md).
+
+## V2 architecture refinement: evidence-to-accountant traceability (2026-11-16)
+
+**Canonical processing direction:** `Private upload -> content-signature check -> immutable encrypted source & provenance -> isolated parser + version -> observed bank/FBR/workbook facts -> source-period and running-balance verification -> reviewed economic event + ownership -> deterministic cash/asset/liability projections -> tax rule version + evidence -> exception review -> owner dashboard and accountant-ready export`. Unknown facts never silently become verified.
+
+**Add two bounded domains without new deployable services:**
+
+1. **Workbook Diagnostics & Accountant Review:** secure read-only workbook original/version, worksheet+cell/formula/cached-value provenance, dependency/errors/missing tabs, comparison to independent ledger and withholding lines; exception statuses, owner answers, resolution and report export. A workbook **DRAFT** never writes into filed FBR originals. Unsafe macros/external formulas must not be executed; conversion belongs in a bounded worker. Direct accountant access is **optional** later, not necessary to download a reviewed pack.
+2. **Evidence-linked Reconciliation & Annual Readiness:** register account×date coverage and opening/closing balance proofs, source tax-year/entity/currency, match reviewed transfers and loans, tie cash/property/investment acquisition and withholding evidence, compare prior filed wealth vs draft next opening, retain reversible classification and source timestamps, and display what was actually observed. No unsupported credit, refund, investment gain or accountant filing conclusion.
+
+**Contract boundaries:** encrypted canonical event plus purpose-specific blind indexes (G1); parser result never equates to reviewed tax treatment; tax engine deterministic and effective-year verified (G4), not AI-generated; assistant can suggest questions and planning opportunities but must show source/rule/uncertainty; an accountant work package contains a *source-bounded snapshot* and signed-off versions, not raw underlying credentials. Maintain individual/company legal-person isolation at storage, projections and exports.
+
+**Security deployment order unchanged:** G1 operational finance confidentiality and independently restored encrypted backups, then G2 owner MFA/private hosting and G3 isolated authentic source adapters before any real owner files. Historical financial documents are not a dependency for synthetic implementation. See [release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md) and [v2 acceptance tests](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md#6-acceptance-and-adversarial-scenarios-synthetic-only-during-development).
