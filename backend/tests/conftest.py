@@ -1,6 +1,14 @@
 import os
+import base64
+import json
 import pytest
 from fastapi.testclient import TestClient
+# Public synthetic fixture key; test code only, never use in actual application.
+# Set BEFORE importing main, which instantiates a local demonstration app.
+os.environ.setdefault("LEDGER_FIELD_KEYS_JSON", json.dumps({
+    "synthetic_test": base64.urlsafe_b64encode(b"S" * 32).decode("ascii")
+}))
+os.environ.setdefault("LEDGER_FIELD_ACTIVE_KEY", "synthetic_test")
 from app.main import create_app
 
 @pytest.fixture
