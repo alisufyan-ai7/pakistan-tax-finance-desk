@@ -95,3 +95,9 @@ The synthetic-only backend now records loan obligations/receivables with explici
 [Implementation guide](docs/IMPLEMENTATION_M2F_REVERSALS.md) · [Merged PR #12](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/12) · [61-test GitHub Actions](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43713209678).
 
 Incorrect synthetic loan allocations and owner-account transfer confirmations can now be reversed with a documented reason and immutable audit history; active-only uniqueness allows corrected relinking. The original financial documents/transactions are never silently deleted. All such records remain **synthetic only**; there is no certified tax savings, tax computation or secure real-user upload workflow.
+
+## M2g — Historical cash-in-hand records (2026-11-15)
+
+[Documentation](docs/IMPLEMENTATION_M2G_CASH_WEALTH.md) · [Merged PR #13](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/13) · [68-test hosted CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43714829408).
+
+The synthetic app now maintains owner-declared dated cash openings, reviewed bank withdrawal/deposit allocations, unverified manual cash spending/receipts, audited corrections and a July–June cash wealth movement bridge. It returns **null rather than zero** when historical opening evidence is missing. This is **not** complete net worth, a verified FBR wealth statement, a tax deduction, or an invitation to upload actual private documents.

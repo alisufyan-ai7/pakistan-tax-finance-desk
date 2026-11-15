@@ -141,3 +141,14 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Source classification locks follow active links only; actual tax due and filing readiness remain unverified.
 - [x] Exact GitHub Actions [run 43713209678](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43713209678): **61 pytest passed** and PostgreSQL 18 migration `0005` / Alembic schema PASS.
 - [ ] End-to-end secure real financial data acceptance, private deploy and genuine evidence processing, protected amounts/date/IDs, verified FBR tax-year rules, commercial adviser licensing as needed.
+
+## M2g acceptance — 2026-11-15
+
+- [x] Dated PKR cash-in-hand holding opening with positive or explicitly zero source/evidence, encrypted label and notes.
+- [x] Reviewed `atm_cash` withdrawal → cash increase, reviewed `cash_deposit` → cash decrease, separate unverified manual receipt/spend; exact bank source owner/date/amount checks.
+- [x] Reject bank source duplicate active assignment across cash, loans and own-account transfers; lock source categorization until reasoned correction and allow corrected reassignment.
+- [x] End-of-day cash balance schedule rejects negative/backdated inconsistencies; preserved historical reversal audit and replay idempotency.
+- [x] Historical FY cash opening and closing, clear missing-vs-zero semantics; no tax benefit and no FBR wealth validation claimed.
+- [x] Hosted [CI 43714829408](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43714829408): **68 tests pass**, PostgreSQL18 `0006_cash_wealth` migration/check PASS.
+- [ ] Complete wealth: property, gold, investments, bank closing coverage, loan receivable/liability, cash missing records, ownership/evidence and signed filing versions.
+- [ ] Real files blocked by residual unencrypted financial amounts/dates/metadata, unsupported bank/FBR PDFs, production MFA/backup/security and audited statutory tax rules.

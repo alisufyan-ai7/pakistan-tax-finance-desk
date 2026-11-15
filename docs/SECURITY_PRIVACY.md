@@ -47,3 +47,7 @@ Loan counterparty labels, opening-balance basis text and allocation/transfer evi
 ## M2f audited reversal data (2026-11-15)
 
 Each synthetic loan-allocation reversal or transfer revocation has an encrypted reason in a dedicated append-only audit row, with a separate active flag controlling derived principal and transfer linkage. The app does not delete original bank transactions or original confirmation records. This is still **not a tamper-proof external audit journal**, and bank amounts, dates, identity/linkage and metadata remain plaintext pending broader redesign. No real financial-data intake or production deployment authorized; `APP_DATA_MODE=real` remains blocked. GitHub remains temporarily public for synthetic engineering only.
+
+## M2g synthetic cash privacy boundary (2026-11-15)
+
+Cash holding labels, opening basis, cash movement evidence notes and append-only reversal reasons are encrypted with the existing AES-GCM key-ID envelope; source notes never enter GitHub. **Cash amounts, event dates, transaction IDs, and bank account linkages remain plaintext in the development database**. All cash figures are owner assertions or reviewed synthetic source relationships. No verified bank/FBR import, tax treatment or public-service access exists. `APP_DATA_MODE=real` remains fail-closed. Never upload personal cash ledgers, bank statements or previous returns to public GitHub/CI.
