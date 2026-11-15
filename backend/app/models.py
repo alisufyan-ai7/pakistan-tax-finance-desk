@@ -23,6 +23,7 @@ class Document(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), nullable=False, index=True)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    digest_scheme: Mapped[str] = mapped_column(String(24), nullable=False, default='hmac_sha256_v1', server_default='legacy_sha256')
     file_format: Mapped[str] = mapped_column(String(8), nullable=False)
     parser_version: Mapped[str] = mapped_column(String(24), nullable=False)
     period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
