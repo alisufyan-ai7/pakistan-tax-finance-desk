@@ -97,4 +97,56 @@ jobs:
                                                          'SYNTHETIC-POSTGRES-ACCOUNT-1','synthetic only'))
           print('POSTGRES_18_SYNTHETIC_SCHEMA=PASS')
           print('POSTGRES_18_CONFIDENTIAL_BANK_OPERATIONAL=PASS')
+          # G1-b: a separate empty schema, sealed PostgreSQL DATA backup,
+          # injected transactional rollback and independent verified recovery.
+          import tempfile,sys,subprocess
+          import psycopg
+          from pathlib import Path
+          from app.pg_recovery import create_pg_snapshot,restore_pg_snapshot,PgRecoveryBlocked
+          source_dsn=os.environ['DATABASE_URL'].replace('postgresql+psycopg://','postgresql://')
+          prefix=source_dsn.rsplit('/',1)[0]
+          algebra_prefix=os.environ['DATABASE_URL'].rsplit('/',1)[0]
+          os.environ['PG_SNAPSHOT_SOURCE_DSN']=source_dsn
+          os.environ['PG_SNAPSHOT_KEY']=base64.urlsafe_b64encode(b'R'*32).decode()
+          target_names=('synthetic_restore_rollback','synthetic_restore_verified')
+          with psycopg.connect(source_dsn,autocommit=True) as admin:
+              for name in target_names:
+                  admin.execute('CREATE DATABASE ' + name)  # fixed fictional CI names
+          for name in target_names:
+              subprocess.run([sys.executable,'-m','alembic','-x',f'db_url={algebra_prefix}/{name}',
+                              'upgrade','head'],check=True)
+          with tempfile.TemporaryDirectory(prefix='synthetic-pg-backup-') as work:
+              path=Path(work)/'sealed-postgres.tfpg'
+              result=create_pg_snapshot(path)
+              assert result['encrypted'] and result['verified_read_snapshot']
+              assert path.stat().st_mode & 0o777 == 0o600
+              assert b'SYNTHETIC-POSTGRES-ACCOUNT-1' not in path.read_bytes()
+              os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_rollback'
+              try:
+                  restore_pg_snapshot(path,inject_failure_after_tables=1)
+                  raise AssertionError('Injected restore failure did not abort')
+              except PgRecoveryBlocked as err:
+                  assert 'Injected' in str(err)
+              with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
+                  assert chk.execute('SELECT COUNT(*) FROM confidential_bank_batches').fetchone()[0]==0
+              os.environ['PG_SNAPSHOT_KEY']=base64.urlsafe_b64encode(b'X'*32).decode()
+              try:
+                  restore_pg_snapshot(path)
+                  raise AssertionError('Wrong backup key was accepted')
+              except PgRecoveryBlocked as err:
+                  assert 'authentication' in str(err)
+              os.environ['PG_SNAPSHOT_KEY']=base64.urlsafe_b64encode(b'R'*32).decode()
+              os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_verified'
+              recovered=restore_pg_snapshot(path)
+              assert recovered['full_row_parity_verified'] and recovered['independent_target']
+              with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
+                  assert chk.execute('SELECT COUNT(*) FROM confidential_bank_batches').fetchone()[0]==1
+                  assert chk.execute('SELECT payload_json FROM confidential_bank_batches').fetchone()[0].startswith('TFLE1:')
+              try:
+                  restore_pg_snapshot(path)
+                  raise AssertionError('Second restore improperly overwrote existing records')
+              except PgRecoveryBlocked as err:
+                  assert 'existing data' in str(err)
+          print('POSTGRES_18_ENCRYPTED_DATA_RESTORE_PARITY=PASS')
+
           PY
