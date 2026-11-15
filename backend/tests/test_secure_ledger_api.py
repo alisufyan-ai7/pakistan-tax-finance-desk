@@ -40,8 +40,8 @@ def test_old_unsealed_ledger_fails_before_serving(tmp_path,monkeypatch):
     e=create_engine(f'sqlite:///{path}')
     Base.metadata.create_all(e)
     with e.begin() as con:
-        con.exec_driver_sql("INSERT INTO accounts(id,name,institution,currency,legal_owner) VALUES (?,?,?,?,?)",
-                            ('synthetic','LEGACY_PLAINTEXT','bank','PKR','individual'))
+        con.exec_driver_sql("INSERT INTO accounts(id,name,institution,currency,legal_owner,created_at) VALUES (?,?,?,?,?,?)",
+                            ('synthetic','LEGACY_PLAINTEXT','bank','PKR','individual','2026-11-15 00:00:00'))
     e.dispose()
     monkeypatch.setenv('OWNER_PASSWORD','synthetic-owner-password-long')
     try:
