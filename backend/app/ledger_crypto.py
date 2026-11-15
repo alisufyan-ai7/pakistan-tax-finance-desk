@@ -22,6 +22,9 @@ ENCRYPTED_COLUMNS = {
     "accounts": ("name", "institution"),
     "transactions": ("description", "reference", "category"),
     "audit_events": ("old_category", "new_category", "note"),
+    "loan_accounts": ("counterparty_label", "opening_basis"),
+    "loan_allocations": ("evidence_note",),
+    "transfer_confirmations": ("evidence_note",),
 }
 
 
