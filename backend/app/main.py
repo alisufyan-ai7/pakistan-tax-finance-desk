@@ -32,7 +32,7 @@ from .financial_links import (
     ReversalInput, reverse_loan_allocation, reverse_transfer, link_audit,
 )
 
-CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "refund", "own_transfer"}
+CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "loan_installment_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
 CATEGORIES = {"unreviewed"} | CREDIT | DEBIT
 security = HTTPBasic(auto_error=False)
