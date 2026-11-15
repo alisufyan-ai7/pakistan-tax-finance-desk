@@ -172,3 +172,11 @@ User will provide prior filed returns in the future; there is **no development d
 - [ ] Secure actual documents through sandboxed real bank and FBR IRIS layouts with proven provenance, malware controls, MFA/private hosting and encrypted offsite restore.
 - [ ] Complete holdings lot/basis/valuation source links and 2023–2027 historic income-tax engine for mixed income plus legit reductions, eligibility and proper withholding treatment, independently reviewed.
 - [ ] Real filing-ready FBR return + wealth reconciliation and export, human approval; no real data acceptance or automatic filing until complete.
+
+## M2m synthetic confidential journal acceptance — 2026-11-16
+
+- [x] Fully authenticated-encrypted payload for new synthetic event amount/date/source/account/kind/counterparty/notes, and independent owner/year/source blind indexes only.
+- [x] Strict synthetic input, owner-PKR scope, July–June TY boundary, source replay vs conflict, identical values/different source IDs distinction, key absence refusal.
+- [x] Alembic `0009_private_events`, [GitHub CI 43750827782](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43750827782) **116 tests PASS, PostgreSQL 18 schema PASS**.
+- [ ] Legacy financial numeric/date/metadata migration/reconciliation into protected store, including source fingerprint/index key rotation and no-double-count controls: NOT COMPLETE.
+- [ ] Private production MFA/key management, real-doc parser sandbox, secure offsite restore and verified FBR tax engine: NOT COMPLETE. `APP_DATA_MODE=real` must stay disabled.
