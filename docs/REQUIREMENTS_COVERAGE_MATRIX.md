@@ -60,3 +60,16 @@ The newspaper [source assessment](RESEARCH_AI_HOUSEHOLD_BUDGETING_2026-11-16.md)
 - **Private deployment:** BLOCKED. Current local-only host/client restrictions are intentional; a remote proxy deployment would fail or require a reviewed authorization design, not a trivial port change. Gate G2 [Issue #28](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/28).
 - **Genuine bank/IRIS parsing:** BLOCKED. Synthetic fixed PDFs only; no authenticated real source layout certified. Gate G3 [Issue #29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29).
 - **Owner completion outlook:** tracked by [G0–G6 objectively tested release criteria](DELIVERY_GATES_AND_RELEASE_READINESS.md), not synthetic test-count-based percentage or ungrounded promised date. Personal CFO/wealth/tax MVP requires verified G1–G5.
+
+## Added: draft-accountant and private source-review requirements (2026-11-16)
+
+| Requirement | Status | Implementation acceptance |
+| --- | --- | --- |
+| Private bank PDF unlock with ephemeral per-document passwords | **BLOCKED (G1–G3)** | No saved/logged password; never ask for login/PIN/OTP; synthetic encrypted-PDF tests, sandboxed conversion, encrypted originals |
+| Multi-bank statement format detection, coverage and running balance | **PARTIAL synthetic / REAL BLOCKED** | Versioned adapters, XLS-vs-error-stub validation, account×period holes, page carry-forward, matched transfer sources and no duplicate import |
+| Accountant working paper **DRAFT/REVIEWED/APPROVED**, separate from IRIS **FILED** | **PLANNED** | Workbook sheet/formula dependencies and sources, field confirmation, imported versions, final FBR acknowledgment provenance/revision |
+| Filed wealth-to-next-year opening reconciliation | **PARTIAL synthetic** | Missing/nonbank assets and source revision evidence create review exceptions; draft mismatches not treated as legal filing errors |
+| Third-party transfers, loans, property, investments, withholding review | **PARTIAL / source integration blocked** | Evidence-linked classification queue, owner/accountant answers and immutable audit; unsupported amounts excluded from certified tax |
+| Secure communication/explanation queue | **PLANNED** | Private correspondence attachments are not bank/FBR evidence; owner approval, accountant collaboration optionally later; screenshots do not prove voice-message content |
+
+See [`ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md`](ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md), [Issue #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30). No authentic personal data is used in CI or committed; current real-data app remains disabled.
