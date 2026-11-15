@@ -17,6 +17,8 @@ Active M1 bank/loan/cash money/date/linkage metadata remain **plaintext in the d
 
 ## Verification and release gate
 
-Run `cd backend && python -m pytest -q`; CI must also run ephemeral PostgreSQL 18 Alembic upgrade/no-drift check on the **exact final PR head**. Verify an ordinary openpyxl-generated synthetic workbook succeeds and a forged/zip-bomb/macro/external .xlsx fails before any ledger mutation. Document verified PR SHA and workflow after green results; do not claim this alone permits real uploads.
+**Verified 2026-11-16:** [PR #32 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/32) at `37625adfa3fbe5b88b9ff7d012aab77db292d5c7`; exact PR-head [hosted workflow 43769169270](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43769169270) **178 pytest passed, 2 warnings, ephemeral PostgreSQL18 migrations/no-drift PASS**. Previous M2r baseline was 153 tests. Valid synthetic openpyxl OOXML imports still work, suspicious/unrecognized or disguised formats fail before synthetic ledger persistence.
+
+Run `cd backend && python -m pytest -q` for subsequent changes; independently verify the final `main` head after merged implementation. This preflight alone **does not permit actual financial uploads**, PDF handling or real-data deployment.
 
 Next owner-independent G1 focus is replacing plaintext active legacy finance relationships with confidential canonical storage and testing PostgreSQL source migration/rollback. G2 MFA/private deployment and G3 isolated real-document adapters may proceed as separate slices. Earlier FBR documents are not needed for synthetic development.
