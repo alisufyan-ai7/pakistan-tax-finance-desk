@@ -32,6 +32,8 @@ ENCRYPTED_COLUMNS = {
     "cash_movement_reversals": ("reason",),
     "asset_snapshots": ("payload_json",),
     "private_financial_events": ("payload_json",),
+    "confidential_bank_batches": ("payload_json",),
+    "confidential_bank_key_state": ("sentinel",),
 }
 
 

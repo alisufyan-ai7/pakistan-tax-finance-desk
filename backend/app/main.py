@@ -38,6 +38,7 @@ from .wealth_position import observed_position, annual_position
 from .asset_book import AssetInput, record_asset, asset_position
 from .private_events import PrivateEventInput, record_private_event, list_private_events, require_private_index_key, PrivateEventKeyError
 from .private_migration_preview import preview_legacy_migration
+from .confidential_bank import ConfidentialBankInput, record_confidential_bank_source, list_confidential_bank_sources, ConfidentialBankKeyError
 from .cfo_planning import CFOScenarioInput, scenario_forecast, private_journal_briefing
 from .investment_lots import LotScenarioInput, calculate_lot_scenario
 from .tax_rules import SalaryPreviewInput, salary_preview, tax_rule_registry, opportunity_rule_index
@@ -86,7 +87,7 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0009_private_events":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0010_confidential_bank":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
@@ -486,6 +487,22 @@ def create_app(database_url: str | None = None):
     @app.get("/api/finance/private-events/migration-preview")
     def preview_private_journal_migration(_: Auth, db: DB, tax_year: int = 2027, limit: int = 500):
         return preview_legacy_migration(db, tax_year, limit)
+
+    @app.post("/api/finance/confidential-bank/statements", status_code=201)
+    def add_confidential_bank_statement(payload: ConfidentialBankInput, _: Auth, db: DB):
+        """Synthetic-only operational AES-GCM source path, independent of legacy M1."""
+        try:
+            result, replay = record_confidential_bank_source(db, payload)
+        except ConfidentialBankKeyError as exc:
+            raise HTTPException(503, "Confidential bank keys unavailable or inconsistent") from exc
+        return JSONResponse(status_code=200, content={**result, "already_recorded": True}) if replay else result
+
+    @app.get("/api/finance/confidential-bank/statements")
+    def get_confidential_bank_statements(_: Auth, db: DB, account_ref: str, tax_year: int = 2027):
+        try:
+            return list_confidential_bank_sources(db, account_ref, tax_year)
+        except ConfidentialBankKeyError as exc:
+            raise HTTPException(503, "Confidential bank keys unavailable or inconsistent") from exc
 
     @app.post("/api/finance/private-events", status_code=201)
     def append_private_financial_event(payload: PrivateEventInput, _: Auth, db: DB):

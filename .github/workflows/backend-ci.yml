@@ -59,9 +59,42 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0009_private_events'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0010_confidential_bank'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
+          # Test the operational encrypted bank-source path against real ephemeral PG18,
+          # not just DDL. All identifiers and figures are fabricated.
+          import base64
+          os.environ['CONFIDENTIAL_BANK_HMAC_KEY']=base64.urlsafe_b64encode(b'C'*32).decode()
+          os.environ['OWNER_PASSWORD']='synthetic-ci-owner-password-123456'
+          from fastapi.testclient import TestClient
           from app.main import create_app
-          assert create_app().title.startswith('Pakistan Tax')
+          app=create_app()
+          assert app.title.startswith('Pakistan Tax')
+          synthetic={
+              'synthetic_fixture':True,'legal_owner':'individual','currency':'PKR',
+              'account_ref':'SYNTHETIC-POSTGRES-ACCOUNT-1',
+              'institution':'SYNTHETIC-BANK-ONLY',
+              'source_ref':'SYNTHETIC-POSTGRES-STMT-0001',
+              'period_start':'2024-07-01','period_end':'2024-07-31',
+              'opening_balance_minor':12345,'closing_balance_minor':12545,
+              'rows':[{'row_number':2,'posted_on':'2024-07-15','description':'synthetic only',
+                       'reference':'SYN-PG1','credit_minor':200,'debit_minor':0,'balance_minor':12545}],
+          }
+          with TestClient(app) as client:
+              client.auth=('owner',os.environ['OWNER_PASSWORD'])
+              created=client.post('/api/finance/confidential-bank/statements',json=synthetic)
+              assert created.status_code==201, created.text
+              replay=client.post('/api/finance/confidential-bank/statements',json=synthetic)
+              assert replay.status_code==200 and replay.json()['already_recorded']
+              found=client.get('/api/finance/confidential-bank/statements',
+                               params={'account_ref':synthetic['account_ref'],'tax_year':2025})
+              assert found.status_code==200 and found.json()['source_count']==1
+              assert client.get('/api/summary?tax_year=2025').json()['record_count']==0
+          with engine.connect() as db:
+              raw=db.execute(text('SELECT payload_json FROM confidential_bank_batches')).scalar_one()
+              assert raw.startswith('TFLE1:')
+              assert all(secret not in raw for secret in ('12345','12545','2024-07-15',
+                                                         'SYNTHETIC-POSTGRES-ACCOUNT-1','synthetic only'))
           print('POSTGRES_18_SYNTHETIC_SCHEMA=PASS')
+          print('POSTGRES_18_CONFIDENTIAL_BANK_OPERATIONAL=PASS')
           PY
