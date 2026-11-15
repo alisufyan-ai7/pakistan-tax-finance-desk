@@ -25,6 +25,7 @@ from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
 from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
 from .bank_profiles import normalize_synthetic_csv, PROFILES
+from .movement_analysis import analyze_movements, MAX_TRANSFER_DAYS
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "gift_received", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
@@ -399,6 +400,18 @@ def create_app(database_url: str | None = None):
                 "possible_overlaps_pending": review_overlap,
                 "tax_due": None, "projected_annual_tax": None, "fbr_ready": False,
                 "reason": "FBR year-specific rules and withholding evidence have not been verified; no tax estimate is available"}
+
+    @app.get("/api/finance/movement-review")
+    def movement_review(_: Auth, db: DB, tax_year: int = 2027):
+        """Candidate review only: no automatic matching or legal tax conclusions."""
+        start, end = fiscal_bounds(tax_year)
+        margin = timedelta(days=MAX_TRANSFER_DAYS)
+        rows = db.scalars(select(Transaction).where(
+            Transaction.posted_on.between(start - margin, end + margin)
+        )).all()
+        owners = {account.id: account.legal_owner for account in db.scalars(select(Account)).all()}
+        return {"tax_year": tax_year, "synthetic_only": True,
+                **analyze_movements(rows, owners, start, end)}
 
     @app.get("/api/coverage")
     def coverage(_: Auth, db: DB, tax_year: int = 2027):
