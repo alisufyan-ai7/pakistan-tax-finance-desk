@@ -114,3 +114,10 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] GitHub Actions run 43709171698: **39 tests passed**; PostgreSQL 18 upgrade and Alembic schema validation PASS.
 - [ ] Monetary fields, balances/dates, identifiers and keyed dedup indexes remain unencrypted; no genuine bank/FBR ingestion permitted.
 - [ ] Multiworker MFA hardening, private production deployment, key recovery/rotation operations, confidential off-site backups, bank/FBR PDFs and legally reviewed TY2023+ calculations remain pending.
+
+## M2d-2 acceptance — 2026-11-15
+
+- [x] Read-only unique own-account transfer candidates across two individual-owned accounts within two days, preserving financial-year crossing pairs and preventing ambiguous auto-match.
+- [x] Distinct reviewed non-earnings cash movement summaries for loans, cash, taxes, gifts, zakat/donations and investment contributions; no assertion of loan balances, tax eligibility or gains.
+- [x] Hosted CI **44 passed, PostgreSQL18 schema PASS** ([run 43709644891](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43709644891)).
+- [ ] Audited counterparty/loan principal schedules and authoritative transfer confirmation, wealth evolution and complete secure document import remain pending.
