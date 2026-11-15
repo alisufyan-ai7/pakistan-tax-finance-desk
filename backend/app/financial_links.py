@@ -199,8 +199,6 @@ def loan_view(db: Session, loan: LoanAccount, as_of: date) -> dict:
     principal_repaid = 0
     entries = []
     for allocation in allocations:
-        if allocation.id == exclude_id:
-            continue
         tx = db.get(Transaction, allocation.transaction_id)
         if tx is None:
             _conflict("Loan source transaction missing")
