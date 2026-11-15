@@ -1,5 +1,8 @@
 # Delivery roadmap and acceptance tests
 
+> **Current priority and sequencing (2026-11-16):** The [v2 statement-led accountant-ready Personal CFO product plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md) and [objective G0–G6 release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md) govern NEW implementation. The P0–P4 and M1–M2 historical sections below remain a chronological record, NOT evidence that unchecked historical checklist items are still entirely unimplemented. The most recent tested code is M2s PR #32 (178 pytest, PostgreSQL18 PASS); G1 active finance confidentiality remains BLOCKED.
+
+
 ## P0 — Establish repository and safe skeleton
 
 - [x] Source repository created, admin/default branch/docs verified; temporarily PUBLIC by owner's choice for development, revert PRIVATE afterward.
@@ -231,3 +234,19 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] In-memory recovery/FK verification and reject unknown source table, tampering, missing row, reused or invalid key, real mode, output overwrite, injected failure; 0600 archive + receipt, redacted audit.
 - [x] Exact-head GitHub [CI 43761634183](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43761634183) **153 tests passed**, PostgreSQL18 Alembic check PASS (NO PostgreSQL data-copy test).
 - [ ] **Production blocking**: active legacy DB still plaintext; no authoritative encrypted read/write model, private web access/MFA/recovery, encrypted source PDF vault, actual bank and IRIS adapters, or complete mixed-income tax. Refer to [release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md).
+
+## Formal v2 delivery order — accountant-ready owner MVP (2026-11-16)
+
+| Priority | Next slice | Technical contract and acceptance | Dependency |
+| --- | --- | --- | --- |
+| **P0 / G1** | Active encrypted canonical finance ledger | Confidential bank/loan/cash/asset numbers, dates, links and indexes; PostgreSQL source migration parity/no-double-count, sealed backup + independent restore, reversible rollout | Owner-independent synthetic code; [#21](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/21) |
+| **P0 / G2 + G3** | Protected owner app + real-evidence ingress | MFA/TLS/recovery/secrets and sandbox, encrypted originals and safe document signature; synthetic PDF/CSV/XLSX/FBR adapters first, later approved private real-layout acceptance | Host/real evidence later, not needed for synthetic planning; [#28](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/28), [#29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29) |
+| **P1** | Historical and incremental statement-led reconciliation | Account×period gaps, opening/closing and per-row parity, own-transfers, reviewed income/expense/loans/investment/property/cash, immutable corrections. Replayed files no duplicate events; unknown months not zero | G1 for actual data; synthetic domain code can proceed in parallel |
+| **P1** | Accountant Workspace and evidence exception queue | Draft multi-sheet XLSX formula/source-cell diagnostics and versions; question → evidence → reviewed → approved history; private safe PDF/password handling, clear distinction between draft/approved/acknowledged filed; accountant-ready draft exports | [#30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30); no automatic workbook mutation or submission |
+| **P1 / G4** | Full mixed-income FBR tax + annual wealth bridge | Verified TY2023+ statutory golden vectors, adjustable/final WHT, filed-vs-draft, investment/wealth/loan reconciliation, evidence-required legal savings, conditional due/refund; accountant-ready FBR working pack | [#5](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/5); legal source review |
+| **P2 / G5** | Personal CFO dashboard and end-to-end owner experience | Mobile-first upload→review→tax/wealth dashboard→reconciling pack, with goals, liquidity, spending intelligence, subscriptions, loans, investments and advisory explanations | No commercial/public launch without private browser/restore acceptance |
+| **Future G6** | Optional family/accountant/SaaS version | Only explicit authorization; permissions, tenant/entity boundaries and relevant regulatory review | Do not delay private owner version |
+
+**Synthetic regression requirements:** Use the [v2 20-scenario acceptance matrix](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md#6-acceptance-and-adversarial-scenarios-synthetic-only-during-development). Tests cover fake/unsafe documents, stale formula caches, historical wealth discontinuity, unknown incoming payments, duplicates, transfers, income-vs-principal, withholding, versioned drafts vs filed originals, complete vs partial coverage, deterministic law-year recalculation, privacy/leak and backup restore. Never substitute a spreadsheet or previous assistant claim for source-proven bank/FBR facts.
+
+**No change to security release requirements:** code planning is owner-independent; `APP_DATA_MODE=real` remains disabled until approved G1–G3 security acceptance. The owner expects accountant documents to remain provisional until explicitly finalized; no deadline reminders or guessed legal extension checks needed as part of this feature work.
