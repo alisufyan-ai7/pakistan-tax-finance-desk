@@ -198,3 +198,12 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Injected mid-batch failure removes candidate and preserves original+encrypted backup; optional 0600 redacted audit receipt; no double count or tax claim.
 - [x] [CI run 43754350890](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43754350890): **129 pytest passed**, PostgreSQL18 **schema migration** check PASS (not PostgreSQL data-copy migration).
 - [ ] Encrypt/cut over remaining original bank/cash/loan amounts, dates, balances and relationships; dedicated Postgres backup/restore and schema migration work; genuine private app and FBR legal tax readiness. Source remains plaintext and real data prohibited.
+
+## M2p — extensible CFO planning and requirements completeness (2026-11-16)
+
+- [x] Domain boundary/ownership/tenant-ready architecture covering tax, personal finance, household/business, investments/loans/cash/assets, insurance, wealth/retirement/goals, financial scenarios and evidence-based advice without premature microservices.
+- [x] Versioned pure synthetic CFO scenario (income/expense/loan/tax-reserve/investment flows, one-off/recurring and goals) with integer paisa, 1–60 month bounds, reserve gap, negative liquidity, missing-essential-flow detection, hypothetical insights and null tax/savings.
+- [x] Protected-journal-only CFO briefing with July–June gaps, separate nonoperating flows, validated HMAC source indexes, bound full scan, no legacy double count and honest owner/source completeness gaps.
+- [x] Requirements coverage matrix marks every owner goal as done/partial/blocked with acceptance gates (not a claim of end-to-end delivery).
+- [x] [CI run 43756223286](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43756223286) **136 tests PASS**, PostgreSQL 18 schema no-drift PASS.
+- [ ] Complete real-data security + private encrypted old bank/loan/cash schema, real PDF/bank/FBR/broker adapter acceptance, full tax/wealth/investment/obligation reconciliation, actual CFO advisory suitability and personal usable mobile UI.

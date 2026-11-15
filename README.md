@@ -131,3 +131,11 @@ The application can now *preview*, but does **not execute**, conversion of revie
 [Implementation documentation](docs/IMPLEMENTATION_M2O_VERIFIED_CANDIDATE_MIGRATION.md) · [Merged PR #22](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/22) · [129-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43754350890).
 
 An explicit offline synthetic-only CLI now **backs up, independently restores, and transactionally migrates reviewed bank transaction mirrors** into a new encrypted candidate database, with tax-year/account amount parity and rollback protection. It NEVER replaces the source ledger or mixes v2 entries into original tax totals. **Legacy bank/loan/cash amount, date and relationship SQL fields remain PLAINTEXT in source and candidate; actual private documents are not permitted yet.** The copy tool is SQLite-only; hosted PostgreSQL18 verification covers schema integrity, not live Postgres data migration.
+
+## M2p — Broader personal CFO direction (2026-11-16)
+
+**The scope is not limited to a tax calculator.** The application is designed as a single-user private **personal CFO and evidence-based adviser** first, with an eventual optional product for families, self-employed professionals and accountants. Domain boundaries allow expansion across bank/credit/cash, investments, loans, property, insurance, cashflow, goals, Pakistan FBR tax, long-term planning and evidence-backed advice.
+
+**New code:** [PR #23](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/23) merged [136-test CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43756223286) — hypothetical cashflow/reserve/goal forecasting and private encrypted-journal-only CFO briefing. [Current status](docs/PROJECT_STATUS.md) · [Architecture](docs/CFO_PLATFORM_ARCHITECTURE.md) · [Coverage matrix](docs/REQUIREMENTS_COVERAGE_MATRIX.md).
+
+**Still synthetic-only:** no real documents or professional financial advice; earlier financial amounts/dates/links remain plaintext until protected migration. `APP_DATA_MODE=real` must remain disabled. Public GitHub holds no genuine owner financial/identity data.
