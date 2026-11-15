@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date, datetime, timezone
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 from .ledger_crypto import EncryptedText
@@ -123,7 +123,7 @@ class LoanAllocation(Base):
     """Append-only, bank-transaction-backed disbursement or principal/markup split."""
     __tablename__ = "loan_allocations"
     __table_args__ = (
-        UniqueConstraint("transaction_id", name="uq_loan_allocation_transaction"),
+        Index("uq_active_loan_allocation_transaction", "transaction_id", unique=True, postgresql_where=text("active IS TRUE"), sqlite_where=text("active = 1")),
         CheckConstraint("principal_minor >= 0", name="ck_loan_principal_nonnegative"),
         CheckConstraint("markup_minor >= 0", name="ck_loan_markup_nonnegative"),
     )
@@ -131,6 +131,7 @@ class LoanAllocation(Base):
     loan_id: Mapped[str] = mapped_column(ForeignKey("loan_accounts.id"), index=True, nullable=False)
     transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
     event_kind: Mapped[str] = mapped_column(String(12), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     principal_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     markup_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     evidence_note: Mapped[str] = mapped_column(EncryptedText("loan_allocations.evidence_note"), nullable=False)
@@ -141,11 +142,31 @@ class TransferConfirmation(Base):
     """Immutable owner-confirmed linkage, never a certified legal/tax conclusion."""
     __tablename__ = "transfer_confirmations"
     __table_args__ = (
-        UniqueConstraint("debit_transaction_id", name="uq_transfer_debit"),
-        UniqueConstraint("credit_transaction_id", name="uq_transfer_credit"),
+        Index("uq_active_transfer_debit", "debit_transaction_id", unique=True, postgresql_where=text("active IS TRUE"), sqlite_where=text("active = 1")),
+        Index("uq_active_transfer_credit", "credit_transaction_id", unique=True, postgresql_where=text("active IS TRUE"), sqlite_where=text("active = 1")),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     debit_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
     credit_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
     evidence_note: Mapped[str] = mapped_column(EncryptedText("transfer_confirmations.evidence_note"), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+class LoanAllocationReversal(Base):
+    """Append-only reason for invalidating a synthetic allocation; source preserved."""
+    __tablename__ = "loan_allocation_reversals"
+    __table_args__ = (UniqueConstraint("allocation_id", name="uq_loan_allocation_reversal"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    allocation_id: Mapped[str] = mapped_column(ForeignKey("loan_allocations.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(EncryptedText("loan_allocation_reversals.reason"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class TransferRevocation(Base):
+    """Append-only reason for revoking an owner-confirmed synthetic transfer."""
+    __tablename__ = "transfer_revocations"
+    __table_args__ = (UniqueConstraint("confirmation_id", name="uq_transfer_revocation"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    confirmation_id: Mapped[str] = mapped_column(ForeignKey("transfer_confirmations.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(EncryptedText("transfer_revocations.reason"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

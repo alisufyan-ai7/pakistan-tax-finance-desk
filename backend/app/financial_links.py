@@ -16,7 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .models import Account, LoanAccount, LoanAllocation, Transaction, TransferConfirmation
+from .models import (Account, LoanAccount, LoanAllocation, LoanAllocationReversal,
+                     Transaction, TransferConfirmation, TransferRevocation)
 from .movement_analysis import MAX_TRANSFER_DAYS
 
 MAX_MINOR = 10**15
@@ -50,6 +51,18 @@ class LoanAllocationInput(BaseModel):
     def note_required(cls, value: str):
         if len(value.strip()) < 8:
             raise ValueError("Evidence note must be meaningful")
+        return value.strip()
+
+
+class ReversalInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=12, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def meaningful_reason(cls, value: str):
+        if len(value.strip()) < 12:
+            raise ValueError("A meaningful correction explanation is required")
         return value.strip()
 
 
@@ -118,11 +131,13 @@ def _loan_event_type(loan: LoanAccount, tx: Transaction, principal: int, markup:
     raise HTTPException(422, "Direction, category or principal/markup split conflicts with source transaction")
 
 
-def _active_schedule(db: Session, loan: LoanAccount, extra: tuple[date, int] | None = None):
+def _active_schedule(db: Session, loan: LoanAccount, extra: tuple[date, int] | None = None, exclude_id: str | None = None):
     """Check end-of-day outstanding >=0 for every date; intraday order not inferred."""
-    allocations = db.scalars(select(LoanAllocation).where(LoanAllocation.loan_id == loan.id)).all()
+    allocations = db.scalars(select(LoanAllocation).where(LoanAllocation.loan_id == loan.id, LoanAllocation.active.is_(True))).all()
     deltas: dict[date, int] = {}
     for allocation in allocations:
+        if allocation.id == exclude_id:
+            continue
         tx = db.get(Transaction, allocation.transaction_id)
         if tx is None:
             _conflict("Referenced transaction missing; ledger cannot be reconciled")
@@ -146,7 +161,7 @@ def add_allocation(db: Session, loan_id: str, payload: LoanAllocationInput) -> t
     tx = db.scalar(select(Transaction).where(Transaction.id == payload.transaction_id).with_for_update())
     if tx is None:
         raise HTTPException(404, "Source transaction not found")
-    existing = db.scalar(select(LoanAllocation).where(LoanAllocation.transaction_id == tx.id))
+    existing = db.scalar(select(LoanAllocation).where(LoanAllocation.transaction_id == tx.id, LoanAllocation.active.is_(True)))
     if existing:
         if (existing.loan_id == loan.id and existing.principal_minor == payload.principal_minor and
             existing.markup_minor == payload.markup_minor):
@@ -177,6 +192,7 @@ def add_allocation(db: Session, loan_id: str, payload: LoanAllocationInput) -> t
 
 def loan_view(db: Session, loan: LoanAccount, as_of: date) -> dict:
     allocations = db.scalars(select(LoanAllocation).where(LoanAllocation.loan_id == loan.id)).all()
+    reversed_audits = {r.allocation_id: r for r in db.scalars(select(LoanAllocationReversal).where(LoanAllocationReversal.allocation_id.in_([a.id for a in allocations]))).all()} if allocations else {}
     outstanding = loan.opening_principal_minor if as_of >= loan.opening_as_of else None
     markup_minor = 0
     principal_advanced = 0
@@ -188,7 +204,7 @@ def loan_view(db: Session, loan: LoanAccount, as_of: date) -> dict:
             _conflict("Loan source transaction missing")
         if tx.posted_on > as_of:
             continue
-        if outstanding is not None:
+        if outstanding is not None and allocation.active:
             if allocation.event_kind == "advance":
                 principal_advanced += allocation.principal_minor
             else:
@@ -199,6 +215,8 @@ def loan_view(db: Session, loan: LoanAccount, as_of: date) -> dict:
             "posted_on": tx.posted_on.isoformat(), "event_kind": allocation.event_kind,
             "principal_minor": allocation.principal_minor, "markup_minor": allocation.markup_minor,
             "evidence_note": allocation.evidence_note,
+            "status": "ACTIVE" if allocation.active else "REVERSED",
+            "reversal_reason": reversed_audits[allocation.id].reason if allocation.id in reversed_audits else None,
         })
     if outstanding is not None:
         outstanding += principal_advanced - principal_repaid
@@ -227,14 +245,14 @@ def confirm_transfer(db: Session, payload: TransferConfirmationInput) -> tuple[T
     if not debit or not credit:
         raise HTTPException(404, "One or both transfer transactions not found")
     previously = db.scalar(select(TransferConfirmation).where(
-        TransferConfirmation.debit_transaction_id == debit.id
+        TransferConfirmation.debit_transaction_id == debit.id, TransferConfirmation.active.is_(True)
     ))
     if previously:
         if previously.credit_transaction_id == credit.id:
             return previously, True
         _conflict("Debit transaction was already confirmed in another transfer")
     if db.scalar(select(TransferConfirmation.id).where(
-        TransferConfirmation.credit_transaction_id == credit.id
+        TransferConfirmation.credit_transaction_id == credit.id, TransferConfirmation.active.is_(True)
     ).limit(1)):
         _conflict("Credit transaction was already confirmed in another transfer")
     if not _eligible(debit) or not _eligible(credit):
@@ -263,7 +281,7 @@ def confirm_transfer(db: Session, payload: TransferConfirmationInput) -> tuple[T
 
 
 def confirmed_transfers(db: Session, start: date, end: date) -> list[dict]:
-    confirmations = db.scalars(select(TransferConfirmation)).all()
+    confirmations = db.scalars(select(TransferConfirmation).where(TransferConfirmation.active.is_(True))).all()
     result = []
     for confirmation in confirmations:
         debit = db.get(Transaction, confirmation.debit_transaction_id)
@@ -287,9 +305,77 @@ def confirmed_transfers(db: Session, start: date, end: date) -> list[dict]:
 
 def source_locked(db: Session, transaction_id: str) -> bool:
     return bool(
-        db.scalar(select(LoanAllocation.id).where(LoanAllocation.transaction_id == transaction_id).limit(1))
+        db.scalar(select(LoanAllocation.id).where(LoanAllocation.transaction_id == transaction_id, LoanAllocation.active.is_(True)).limit(1))
         or db.scalar(select(TransferConfirmation.id).where(
-            (TransferConfirmation.debit_transaction_id == transaction_id) |
-            (TransferConfirmation.credit_transaction_id == transaction_id)
+            ((TransferConfirmation.debit_transaction_id == transaction_id) |
+             (TransferConfirmation.credit_transaction_id == transaction_id)),
+             TransferConfirmation.active.is_(True)
         ).limit(1))
     )
+
+
+# Corrections do not erase earlier confirmations. The historical allocation and
+# confirmation remain in the database, with a separate append-only correction
+# row and a mutable active flag strictly for database-enforced uniqueness.
+
+def reverse_loan_allocation(db: Session, loan_id: str, allocation_id: str, payload: ReversalInput):
+    loan = db.scalar(select(LoanAccount).where(LoanAccount.id == loan_id).with_for_update())
+    if loan is None:
+        raise HTTPException(404, "Loan not found")
+    allocation = db.scalar(select(LoanAllocation).where(
+        LoanAllocation.id == allocation_id, LoanAllocation.loan_id == loan_id
+    ).with_for_update())
+    if allocation is None:
+        raise HTTPException(404, "Loan allocation not found")
+    if not allocation.active:
+        reversal = db.scalar(select(LoanAllocationReversal).where(
+            LoanAllocationReversal.allocation_id == allocation.id
+        ))
+        if reversal is None:
+            _conflict("Reversal audit is missing; manual investigation required")
+        return reversal, True
+    # If reversing an advance would cause the remaining installments to
+    # exceed loan principal, reject it; reverse dependent repayments first.
+    _active_schedule(db, loan, exclude_id=allocation.id)
+    allocation.active = False
+    reversal = LoanAllocationReversal(id=str(uuid4()), allocation_id=allocation.id,
+                                      reason=payload.reason)
+    db.add(reversal)
+    _commit_or_conflict(db)
+    return reversal, False
+
+
+def reverse_transfer(db: Session, transfer_id: str, payload: ReversalInput):
+    transfer = db.scalar(select(TransferConfirmation).where(
+        TransferConfirmation.id == transfer_id
+    ).with_for_update())
+    if transfer is None:
+        raise HTTPException(404, "Confirmed transfer not found")
+    if not transfer.active:
+        reversal = db.scalar(select(TransferRevocation).where(
+            TransferRevocation.confirmation_id == transfer.id
+        ))
+        if reversal is None:
+            _conflict("Transfer revocation audit missing; manual investigation required")
+        return reversal, True
+    transfer.active = False
+    reversal = TransferRevocation(id=str(uuid4()), confirmation_id=transfer.id,
+                                  reason=payload.reason)
+    db.add(reversal)
+    _commit_or_conflict(db)
+    return reversal, False
+
+
+def link_audit(db: Session) -> dict:
+    """Append-only history of reversals, separate from current active balances."""
+    reversed_loans = db.scalars(select(LoanAllocationReversal)).all()
+    reversed_transfers = db.scalars(select(TransferRevocation)).all()
+    return {
+        "loan_reversals": [{"id": r.id, "allocation_id": r.allocation_id,
+                            "reason": r.reason, "reversed_at": r.created_at.isoformat()}
+                           for r in reversed_loans],
+        "transfer_revocations": [{"id": r.id, "confirmation_id": r.confirmation_id,
+                                  "reason": r.reason, "reversed_at": r.created_at.isoformat()}
+                                 for r in reversed_transfers],
+        "synthetic_only": True, "append_only_history": True,
+    }
