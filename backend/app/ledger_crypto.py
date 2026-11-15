@@ -146,7 +146,7 @@ def assert_encrypted_ledger(engine) -> None:
     Intended only for the synthetic/local demonstration. A production boot check
     will need a versioned migrator and integrity/backup procedure, not full scans.
     """
-    from sqlalchemy import inspect
+    from sqlalchemy import inspect, text
     keyring()  # No hardcoded fallback: fail when secrets are absent.
     present = set(inspect(engine).get_table_names())
     with engine.connect() as connection:
@@ -155,9 +155,10 @@ def assert_encrypted_ledger(engine) -> None:
                 continue
             for column in columns:
                 # Table/column names are constants, not user-provided.
-                unsealed = connection.exec_driver_sql(
-                    f"SELECT 1 FROM {table} WHERE {column} IS NOT NULL "
-                    f"AND {column} NOT LIKE 'TFLE1:%' LIMIT 1"
+                unsealed = connection.execute(
+                    text(f"SELECT 1 FROM {table} WHERE {column} IS NOT NULL "
+                         f"AND {column} NOT LIKE :envelope_prefix LIMIT 1"),
+                    {"envelope_prefix": "TFLE1:%"},
                 ).first()
                 if unsealed:
                     raise LedgerKeyError(
