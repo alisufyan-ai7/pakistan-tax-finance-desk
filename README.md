@@ -125,3 +125,9 @@ The **new, separate synthetic financial-event table** encrypts all meaningful ec
 [Implementation guide](docs/IMPLEMENTATION_M2N_MIGRATION_PREFLIGHT.md) · [PR #20 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/20) · [121-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43751406602).
 
 The application can now *preview*, but does **not execute**, conversion of reviewed synthetic legacy bank transactions into M2m's encrypted event journal. Missing classifications, unreviewed overlaps and source conflicts are surfaced explicitly, with no automatic writes or double-counting. **Legacy monetary amounts and dates remain plaintext**. Real finance documents remain prohibited.
+
+## M2o — Verified backup-first migration rehearsal (2026-11-16)
+
+[Implementation documentation](docs/IMPLEMENTATION_M2O_VERIFIED_CANDIDATE_MIGRATION.md) · [Merged PR #22](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/22) · [129-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43754350890).
+
+An explicit offline synthetic-only CLI now **backs up, independently restores, and transactionally migrates reviewed bank transaction mirrors** into a new encrypted candidate database, with tax-year/account amount parity and rollback protection. It NEVER replaces the source ledger or mixes v2 entries into original tax totals. **Legacy bank/loan/cash amount, date and relationship SQL fields remain PLAINTEXT in source and candidate; actual private documents are not permitted yet.** The copy tool is SQLite-only; hosted PostgreSQL18 verification covers schema integrity, not live Postgres data migration.

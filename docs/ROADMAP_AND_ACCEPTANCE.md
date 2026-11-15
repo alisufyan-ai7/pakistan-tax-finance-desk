@@ -189,3 +189,12 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Exact-head [CI 43751406602](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43751406602) **121 tests passed**, ephemeral PostgreSQL18 migration/schema check PASS.
 - [ ] Full, audited and recoverable migration of existing plaintext numeric/date/bank/loan/cash relationships into an encrypted query model; no record migration has occurred.
 - [ ] Production secure private app/MFA/keys/backups, isolated real-document parsers and complete year-effective FBR tax computation; still blocked.
+
+## M2o offline synthetic candidate migration acceptance (2026-11-16)
+
+- [x] Explicit, never automatic, strictly synthetic offline SQLite migration into NEW restored candidate; original ledger stays authoritative and unchanged.
+- [x] Encrypted SQLite+evidence recovery backup created and independently restored before all writes; protected against reused keys, bad paths, partial/unreviewed source, unresolved overlap and source conflicts.
+- [x] Transactional encrypted source mirror creation with stable HMAC source refs; full scanned count and year/account debit-credit parity, committed ciphertext integrity, original-source HMAC unchanged.
+- [x] Injected mid-batch failure removes candidate and preserves original+encrypted backup; optional 0600 redacted audit receipt; no double count or tax claim.
+- [x] [CI run 43754350890](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43754350890): **129 pytest passed**, PostgreSQL18 **schema migration** check PASS (not PostgreSQL data-copy migration).
+- [ ] Encrypt/cut over remaining original bank/cash/loan amounts, dates, balances and relationships; dedicated Postgres backup/restore and schema migration work; genuine private app and FBR legal tax readiness. Source remains plaintext and real data prohibited.
