@@ -96,3 +96,13 @@ M1 is a **development prototype**, not a live financial-data app. Refer to `docs
 - [ ] Hosted GitHub Actions green run: **NOT verified**; code-only development permitted in intentionally public repository.
 
 User will provide prior filed returns in the future; there is **no development dependency** on seeing them before M2b security and adapter work.
+
+## M2b / M2c implementation acceptance — 2026-11-15
+
+- [x] Baseline Alembic migration + PostgreSQL18 CI upgrade/schema check; M2c migration `0002_owner_mfa` verified in ephemeral PostgreSQL.
+- [x] Authenticated-encrypted historical *synthetic* filed-return numerical fields and encrypted synthetic SQLite/evidence archive with strict new-location restore; tamper, key mismatch and overwrite refusal.
+- [x] Two synthetic bank-layout CSV adapters in API/UI; strict date/balance/dedup assertions. **No actual bank adapter yet certified.**
+- [x] Owner-only synthetic MFA session gateway: scrypt password hash, TOTP, persisted anti-replay counter, hashed session tokens, Secure/HttpOnly/SameSite=Strict cookie, CSRF, logout/expiry; local and HTTPS restricted. **Not production-ready**.
+- [x] PR #7 hosted CI 27 passed + PostgreSQL migration PASS; PR #8 hosted CI 31 passed + PostgreSQL migration PASS.
+- [ ] MFA provisioning/recovery and rate limiting for multiworker deployment; production TLS/session audit; encrypted all-sensitive ledger values, key rotation, off-site backup/restore evidence, actual bank/FBR parsing; genuine documents remain **PROHIBITED** in synthetic app.
+- [ ] Deterministic verified FBR rules for TY2023 onward and legal tax optimization estimates; monetary tax due must remain `null` until review.
