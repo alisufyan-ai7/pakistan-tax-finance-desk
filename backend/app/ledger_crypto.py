@@ -25,6 +25,8 @@ ENCRYPTED_COLUMNS = {
     "loan_accounts": ("counterparty_label", "opening_basis"),
     "loan_allocations": ("evidence_note",),
     "transfer_confirmations": ("evidence_note",),
+    "loan_allocation_reversals": ("reason",),
+    "transfer_revocations": ("reason",),
 }
 
 
