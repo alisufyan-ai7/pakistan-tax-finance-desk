@@ -19,16 +19,20 @@ from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
 from .ledger_crypto import assert_encrypted_ledger, LedgerKeyError
-from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState
+from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState, LoanAccount
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
 from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
 from .bank_profiles import normalize_synthetic_csv, PROFILES
 from .movement_analysis import analyze_movements, MAX_TRANSFER_DAYS
+from .financial_links import (
+    LoanInput, LoanAllocationInput, TransferConfirmationInput, create_loan,
+    add_allocation, loan_view, confirm_transfer, confirmed_transfers, source_locked,
+)
 
-CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "gift_received", "refund", "own_transfer"}
-DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
+CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "refund", "own_transfer"}
+DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "loan_installment_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
 CATEGORIES = {"unreviewed"} | CREDIT | DEBIT
 security = HTTPBasic(auto_error=False)
 
@@ -70,7 +74,7 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0003_ledger_text":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0004_finance_links":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
@@ -355,6 +359,8 @@ def create_app(database_url: str | None = None):
         tx = db.get(Transaction, transaction_id)
         if not tx:
             raise HTTPException(404, "Transaction not found")
+        if source_locked(db, transaction_id):
+            raise HTTPException(409, "Linked financial source is immutable; use an audited correction workflow")
         if payload.category not in CATEGORIES:
             raise HTTPException(422, "Unknown category")
         allowed = CREDIT if tx.credit_minor else DEBIT
@@ -400,6 +406,53 @@ def create_app(database_url: str | None = None):
                 "possible_overlaps_pending": review_overlap,
                 "tax_due": None, "projected_annual_tax": None, "fbr_ready": False,
                 "reason": "FBR year-specific rules and withholding evidence have not been verified; no tax estimate is available"}
+
+    @app.post("/api/finance/loans", status_code=201)
+    def create_loan_record(payload: LoanInput, _: Auth, db: DB):
+        loan = create_loan(db, payload)
+        return loan_view(db, loan, loan.opening_as_of)
+
+    @app.get("/api/finance/loans")
+    def list_loan_records(_: Auth, db: DB, as_of: date | None = None):
+        selected_date = as_of or date.today()
+        loans = db.scalars(select(LoanAccount).order_by(LoanAccount.opening_as_of, LoanAccount.id)).all()
+        return {"as_of": selected_date.isoformat(), "synthetic_only": True,
+                "loans": [loan_view(db, loan, selected_date) for loan in loans],
+                "warning": "Loan balances are owner-declared and unverified; no FBR tax characterization."}
+
+    @app.get("/api/finance/loans/{loan_id}")
+    def read_loan_record(loan_id: str, _: Auth, db: DB, as_of: date | None = None):
+        loan = db.get(LoanAccount, loan_id)
+        if loan is None:
+            raise HTTPException(404, "Loan not found")
+        return loan_view(db, loan, as_of or date.today())
+
+    @app.post("/api/finance/loans/{loan_id}/allocations", status_code=201)
+    def assign_loan_transaction(loan_id: str, payload: LoanAllocationInput, _: Auth, db: DB):
+        allocation, replay = add_allocation(db, loan_id, payload)
+        result = {"id": allocation.id, "loan_id": allocation.loan_id,
+                  "transaction_id": allocation.transaction_id, "event_kind": allocation.event_kind,
+                  "principal_minor": allocation.principal_minor, "markup_minor": allocation.markup_minor,
+                  "already_linked": replay, "tax_treatment_verified": False, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.post("/api/finance/transfers/confirm", status_code=201)
+    def confirm_own_transfer(payload: TransferConfirmationInput, _: Auth, db: DB):
+        confirmation, replay = confirm_transfer(db, payload)
+        result = {"id": confirmation.id,
+                  "debit_transaction_id": confirmation.debit_transaction_id,
+                  "credit_transaction_id": confirmation.credit_transaction_id,
+                  "already_confirmed": replay,
+                  "status": "OWNER_CONFIRMED_NOT_INDEPENDENTLY_VERIFIED",
+                  "no_tax_claim": True, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.get("/api/finance/transfers/confirmed")
+    def list_confirmed_transfers(_: Auth, db: DB, tax_year: int = 2027):
+        start, end = fiscal_bounds(tax_year)
+        return {"tax_year": tax_year, "synthetic_only": True,
+                "transfers": confirmed_transfers(db, start, end),
+                "warning": "User confirmations are not independently verified or tax certifications."}
 
     @app.get("/api/finance/movement-review")
     def movement_review(_: Auth, db: DB, tax_year: int = 2027):
