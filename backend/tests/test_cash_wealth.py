@@ -130,8 +130,14 @@ def test_cash_evidence_encrypted_and_no_tax_claim(client,tmp_path):
         label,basis = conn.execute('SELECT label,evidence_basis FROM cash_holdings').fetchone()
         note = conn.execute('SELECT evidence_note FROM cash_movements').fetchone()[0]
         reason = conn.execute('SELECT reason FROM cash_movement_reversals').fetchone()[0]
-    for encrypted in (label,basis,note,reason):
-        assert encrypted.startswith('TFLE1:') and 'synthetic' not in encrypted.lower()
+    for encrypted, secret_text in (
+        (label, 'Private synthetic hiding place'),
+        (basis, 'Owner-declared synthetic count'),
+        (note, 'Explicit synthetic retail cash payment'),
+        (reason, 'Correction supported by synthetic source review'),
+    ):
+        assert encrypted.startswith('TFLE1:')
+        assert secret_text not in encrypted
     report=client.get(f'/api/finance/cash/{cid}?as_of=2024-02-01').json()
     assert report['cash_minor']==500 and not report['tax_treatment_verified']
     assert client.get('/api/summary?tax_year=2024').json()['tax_due'] is None
