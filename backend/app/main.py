@@ -33,6 +33,7 @@ from .financial_links import (
 )
 from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput,
     create_cash_holding, add_cash_movement, cash_view, reverse_cash_movement, cash_annual_bridge)
+from .wealth_position import observed_position, annual_position
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "loan_installment_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
@@ -415,6 +416,20 @@ def create_app(database_url: str | None = None):
         loan = create_loan(db, payload)
         return loan_view(db, loan, loan.opening_as_of)
 
+
+
+    @app.get("/api/finance/wealth/observed")
+    def observed_financial_position(_: Auth, db: DB, as_of: date | None = None):
+        selected = as_of or date.today()
+        if not date(1900, 1, 1) <= selected <= date(2100, 12, 31):
+            raise HTTPException(422, "Position date outside supported range")
+        return observed_position(db, selected)
+
+    @app.get("/api/finance/wealth/annual")
+    def annual_recorded_wealth_bridge(_: Auth, db: DB, tax_year: int = 2027):
+        if not 2023 <= tax_year <= 2100:
+            raise HTTPException(422, "Tax year must be 2023 or later")
+        return annual_position(db, tax_year)
 
     @app.post("/api/finance/cash", status_code=201)
     def open_cash_holding(payload: CashOpeningInput, _: Auth, db: DB):
