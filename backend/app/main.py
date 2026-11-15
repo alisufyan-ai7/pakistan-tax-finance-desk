@@ -38,6 +38,7 @@ from .wealth_position import observed_position, annual_position
 from .asset_book import AssetInput, record_asset, asset_position
 from .private_events import PrivateEventInput, record_private_event, list_private_events, require_private_index_key, PrivateEventKeyError
 from .private_migration_preview import preview_legacy_migration
+from .cfo_planning import CFOScenarioInput, scenario_forecast, private_journal_briefing
 from .tax_rules import SalaryPreviewInput, salary_preview, tax_rule_registry, opportunity_rule_index
 from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
@@ -465,6 +466,16 @@ def create_app(database_url: str | None = None):
         return loan_view(db, loan, loan.opening_as_of)
 
 
+
+    @app.post("/api/finance/advisor/scenarios")
+    def hypothetical_cfo_scenario(payload: CFOScenarioInput, _: Auth):
+        """Only explicitly synthetic financial assumptions; no ledger mutation."""
+        return scenario_forecast(payload)
+
+    @app.get("/api/finance/advisor/briefing")
+    def synthetic_cfo_journal_briefing(_: Auth, db: DB, tax_year: int = 2027):
+        """Observation-only encrypted journal overview; no legacy double-count."""
+        return private_journal_briefing(db, tax_year)
 
     @app.get("/api/finance/private-events/migration-preview")
     def preview_private_journal_migration(_: Auth, db: DB, tax_year: int = 2027, limit: int = 500):
