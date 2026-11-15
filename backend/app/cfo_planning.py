@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from datetime import date
-from hashlib import sha256
+from decimal import Decimal, ROUND_HALF_UP
 import json
 from typing import Literal
 
@@ -114,12 +114,18 @@ def scenario_forecast(payload: CFOScenarioInput) -> dict:
     if reserve_target > MAX_MINOR * 24:
         raise HTTPException(422, "Reserve target exceeds calculation limits")
     current = payload.opening_liquid_minor
+    opening_runway_months = (
+        str((Decimal(current) / Decimal(payload.essential_monthly_outflow_minor))
+            .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+        if payload.essential_monthly_outflow_minor else None
+    )
     rows: list[dict] = []
     used_categories: dict[str, int] = defaultdict(int)
     first_negative: int | None = None
     below_reserve: int | None = None
+    incomplete_essentials_month: int | None = None
     for month in range(1, payload.forecast_months + 1):
-        credit = debit = 0
+        credit = debit = modeled_essential = 0
         triggered: list[str] = []
         for flow in payload.flows:
             if flow.start_month <= month <= flow.end_month and (month - flow.start_month) % flow.every_months == 0:
@@ -127,9 +133,14 @@ def scenario_forecast(payload: CFOScenarioInput) -> dict:
                     credit += flow.amount_minor
                 else:
                     debit += flow.amount_minor
+                    if flow.category in {"living_expense", "loan_payment", "insurance",
+                                         "healthcare", "education", "tax_reserve"}:
+                        modeled_essential += flow.amount_minor
                 triggered.append(flow.rule_id)
                 used_categories[flow.category] += flow.amount_minor
         current += credit - debit
+        if modeled_essential < payload.essential_monthly_outflow_minor and incomplete_essentials_month is None:
+            incomplete_essentials_month = month
         if current < 0 and first_negative is None:
             first_negative = month
         if current < reserve_target and below_reserve is None:
@@ -147,6 +158,10 @@ def scenario_forecast(payload: CFOScenarioInput) -> dict:
         insights.append(_insight("UNKNOWN_RUNWAY", "liquidity", "review",
             "Essential outgoings are explicitly zero or not modeled; reserve coverage cannot be calculated.",
             "Establish recurring essential expenses and required debt payments."))
+    if incomplete_essentials_month is not None:
+        insights.append(_insight("ESSENTIAL_SPENDING_UNDERMODELLED", "data_quality", "high",
+            f"Modeled essential costs in month {incomplete_essentials_month} are below the separately supplied monthly essentials assumption.",
+            "Include those actual essential outflows as cash-flow rules; the reserve-target input is not automatically deducted a second time."))
     if payload.opening_liquid_minor < reserve_target:
         insights.append(_insight("OPENING_RESERVE_GAP", "liquidity", "review",
             "Hypothetical opening liquidity is below the supplied emergency-reserve target.",
@@ -179,6 +194,9 @@ def scenario_forecast(payload: CFOScenarioInput) -> dict:
     return {"synthetic_only": True, "scenario_version": "cfo-cash-scenario-v1",
             "currency": payload.currency, "months": rows,
             "reserve_target_minor": reserve_target,
+            "opening_essential_runway_months": opening_runway_months,
+            "first_undermodelled_essentials_month": incomplete_essentials_month,
+            "reserve_target_assumption_only": True,
             "opening_liquid_minor": payload.opening_liquid_minor,
             "ending_liquid_minor": current,
             "first_negative_month": first_negative,

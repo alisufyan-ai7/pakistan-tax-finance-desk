@@ -20,6 +20,9 @@ def test_pure_forecast_periodic_flows_and_goals():
     r=scenario_forecast(CFOScenarioInput(**SCENARIO))
     assert [m["projected_liquid_minor"] for m in r["months"]]==[140000,160000,180000,200000]
     assert r["reserve_target_minor"]==120000
+    assert r["opening_essential_runway_months"]=="3.00"
+    assert r["first_undermodelled_essentials_month"]==1
+    assert "ESSENTIAL_SPENDING_UNDERMODELLED" in {x["code"] for x in r["insights"]}
     assert r["goals"][0]["on_track_in_scenario"] is True
     assert r["tax_due_minor"] is None and not r["investment_advice_verified"]
     assert r["category_movement_minor"]["salary"]==200000
