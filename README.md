@@ -119,3 +119,9 @@ Four further owner-independent PRs are merged: [#15 keyed bank import IDs](https
 [Implementation](docs/IMPLEMENTATION_M2M_PRIVATE_EVENT_VAULT.md) · [Merged PR #19](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/19) · [116-test PostgreSQL 18 CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43750827782).
 
 The **new, separate synthetic financial-event table** encrypts all meaningful economic fields including amounts and posting dates in one authenticated payload, and uses a dedicated keyed blind index to retrieve events by tax year and source. This is **not** a migration of the pre-existing bank/loan/cash tables; those numeric/date/relationship columns remain readable in the old development schema. Real financial data remains prohibited and `APP_DATA_MODE=real` still fails closed.
+
+## M2n — Read-only encrypted migration review (2026-11-16)
+
+[Implementation guide](docs/IMPLEMENTATION_M2N_MIGRATION_PREFLIGHT.md) · [PR #20 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/20) · [121-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43751406602).
+
+The application can now *preview*, but does **not execute**, conversion of reviewed synthetic legacy bank transactions into M2m's encrypted event journal. Missing classifications, unreviewed overlaps and source conflicts are surfaced explicitly, with no automatic writes or double-counting. **Legacy monetary amounts and dates remain plaintext**. Real finance documents remain prohibited.

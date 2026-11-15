@@ -180,3 +180,12 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Alembic `0009_private_events`, [GitHub CI 43750827782](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43750827782) **116 tests PASS, PostgreSQL 18 schema PASS**.
 - [ ] Legacy financial numeric/date/metadata migration/reconciliation into protected store, including source fingerprint/index key rotation and no-double-count controls: NOT COMPLETE.
 - [ ] Private production MFA/key management, real-doc parser sandbox, secure offsite restore and verified FBR tax engine: NOT COMPLETE. `APP_DATA_MODE=real` must stay disabled.
+
+## M2n synthetic migration-preflight acceptance (2026-11-16)
+
+- [x] Read-only reviewed bank-source eligibility preview and stable purpose-separated HMAC source identity; fiscal-year windows and missing evidence never interpreted as zero.
+- [x] Separate statuses for excluded, unreviewed, unresolved overlap, unsupported and conflicting mirror; immutable original source remains authoritative.
+- [x] Optional encrypted debit/credit direction in M2m payload, canonical replay compatibility for pre-M2n default.
+- [x] Exact-head [CI 43751406602](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43751406602) **121 tests passed**, ephemeral PostgreSQL18 migration/schema check PASS.
+- [ ] Full, audited and recoverable migration of existing plaintext numeric/date/bank/loan/cash relationships into an encrypted query model; no record migration has occurred.
+- [ ] Production secure private app/MFA/keys/backups, isolated real-document parsers and complete year-effective FBR tax computation; still blocked.
