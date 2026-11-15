@@ -38,4 +38,6 @@ Existing `APP_DATA_MODE=real` startup prohibition remains in force. The new API 
 
 ## Verification record
 
-**Before CI:** this document is a statement of intended code and test acceptance, not a claim of passed hosted tests. Add exact PR/head SHA, tests, PG18 result and final merge status after GitHub Actions completes.
+[PR #34](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/34) merged to `main` at `2c7bf08f784abc17c544ac13f2d584eabcf2ec3b`. Exact PR-head [GitHub Actions run 43775409962](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43775409962) **SUCCESS**: **205 pytest passed, 2 warnings**; ephemeral **PostgreSQL18** `0010_confidential_bank` migration + `alembic check` no drift **PASS**, and actual protected DB API write/exact replay/read/no-legacy-totals SQL smoke **PASS**. First PR CI attempt had an outdated CI revision assertion (0009), which was corrected before the independently successful re-run. No genuine bank or FBR documents, secrets or source identifiers were used.
+
+**NOT FULL G1:** source M1 tables and non-bank legacy relationships remain plaintext; no real PostgreSQL data migration or independent PostgreSQL backup/restore has been executed. `APP_DATA_MODE=real` remains disabled. G1-b next: encrypted PG backup/restore and a verified migration from legacy graph to encrypted canonical form with no double count and auditable reversible cutover.
