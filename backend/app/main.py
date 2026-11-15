@@ -18,6 +18,7 @@ from sqlalchemy import and_, select, func
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
+from .privacy_fingerprints import document_digest, transaction_digest, require_dedup_key, FingerprintKeyError
 from .ledger_crypto import assert_encrypted_ledger, LedgerKeyError
 from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState, LoanAccount, CashHolding
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
@@ -78,13 +79,22 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0006_cash_wealth":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0007_keyed_import_digests":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
     except LedgerKeyError as exc:
         engine.dispose()
         raise RuntimeError("Ledger field encryption unavailable or unsealed synthetic records detected") from exc
+    try:
+        require_dedup_key()
+        with engine.connect() as connection:
+            old_documents = connection.execute(select(Document.id).where(Document.digest_scheme != 'hmac_sha256_v1').limit(1)).first()
+            if old_documents is not None:
+                raise RuntimeError('Legacy unkeyed bank documents detected; explicitly rebuild synthetic fixtures')
+    except FingerprintKeyError as exc:
+        engine.dispose()
+        raise RuntimeError('Bank import deduplication HMAC key missing or invalid') from exc
     sessions = session_factory(engine)
 
     def _local_only(request: Request):
@@ -245,7 +255,7 @@ def create_app(database_url: str | None = None):
         raw = await file.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             raise HTTPException(413, "Maximum file size is 4 MiB")
-        digest = sha256(raw).hexdigest()
+        digest = document_digest(raw)
         prior_document = db.scalar(select(Document).where(Document.account_id == account_id, Document.sha256 == digest))
         if prior_document:
             previously_accepted = db.scalar(select(func.count()).select_from(Transaction).where(Transaction.document_id == prior_document.id))
@@ -260,7 +270,7 @@ def create_app(database_url: str | None = None):
             raise HTTPException(422, "Supply both statement period dates or neither")
         if period_start and (period_start > rows[0].posted_on or period_end < rows[-1].posted_on or period_start > period_end):
             raise HTTPException(422, "Declared statement period must cover every imported transaction")
-        doc = Document(id=str(uuid.uuid4()), account_id=account_id, sha256=digest, file_format=ext,
+        doc = Document(id=str(uuid.uuid4()), account_id=account_id, sha256=digest, digest_scheme='hmac_sha256_v1', file_format=ext,
                        parser_version=PARSER_VERSION if profile == "normalized" else f"{PARSER_VERSION}:{profile}", period_start=period_start or rows[0].posted_on,
                        period_end=period_end or rows[-1].posted_on, coverage_declared=bool(period_start))
         db.add(doc)
@@ -269,7 +279,7 @@ def create_app(database_url: str | None = None):
         for row in rows:
             base = fingerprint_base(row)
             occurrences[base] = occurrences.get(base, 0) + 1
-            fp = fingerprint(account_id, row, digest, occurrences[base])
+            fp = transaction_digest(fingerprint(account_id, row, digest, occurrences[base]))
             existing = db.scalar(select(Transaction.id).where(Transaction.account_id == account_id, Transaction.fingerprint == fp))
             if existing:
                 duplicated += 1
