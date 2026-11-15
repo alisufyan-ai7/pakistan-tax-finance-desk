@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
 from .ledger_crypto import assert_encrypted_ledger, LedgerKeyError
-from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState, LoanAccount
+from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState, LoanAccount, CashHolding
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
 from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session
@@ -31,6 +31,8 @@ from .financial_links import (
     add_allocation, loan_view, confirm_transfer, confirmed_transfers, source_locked,
     ReversalInput, reverse_loan_allocation, reverse_transfer, link_audit,
 )
+from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput,
+    create_cash_holding, add_cash_movement, cash_view, reverse_cash_movement, cash_annual_bridge)
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
 DEBIT = {"personal_expense", "business_expense", "donation", "zakat", "investment_purchase", "loan_given", "debt_principal_paid", "loan_installment_paid", "tax_paid", "atm_cash", "own_transfer", "other_outflow"}
@@ -75,7 +77,7 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0005_link_reversals":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0006_cash_wealth":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
@@ -412,6 +414,50 @@ def create_app(database_url: str | None = None):
     def create_loan_record(payload: LoanInput, _: Auth, db: DB):
         loan = create_loan(db, payload)
         return loan_view(db, loan, loan.opening_as_of)
+
+
+    @app.post("/api/finance/cash", status_code=201)
+    def open_cash_holding(payload: CashOpeningInput, _: Auth, db: DB):
+        holding = create_cash_holding(db, payload)
+        return cash_view(db, holding, holding.opening_as_of)
+
+    @app.get("/api/finance/cash")
+    def list_cash_holdings(_: Auth, db: DB, as_of: date | None = None):
+        selected = as_of or date.today()
+        holdings = db.scalars(select(CashHolding).order_by(CashHolding.opening_as_of, CashHolding.id)).all()
+        return {"as_of": selected.isoformat(), "synthetic_only": True,
+                "cash_holdings": [cash_view(db, h, selected) for h in holdings],
+                "warning": "Cash balances are owner-declared/unverified, never proof of FBR wealth."}
+
+    @app.get("/api/finance/cash/annual")
+    def annual_cash_wealth_bridge(_: Auth, db: DB, tax_year: int = 2027):
+        return cash_annual_bridge(db, tax_year)
+
+    @app.get("/api/finance/cash/{cash_id}")
+    def read_cash_holding(cash_id: str, _: Auth, db: DB, as_of: date | None = None):
+        holding = db.get(CashHolding, cash_id)
+        if holding is None:
+            raise HTTPException(404, "Cash holding not found")
+        return cash_view(db, holding, as_of or date.today())
+
+    @app.post("/api/finance/cash/{cash_id}/movements", status_code=201)
+    def record_cash_movement(cash_id: str, payload: CashMovementInput, _: Auth, db: DB):
+        movement, replay = add_cash_movement(db, cash_id, payload)
+        result = {"id": movement.id, "cash_id": movement.cash_id, "kind": movement.kind,
+                  "transaction_id": movement.transaction_id, "amount_minor": movement.amount_minor,
+                  "posted_on": movement.posted_on.isoformat(),
+                  "already_linked": replay, "wealth_verified": False,
+                  "tax_treatment_verified": False, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.post("/api/finance/cash/{cash_id}/movements/{movement_id}/reverse", status_code=201)
+    def correct_cash_movement(cash_id: str, movement_id: str, payload: CashReversalInput,
+                              _: Auth, db: DB):
+        reversal, replay = reverse_cash_movement(db, cash_id, movement_id, payload)
+        result = {"id": reversal.id, "movement_id": reversal.movement_id,
+                  "status": "REVERSED", "audit_preserved": True,
+                  "already_reversed": replay, "synthetic_only": True}
+        return JSONResponse(status_code=200, content=result) if replay else result
 
     @app.get("/api/finance/loans")
     def list_loan_records(_: Auth, db: DB, as_of: date | None = None):
