@@ -1,6 +1,6 @@
 # Delivery gates — personal CFO owner MVP and future platform
 
-**Checkpoint:** 2026-11-16, after M2r PR #27. **This is a dependency-based delivery order, NOT an ETA or launch commitment.** GitHub's verified commit, PR/CI and current project status decide what is done; a synthetic test pass does not certify the real-data product.
+**Checkpoint:** 2026-11-16, after M2s PR #32 (178 tests + PostgreSQL18 PASS on PR and merge-main code). The [updated accountant-ready Personal CFO v2 plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md) is the feature/scope authority; the G0–G6 objective security/legal release gates still control real-data eligibility. **This is a dependency-based delivery order, NOT an ETA or launch commitment.** GitHub's verified commit, PR/CI and current project status decide what is done; a synthetic test pass does not certify the real-data product.
 
 ## What the first development session achieved — and did not
 
@@ -33,3 +33,15 @@ The owner's initial approximately 5–6 hours of work with agents created a *syn
 4. Keep a single canonical [project status](PROJECT_STATUS.md) and [handoff](CURRENT_HANDOFF.md) with latest validated SHA and exceptions. Follow [mandatory continuity protocol](CHAT_CONTINUITY_PROTOCOL.md) before a new chat or thread ends.
 
 **Current first remaining task:** G1 full confidentiality of the active legacy data model, audited PostgreSQL data migration and recovery. After that, G2/G3 must progress together. Future owner documents and infrastructure consent are acceptance inputs, not blockers for the present synthetic engineering.
+
+## V2 release sequencing: what changed, what did not — 2026-11-16
+
+The owner chose to elevate **continuous statement-led evidence → reconciliation → accountant-ready working pack** into the principal owner workflow (see [v2 plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md)). New first-class experiences are **read-only accountant workbook diagnostics**, distinct DRAFT versus officially FILED status, contextual withholding tax candidates, targeted evidence requests, and review/export reports. These sharpen G3/G4/G5 deliverables, rather than adding a separate release gate or delaying operational encryption.
+
+- **G0:** M2s [PR #32](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/32) is the newest verified code. [CI 43769169270](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43769169270) 178 passed + PG18 PASS; CSV/OOXML true-signature and bounded package preflight is *synthetic only*.
+- **G1 is still blocking:** encrypted-only archive is not confidential active bank/loan/cash DB. Full source migration/parity/recovery remains priority #1.
+- **G2/G3 still blocking:** private MFA/deploy and validated genuine Pakistani bank/FBR intake plus isolated PDF/workbook processing are prerequisites for real owner data.
+- **G4 remains incomplete:** mixed-income per-TY Pakistan statute, WHT, investment, full wealth reconciliation and verified legal opportunities are not certified.
+- **G5 owner MVP expands:** require repeatable source-to-exception-to-accountant pack workflow, mobile-first owner view, tax/wealth confidence, planning. Direct accountant accounts may wait; owner-controlled export is sufficient initial collaboration.
+
+**Review evidence boundary:** private accountant drafts remain unfinished and must not be treated as filed; an owner-confirmed timing extension is distinct from official filing verification. This documentation adds **requirements, not data access, release approval or implemented tax calculations**.
