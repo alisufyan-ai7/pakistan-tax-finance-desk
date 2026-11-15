@@ -87,3 +87,18 @@ class HistoricalFiling(Base):
     # ONLY synthetic numerical fixtures in this stage; no actual filed figures or identifiers.
     fields_json: Mapped[str] = mapped_column(Text, nullable=False)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+class OwnerAuthState(Base):
+    """Replay-protected RFC6238 counter for the single synthetic owner."""
+    __tablename__ = "owner_auth_state"
+    owner_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    last_totp_step: Mapped[int] = mapped_column(Integer, nullable=False, default=-1)
+
+class OwnerSession(Base):
+    """Hashed session token only; never store the HttpOnly cookie itself."""
+    __tablename__ = "owner_sessions"
+    token_sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    csrf_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

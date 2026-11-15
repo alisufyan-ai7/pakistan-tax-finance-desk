@@ -2,7 +2,7 @@
 
 No real documents until MFA, encryption at rest and backup/restore are certified.
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from hashlib import sha256
 from decimal import Decimal
 from pathlib import Path
@@ -18,9 +18,10 @@ from sqlalchemy import and_, select, func
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .db import Base, build_engine, session_factory
-from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling
+from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
+from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
 from .bank_profiles import normalize_synthetic_csv, PROFILES
 
@@ -34,6 +35,11 @@ class AccountInput(BaseModel):
     institution: str = Field(min_length=1, max_length=80)
     currency: str = "PKR"
     legal_owner: str = "individual"
+
+class OwnerLoginInput(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=256)
+    totp_code: str = Field(pattern=r"^[0-9]{6}$")
 
 class ClassificationInput(BaseModel):
     category: str
@@ -62,20 +68,62 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0001_initial":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0002_owner_mfa":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     sessions = session_factory(engine)
 
-    def authenticate(request: Request, credentials: Annotated[HTTPBasicCredentials | None, Depends(security)]):
-        password = os.getenv("OWNER_PASSWORD", "")
-        user = os.getenv("OWNER_USERNAME", "owner")
-        if not password or len(password) < 16:
-            raise HTTPException(status_code=503, detail="Configure OWNER_PASSWORD with 16+ characters")
-        # Fail closed even if someone binds the service beyond loopback.
+    def _local_only(request: Request):
+        # This synthetic demo must not be accessible over the public internet.
         if not request.client or request.client.host not in {"127.0.0.1", "::1", "testclient"}:
             raise HTTPException(status_code=403, detail="Local-only development service")
-        if not credentials or not (secrets.compare_digest(credentials.username.encode(), user.encode()) and secrets.compare_digest(credentials.password.encode(), password.encode())):
-            raise HTTPException(status_code=401, detail="Authentication required", headers={"WWW-Authenticate": 'Basic realm="Private finance desk"'})
+
+    def _auth_mode():
+        mode = os.getenv("OWNER_AUTH_MODE", "local_basic")
+        if mode not in {"local_basic", "totp_session"}:
+            raise HTTPException(status_code=503, detail="Unsupported authentication mode")
+        return mode
+
+    def authenticate(request: Request, credentials: Annotated[HTTPBasicCredentials | None, Depends(security)]):
+        _local_only(request)
+        user = os.getenv("OWNER_USERNAME", "owner")
+        if _auth_mode() == "local_basic":
+            password = os.getenv("OWNER_PASSWORD", "")
+            if not password or len(password) < 16:
+                raise HTTPException(status_code=503, detail="Configure OWNER_PASSWORD with 16+ characters")
+            if not credentials or not (secrets.compare_digest(credentials.username.encode(), user.encode()) and secrets.compare_digest(credentials.password.encode(), password.encode())):
+                raise HTTPException(status_code=401, detail="Authentication required", headers={"WWW-Authenticate": 'Basic realm="Private finance desk"'})
+            return
+        # This is synthetic-only MFA groundwork. HTTPS and a secure host are mandatory,
+        # even for the local demonstration. No remote hosting until full security gates.
+        if request.url.scheme != "https":
+            raise HTTPException(status_code=403, detail="MFA session mode requires HTTPS")
+        raw = request.cookies.get(SESSION_COOKIE, "")
+        if len(raw) > 100 or not raw or not all(c.isalnum() or c in "-_" for c in raw):
+            raise HTTPException(status_code=401, detail="Login required")
+        with sessions() as session:
+            item = session.get(OwnerSession, token_digest(raw))
+            now = datetime.now(timezone.utc)
+            if not item or item.revoked:
+                raise HTTPException(status_code=401, detail="Login required")
+            expiry = item.expires_at
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            if now >= expiry:
+                raise HTTPException(status_code=401, detail="Session expired")
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                supplied = request.headers.get("X-CSRF-Token", "")
+                if len(supplied) != 64 or not secrets.compare_digest(token_digest(supplied), item.csrf_sha256):
+                    raise HTTPException(status_code=403, detail="CSRF validation failed")
+                origin = request.headers.get("origin")
+                if origin and origin != str(request.base_url).rstrip("/"):
+                    raise HTTPException(status_code=403, detail="Cross-origin mutation rejected")
+
+    def _configured_mfa():
+        pw_hash = os.getenv("OWNER_PASSWORD_SCRYPT", "")
+        totp_secret = os.getenv("OWNER_TOTP_SECRET", "")
+        if not pw_hash or not totp_secret:
+            raise HTTPException(status_code=503, detail="Configure owner MFA credentials")
+        return pw_hash,totp_secret
 
     def db_session():
         with sessions() as db:
@@ -89,6 +137,61 @@ def create_app(database_url: str | None = None):
 
     Auth = Annotated[None, Depends(authenticate)]
     DB = Annotated[Session, Depends(db_session)]
+
+    @app.get("/login", include_in_schema=False)
+    def login_page(request: Request):
+        _local_only(request)
+        if _auth_mode() != "totp_session":
+            raise HTTPException(404, "MFA session login not enabled")
+        return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "login.html", media_type="text/html",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'"})
+
+    @app.post("/api/auth/login")
+    def owner_login(payload: OwnerLoginInput, request: Request, db: DB):
+        _local_only(request)
+        if _auth_mode() != "totp_session":
+            raise HTTPException(404, "MFA session login not enabled")
+        if request.url.scheme != "https":
+            raise HTTPException(403, "HTTPS required")
+        pw_hash,totp_secret=_configured_mfa()
+        if not secrets.compare_digest(payload.username,os.getenv("OWNER_USERNAME","owner")) or not check_password(payload.password,pw_hash):
+            raise HTTPException(401, "Invalid login credentials")
+        step=totp_step(totp_secret,payload.totp_code)
+        if step is None:
+            raise HTTPException(401, "Invalid login credentials")
+        state=db.scalar(select(OwnerAuthState).where(OwnerAuthState.owner_id == "owner").with_for_update())
+        if state and step <= state.last_totp_step:
+            raise HTTPException(401, "One-time code already used")
+        if not state:
+            state=OwnerAuthState(owner_id="owner",last_totp_step=step)
+            db.add(state)
+        else:
+            state.last_totp_step=step
+        raw=session_token()
+        csrf=csrf_for_session(raw)
+        now=datetime.now(timezone.utc)
+        db.add(OwnerSession(token_sha256=token_digest(raw),csrf_sha256=token_digest(csrf),
+                            created_at=now,expires_at=now+timedelta(seconds=COOKIE_LIFETIME_SECONDS),revoked=False))
+        db.commit()
+        result=JSONResponse({"authenticated":True,"mode":"totp_session","synthetic_only":True})
+        result.set_cookie(key=SESSION_COOKIE,value=raw,max_age=COOKIE_LIFETIME_SECONDS,
+                          secure=True,httponly=True,samesite="strict",path="/")
+        return result
+
+    @app.get("/api/auth/session")
+    def session_info(request: Request, _: Auth):
+        if _auth_mode() == "local_basic":
+            return {"mode":"local_basic","csrf_token":None,"synthetic_only":True}
+        return {"mode":"totp_session","csrf_token":csrf_for_session(request.cookies[SESSION_COOKIE]),"synthetic_only":True}
+
+    @app.post("/api/auth/logout")
+    def logout(request: Request, _: Auth, db: DB):
+        if _auth_mode() == "totp_session":
+            db.query(OwnerSession).filter(OwnerSession.token_sha256 == token_digest(request.cookies[SESSION_COOKIE])).update({"revoked":True})
+            db.commit()
+        response=JSONResponse({"signed_out":True})
+        response.delete_cookie(SESSION_COOKIE,path="/",secure=True,httponly=True,samesite="strict")
+        return response
 
     @app.get("/", include_in_schema=False)
     def homepage(_: Auth):
