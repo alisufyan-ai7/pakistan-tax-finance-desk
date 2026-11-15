@@ -83,3 +83,9 @@ Sensitive account labels, transaction descriptions/references/categories, and au
 ## M2d-2 — Reviewed cross-account movements (2026-11-15)
 
 Read-only [movement review endpoint](docs/IMPLEMENTATION_M2D2_MOVEMENTS.md) identifies *unverified* candidate matches between your own bank accounts only when both sides are already reviewed, have equal amounts and a unique opposite-side match within two days. Ambiguous and single-sided matches remain exceptions. Loan principal, cash withdrawals, donations, zakat, investments and tax payments are observed separately from salary/business receipts; this **does not** calculate verified debt balances, investment gains, deductions or FBR tax. [Merged PR #10](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/10), [44-test green CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43709644891). Real-data mode still disabled.
+
+## M2e — Loan and transfer recording (2026-11-15)
+
+[Implementation documentation](docs/IMPLEMENTATION_M2E_LOANS_TRANSFERS.md) · [Merged PR #11](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/11) · [55-test successful CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43712136211)
+
+The synthetic-only backend now records loan obligations/receivables with explicitly stated opening balances, individual bank allocations of principal and markup, and owner-confirmed own-account transfer pairs. It never assumes loan disbursements are taxable income, treats markup as automatically deductible, or presents owner confirmation as independent evidence. No tax figures are certified. Loan/transfer records are append-only and lack a correction interface, so this remains a prototype. Real financial-record ingestion is **disabled** pending complete privacy/security and document-adapter acceptance.

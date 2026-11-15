@@ -121,3 +121,14 @@ User will provide prior filed returns in the future; there is **no development d
 - [x] Distinct reviewed non-earnings cash movement summaries for loans, cash, taxes, gifts, zakat/donations and investment contributions; no assertion of loan balances, tax eligibility or gains.
 - [x] Hosted CI **44 passed, PostgreSQL18 schema PASS** ([run 43709644891](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43709644891)).
 - [ ] Audited counterparty/loan principal schedules and authoritative transfer confirmation, wealth evolution and complete secure document import remain pending.
+
+## M2e acceptance — 2026-11-15
+
+- [x] Explicit borrowed loan liability and lent loan receivable with stated opening date/balance and encrypted counterparty/evidence notes, never automatically treated as verified.
+- [x] Reviewed-bank-transaction-backed advance, principal repayment and principal/markup installment with exact paisa reconciliation, no negative end-of-day balance or double allocation.
+- [x] Explicit two-sided owner-account transfer confirmations with equal amounts, different accounts, same legal owner/currency, maximum 2-day lag and cross-FBR-year query support; no tax/income statement inferred.
+- [x] Source transactions locked once linked; append-only evidence events, exact replay idempotency.
+- [x] Key rotation covers newly encrypted financial text and legacy test schemas.
+- [x] GitHub Actions [run 43712136211](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43712136211): **55 pytest passed** and ephemeral PostgreSQL 18 Alembic `0004` + schema check PASS.
+- [ ] Corrections/reversal/relinking workflow with permanent audit, full loan amortization evidence and bank-supplied contractual documents.
+- [ ] Cash-in-hand and wealth provenance; confidentiality of amounts/dates/IDs; real secure document import, MFA recovery/production hosting, actual bank/FBR formats and audited TY2023+ tax rules.
