@@ -37,6 +37,7 @@ from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput
 from .wealth_position import observed_position, annual_position
 from .asset_book import AssetInput, record_asset, asset_position
 from .private_events import PrivateEventInput, record_private_event, list_private_events, require_private_index_key, PrivateEventKeyError
+from .private_migration_preview import preview_legacy_migration
 from .tax_rules import SalaryPreviewInput, salary_preview, tax_rule_registry, opportunity_rule_index
 from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
@@ -464,6 +465,10 @@ def create_app(database_url: str | None = None):
         return loan_view(db, loan, loan.opening_as_of)
 
 
+
+    @app.get("/api/finance/private-events/migration-preview")
+    def preview_private_journal_migration(_: Auth, db: DB, tax_year: int = 2027, limit: int = 500):
+        return preview_legacy_migration(db, tax_year, limit)
 
     @app.post("/api/finance/private-events", status_code=201)
     def append_private_financial_event(payload: PrivateEventInput, _: Auth, db: DB):

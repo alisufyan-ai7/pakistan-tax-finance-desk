@@ -82,6 +82,7 @@ class PrivateEventInput(BaseModel):
     account_ref: str | None = Field(default=None, max_length=80)
     counterparty: str | None = Field(default=None, max_length=160)
     evidence_note: str = Field(min_length=12, max_length=500)
+    direction: Literal["debit", "credit", "none"] = "none"
     reviewed: Literal[False] = False
 
     @model_validator(mode="after")
@@ -98,7 +99,12 @@ class PrivateEventInput(BaseModel):
 
 
 def _canonical(payload: PrivateEventInput) -> str:
-    return json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    data = payload.model_dump(mode="json")
+    # Preserve byte-for-byte canonical replay semantics for pre-M2n synthetic
+    # events which lacked the optional direction field.
+    if data.get("direction") == "none":
+        data.pop("direction")
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _display(record: PrivateFinancialEvent) -> dict:
