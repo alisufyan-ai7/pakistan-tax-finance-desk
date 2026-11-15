@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
+from .ledger_crypto import EncryptedText
 
 def utcnow():
     return datetime.now(timezone.utc)
@@ -10,8 +11,8 @@ def utcnow():
 class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    name: Mapped[str] = mapped_column(String(80), nullable=False)
-    institution: Mapped[str] = mapped_column(String(80), nullable=False)
+    name: Mapped[str] = mapped_column(EncryptedText("accounts.name"), nullable=False)
+    institution: Mapped[str] = mapped_column(EncryptedText("accounts.institution"), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="PKR", nullable=False)
     legal_owner: Mapped[str] = mapped_column(String(32), default="individual", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -41,12 +42,12 @@ class Transaction(Base):
     row_number: Mapped[int] = mapped_column(Integer, nullable=False)
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     posted_on: Mapped[date] = mapped_column(Date, nullable=False, index=True)
-    description: Mapped[str] = mapped_column(String(500), nullable=False)
-    reference: Mapped[str | None] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(EncryptedText("transactions.description"), nullable=False)
+    reference: Mapped[str | None] = mapped_column(EncryptedText("transactions.reference"))
     debit_minor: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     credit_minor: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     balance_minor: Mapped[int | None] = mapped_column(Integer)
-    category: Mapped[str] = mapped_column(String(48), default="unreviewed", nullable=False)
+    category: Mapped[str] = mapped_column(EncryptedText("transactions.category"), default="unreviewed", nullable=False)
     reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
     overlap_possible: Mapped[bool] = mapped_column(Boolean, default=False)
     excluded: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -56,13 +57,13 @@ class AuditEvent(Base):
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
-    old_category: Mapped[str] = mapped_column(String(48), nullable=False)
-    new_category: Mapped[str] = mapped_column(String(48), nullable=False)
+    old_category: Mapped[str] = mapped_column(EncryptedText("audit_events.old_category"), nullable=False)
+    new_category: Mapped[str] = mapped_column(EncryptedText("audit_events.new_category"), nullable=False)
     old_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False)
     new_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False)
     old_overlap_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False)
     new_overlap_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    note: Mapped[str] = mapped_column(EncryptedText("audit_events.note"), default="", nullable=False)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 class HistoricalFiling(Base):

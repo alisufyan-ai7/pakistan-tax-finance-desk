@@ -46,6 +46,9 @@ jobs:
         env:
           DATABASE_URL: postgresql+psycopg://postgres:synthetic_ci_not_a_real_secret@localhost:5432/synthetic_ci_db
           APP_DATA_MODE: synthetic
+          # Public fake CI key; synthetic test data only.
+          LEDGER_FIELD_KEYS_JSON: '{"synthetic_ci":"U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M="}'
+          LEDGER_FIELD_ACTIVE_KEY: synthetic_ci
         run: |
           python -m alembic upgrade head
           python -m alembic check
@@ -54,7 +57,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0002_owner_mfa'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0003_ledger_text'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           from app.main import create_app
           assert create_app().title.startswith('Pakistan Tax')
