@@ -2,7 +2,12 @@
 
 # Pakistan Tax & Wealth Desk
 
-**Status (2026-11-15):** M1 through M2d-1 synthetic-only foundations merged (39-test PostgreSQL CI); no production application, genuine bank/FBR document ingestion, verified FBR tax computation, or filing.
+
+
+> **Current product direction (2026-11-16):** [Personal CFO v2 — statement-led accounting, reconciliation, legal tax intelligence and accountant-ready workflow](docs/PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md). This plan is the primary product scope and user-journey source; the [latest implementation status](docs/PROJECT_STATUS.md), [release gates](docs/DELIVERY_GATES_AND_RELEASE_READINESS.md) and [handoff](docs/CURRENT_HANDOFF.md) distinguish planned versus implemented work.
+
+
+**Current status (2026-11-16):** Latest merged synthetic-only code is M2s PR #32 (178 tests + PG18 PASS). No real-data production deployment, authenticated genuine bank/FBR intake, complete mixed-income FBR tax or automatic filing. See current status/handoff; historical milestone sections below are retained for evidence.
 
 A **private, single-owner-first** Pakistan tax preparation, lifetime transaction ledger and personal wealth intelligence application. **GitHub is the source of truth for code, requirements, decisions, test fixtures and engineering handoffs; never for real statements or confidential financial data.**
 
@@ -157,3 +162,11 @@ Offline *synthetic-only* encrypted archival export can now preserve all recogniz
 ### Real-document readiness and accountant workflow (2026-11-16)
 
 [Design requirements for private working-paper evidence](docs/ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md) · [Issue #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30). The future private CFO must support encrypted password-protected bank statements, independent **filed vs accountant draft** source states, Excel formula provenance, account-period coverage and reviewer-confirmed transactions/wealth discrepancies. **Not implemented for real data.** This repository contains no private passwords, owner documents, bank figures or accountant communications; current `APP_DATA_MODE=real` remains prohibited.
+
+## Product-plan v2 update — accountant-ready statement-led owner experience (2026-11-16)
+
+The owner requested a comprehensive plan revision based on generalized lessons from private bank, filed FBR, unfinished accountant-workbook, tax withholding and evidence-request **document types**. The [new formal product plan](docs/PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md) specifies one-time 2023+ onboarding, irregular ongoing bank statement uploads, account×period coverage, reliable transfer/loan/investment classification, linked exception resolution, lawful year-specific FBR calculations, verified-vs-unknown wealth, read-only draft workbook audits and an accountant-ready report/export.
+
+**The system is a personal CFO, not an autonomous accountant or only a tax calculator.** Owner and accountant retain decisions and signoff; filed source status requires official evidence. Existing privacy and release gates remain unchanged: this PUBLIC GitHub contains only synthetic code/design, not actual private financial documents, passwords or confidential messages. All v2 features beyond existing synthetic primitives remain **planned**, and `APP_DATA_MODE=real` still refuses startup until the G1–G3 security/source gates pass.
+
+Latest verified executable milestone: [M2s PR #32](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/32) (178 tests, PG18 PASS). [Historical and actual feature status](docs/PROJECT_STATUS.md). Next owner-independent code work: [Issue #21](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/21) canonical confidential finance, then [#28](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/28) private MFA, [#29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29) genuine sources and [#30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30) accountant-workbook/exception workflow.
