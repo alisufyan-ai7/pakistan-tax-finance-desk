@@ -14,7 +14,7 @@ MAX_TRANSFER_DAYS = 2
 NON_EARNINGS_CATEGORIES = frozenset({
     "own_transfer", "loan_received", "loan_given", "loan_repayment_received",
     "debt_principal_paid", "atm_cash", "investment_purchase", "gift_received",
-    "donation", "zakat", "tax_paid",
+    "donation", "zakat", "tax_paid", "cash_deposit",
 })
 
 

@@ -170,3 +170,48 @@ class TransferRevocation(Base):
     confirmation_id: Mapped[str] = mapped_column(ForeignKey("transfer_confirmations.id"), nullable=False)
     reason: Mapped[str] = mapped_column(EncryptedText("transfer_revocations.reason"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+class CashHolding(Base):
+    """Synthetic owner-declared PKR cash-in-hand opening, not FBR verified."""
+    __tablename__ = "cash_holdings"
+    __table_args__ = (CheckConstraint("opening_minor >= 0", name="ck_cash_opening_nonnegative"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    label: Mapped[str] = mapped_column(EncryptedText("cash_holdings.label"), nullable=False)
+    legal_owner: Mapped[str] = mapped_column(String(32), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    opening_as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    opening_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    evidence_basis: Mapped[str] = mapped_column(EncryptedText("cash_holdings.evidence_basis"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CashMovement(Base):
+    """Cash movement with reviewed bank source OR explicit manual unverified entry."""
+    __tablename__ = "cash_movements"
+    __table_args__ = (
+        Index("uq_active_cash_bank_transaction", "transaction_id", unique=True,
+              postgresql_where=text("active IS TRUE AND transaction_id IS NOT NULL"),
+              sqlite_where=text("active = 1 AND transaction_id IS NOT NULL")),
+        CheckConstraint("amount_minor > 0", name="ck_cash_movement_positive"),
+        CheckConstraint("kind IN ('bank_withdrawal','bank_deposit','manual_receipt','manual_spend')", name="ck_cash_kind_supported"),
+        CheckConstraint("(kind IN ('bank_withdrawal','bank_deposit') AND transaction_id IS NOT NULL) OR (kind IN ('manual_receipt','manual_spend') AND transaction_id IS NULL)", name="ck_cash_source_kind"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    cash_id: Mapped[str] = mapped_column(ForeignKey("cash_holdings.id"), nullable=False, index=True)
+    transaction_id: Mapped[str | None] = mapped_column(ForeignKey("transactions.id"), nullable=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    posted_on: Mapped[date] = mapped_column(Date, nullable=False)
+    evidence_note: Mapped[str] = mapped_column(EncryptedText("cash_movements.evidence_note"), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CashMovementReversal(Base):
+    """Append-only encrypted reason, preserving inactive cash movement source."""
+    __tablename__ = "cash_movement_reversals"
+    __table_args__ = (UniqueConstraint("movement_id", name="uq_cash_movement_reversal"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    movement_id: Mapped[str] = mapped_column(ForeignKey("cash_movements.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(EncryptedText("cash_movement_reversals.reason"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

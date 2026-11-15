@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .models import (Account, LoanAccount, LoanAllocation, LoanAllocationReversal,
-                     Transaction, TransferConfirmation, TransferRevocation)
+                     Transaction, TransferConfirmation, TransferRevocation, CashMovement)
 from .movement_analysis import MAX_TRANSFER_DAYS
 
 MAX_MINOR = 10**15
@@ -174,9 +174,12 @@ def add_allocation(db: Session, loan_id: str, payload: LoanAllocationInput) -> t
         _conflict("Loan and source account must have the same supported legal owner/currency")
     if db.scalar(select(TransferConfirmation.id).where(
         (TransferConfirmation.debit_transaction_id == tx.id) |
-        (TransferConfirmation.credit_transaction_id == tx.id)
+        (TransferConfirmation.credit_transaction_id == tx.id), TransferConfirmation.active.is_(True)
     ).limit(1)):
         _conflict("Transaction already confirmed as an own-account transfer")
+    if db.scalar(select(CashMovement.id).where(
+        CashMovement.transaction_id == tx.id, CashMovement.active.is_(True)).limit(1)):
+        _conflict("Bank source is already allocated to cash in hand")
     event_type = _loan_event_type(loan, tx, payload.principal_minor, payload.markup_minor)
     delta = payload.principal_minor * (1 if event_type == "advance" else -1)
     _active_schedule(db, loan, extra=(tx.posted_on, delta))
@@ -269,8 +272,11 @@ def confirm_transfer(db: Session, payload: TransferConfirmationInput) -> tuple[T
         _conflict("Transfer sides must have equal and opposite monetary movements")
     if abs((credit.posted_on - debit.posted_on).days) > MAX_TRANSFER_DAYS:
         _conflict("Transfer dates exceed the supported review window")
-    if db.scalar(select(LoanAllocation.id).where(LoanAllocation.transaction_id.in_([debit.id, credit.id])).limit(1)):
+    if db.scalar(select(LoanAllocation.id).where(LoanAllocation.transaction_id.in_([debit.id, credit.id]), LoanAllocation.active.is_(True)).limit(1)):
         _conflict("A transaction is already linked to a loan")
+    if db.scalar(select(CashMovement.id).where(
+        CashMovement.transaction_id.in_([debit.id, credit.id]), CashMovement.active.is_(True)).limit(1)):
+        _conflict("A transaction is already allocated to cash in hand")
     confirmation = TransferConfirmation(
         id=str(uuid4()), debit_transaction_id=debit.id,
         credit_transaction_id=credit.id, evidence_note=payload.evidence_note,
@@ -310,6 +316,9 @@ def source_locked(db: Session, transaction_id: str) -> bool:
             ((TransferConfirmation.debit_transaction_id == transaction_id) |
              (TransferConfirmation.credit_transaction_id == transaction_id)),
              TransferConfirmation.active.is_(True)
+        ).limit(1))
+        or db.scalar(select(CashMovement.id).where(
+            CashMovement.transaction_id == transaction_id, CashMovement.active.is_(True)
         ).limit(1))
     )
 
