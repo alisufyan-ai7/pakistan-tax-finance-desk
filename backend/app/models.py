@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date, datetime, timezone
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 from .ledger_crypto import EncryptedText
@@ -103,3 +103,49 @@ class OwnerSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+class LoanAccount(Base):
+    """Owner-declared synthetic opening balance, not independently verified."""
+    __tablename__ = "loan_accounts"
+    __table_args__ = (CheckConstraint("opening_principal_minor >= 0", name="ck_loan_opening_nonnegative"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    legal_owner: Mapped[str] = mapped_column(String(32), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    direction: Mapped[str] = mapped_column(String(12), nullable=False)
+    counterparty_label: Mapped[str] = mapped_column(EncryptedText("loan_accounts.counterparty_label"), nullable=False)
+    opening_as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    opening_principal_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    opening_basis: Mapped[str] = mapped_column(EncryptedText("loan_accounts.opening_basis"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class LoanAllocation(Base):
+    """Append-only, bank-transaction-backed disbursement or principal/markup split."""
+    __tablename__ = "loan_allocations"
+    __table_args__ = (
+        UniqueConstraint("transaction_id", name="uq_loan_allocation_transaction"),
+        CheckConstraint("principal_minor >= 0", name="ck_loan_principal_nonnegative"),
+        CheckConstraint("markup_minor >= 0", name="ck_loan_markup_nonnegative"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    loan_id: Mapped[str] = mapped_column(ForeignKey("loan_accounts.id"), index=True, nullable=False)
+    transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
+    event_kind: Mapped[str] = mapped_column(String(12), nullable=False)
+    principal_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    markup_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    evidence_note: Mapped[str] = mapped_column(EncryptedText("loan_allocations.evidence_note"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class TransferConfirmation(Base):
+    """Immutable owner-confirmed linkage, never a certified legal/tax conclusion."""
+    __tablename__ = "transfer_confirmations"
+    __table_args__ = (
+        UniqueConstraint("debit_transaction_id", name="uq_transfer_debit"),
+        UniqueConstraint("credit_transaction_id", name="uq_transfer_credit"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    debit_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
+    credit_transaction_id: Mapped[str] = mapped_column(ForeignKey("transactions.id"), nullable=False)
+    evidence_note: Mapped[str] = mapped_column(EncryptedText("transfer_confirmations.evidence_note"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
