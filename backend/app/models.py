@@ -224,3 +224,17 @@ class AssetSnapshot(Base):
     id: Mapped[str] = mapped_column(String(36),primary_key=True)
     payload_json: Mapped[str] = mapped_column(EncryptedText("asset_snapshots.payload_json"),nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utcnow,nullable=False)
+
+
+class PrivateFinancialEvent(Base):
+    """Sensitive event fields are sealed; only HMAC indexes/UUID/timestamp visible."""
+    __tablename__ = "private_financial_events"
+    __table_args__ = (
+        Index("uq_private_financial_events_source_hmac", "source_hmac", unique=True),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    year_hmac: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(EncryptedText("private_financial_events.payload_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
