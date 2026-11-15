@@ -35,6 +35,7 @@ from .financial_links import (
 from .cash_ledger import (CashOpeningInput, CashMovementInput, CashReversalInput,
     create_cash_holding, add_cash_movement, cash_view, reverse_cash_movement, cash_annual_bridge)
 from .wealth_position import observed_position, annual_position
+from .asset_book import AssetInput, record_asset, asset_position
 from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
@@ -80,7 +81,7 @@ def create_app(database_url: str | None = None):
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0007_keyed_import_digests":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0008_asset_snapshots":
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
@@ -445,6 +446,15 @@ def create_app(database_url: str | None = None):
         return loan_view(db, loan, loan.opening_as_of)
 
 
+
+    @app.post("/api/finance/assets/snapshots", status_code=201)
+    def create_asset_snapshot(payload: AssetInput, _: Auth, db: DB):
+        result, replay = record_asset(db, payload)
+        return JSONResponse(status_code=200, content=result) if replay else result
+
+    @app.get("/api/finance/assets/position")
+    def review_asset_position(_: Auth, db: DB, as_of: date | None = None):
+        return asset_position(db, as_of or date.today())
 
     @app.get("/api/finance/wealth/observed")
     def observed_financial_position(_: Auth, db: DB, as_of: date | None = None):

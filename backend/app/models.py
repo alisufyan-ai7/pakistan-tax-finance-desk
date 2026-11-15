@@ -216,3 +216,11 @@ class CashMovementReversal(Base):
     movement_id: Mapped[str] = mapped_column(ForeignKey("cash_movements.id"), nullable=False)
     reason: Mapped[str] = mapped_column(EncryptedText("cash_movement_reversals.reason"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class AssetSnapshot(Base):
+    """Only random id/time public; all position/valuation details encrypted in JSON."""
+    __tablename__ = "asset_snapshots"
+    id: Mapped[str] = mapped_column(String(36),primary_key=True)
+    payload_json: Mapped[str] = mapped_column(EncryptedText("asset_snapshots.payload_json"),nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=utcnow,nullable=False)
