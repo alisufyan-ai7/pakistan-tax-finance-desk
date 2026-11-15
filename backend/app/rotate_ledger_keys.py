@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import argparse
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from .ledger_crypto import ENCRYPTED_COLUMNS, LedgerKeyError, envelope_key_id, keyring, seal, unseal
 
-PRIMARY_KEYS = {"accounts": "id", "transactions": "id", "audit_events": "id"}
+PRIMARY_KEYS = {table: "id" for table in ENCRYPTED_COLUMNS}
 
 
 def rotate_fields(engine, *, new_key_id: str, dry_run: bool = True) -> dict[str, int]:
@@ -23,7 +23,12 @@ def rotate_fields(engine, *, new_key_id: str, dry_run: bool = True) -> dict[str,
     count: dict[str, int] = {}
     # Atomic transaction: exceptions roll back all SQL updates.
     with engine.begin() as connection:
+        present_tables = set(inspect(connection).get_table_names())
         for table, columns in ENCRYPTED_COLUMNS.items():
+            # Old synthetic fixtures and older schema versions legitimately lack
+            # newer tables. Never invent data or silently convert legacy values.
+            if table not in present_tables:
+                continue
             pk = PRIMARY_KEYS[table]
             rows = connection.exec_driver_sql(f"SELECT {pk}, {', '.join(columns)} FROM {table}").all()
             for idx, col in enumerate(columns, 1):
