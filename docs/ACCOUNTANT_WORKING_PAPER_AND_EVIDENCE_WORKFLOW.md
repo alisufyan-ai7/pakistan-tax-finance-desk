@@ -4,6 +4,10 @@
 
 ## Why the personal CFO needs more than transaction import
 
+The product-level implementation order, owner jobs-to-be-done, module navigation, data entities, workflow acceptance and report contract are now captured by [Personal CFO v2 product plan](PRODUCT_PLAN_ACCOUNTANT_READY_CFO_2026-11-16.md); this existing document remains the **source-specific safety/workflow specification**. No private document content is reflected in either file.
+
+
+
 Financial evidence arrives in several forms, and **source reliability and approval stage differ**:
 
 1. An official **FBR IRIS acknowledgement** can evidence submission of a particular Tax Year return, while a corresponding income/wealth filing and its revisions have distinct provenance.
@@ -47,3 +51,11 @@ Tracked in [Issue #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-des
 **Acceptance:** Synthetic password-protected PDF fixtures, malformed/wrong extension cases, bank row/page running-balance parity, duplicate transfers, account×FY gaps, draft Excel formulas and versioning, filed-revision vs draft evidence, cross-year wealth continuity, third-party movement explanation queue, and explicit owner approval boundaries. No case-specific data and no claim that authentic adapters are ready.
 
 **Current article- or sample-derived ideas do not mean their corresponding code has been implemented.**
+
+## End-to-end Accountant Workspace acceptance refinement — 2026-11-16
+
+**Stepwise implementation:** start with source/version metadata + synthetic draft/filed-status separation; add safe read-only workbook formula and cached-value diagnostics; connect source-linked review cases and withholding evidence; then owner-approved accountant-ready export. Only later consider direct accountant permission/invitations. Keep this inside the owner's current modular private app.
+
+**Source comparison logic:** a workbook total is neither a deterministic statutory calculation nor an official FBR filed figure. For every compared cell, the application should report: source document/version, sheet address or page/row, formula or literal value, freshness of cached value, independently derived ledger subtotal and its coverage, treatment/confidence, difference type and which evidence/owner action resolves it. Unavailable evidence `UNKNOWN` stays distinct from `0`. Protect original versions and keep all corrections append-only.
+
+**Owner-visible acceptance:** upload -> source coverage -> review unknown transfer/loan/property/investment/withholding and wealth issues -> accountant question/owner response -> evidence-linked signoff -> export an **explicitly provisional** accountant-ready package. No automatic Excel amendment, direct unapproved WhatsApp message or FBR filing. G1–G3 real-data protection and G4 legal rules still apply; no real documents can be processed in the current synthetic prototype.
