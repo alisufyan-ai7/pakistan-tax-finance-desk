@@ -54,6 +54,7 @@ jobs:
           LEDGER_FIELD_ACTIVE_KEY: synthetic_ci
           PRIVATE_EVENT_HMAC_KEY: 'UFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFA='
           LEDGER_DEDUP_HMAC_KEY: 'REREREREREREREREREREREREREREREREREREREREREM='
+          CANONICAL_JOURNAL_HMAC_KEY: 'SkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSg=='
         run: |
           python -m alembic upgrade head
           python -m alembic check
@@ -62,7 +63,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0011_canonical_mirror'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0012_canonical_journal'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -180,7 +181,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==20 and audit['source_rows']>=4
+          assert audit['source_tables']==22 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']
