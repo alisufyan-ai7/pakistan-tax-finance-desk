@@ -153,17 +153,22 @@ def build_owner_action_brief(
     month_start=date(as_of.year,as_of.month,1)
     prior_end=month_start-timedelta(days=1)
     prior_start=date(prior_end.year,prior_end.month,1)
-    prior_through=prior_start.replace(
-        day=min(as_of.day,monthrange(prior_start.year,prior_start.month)[1]))
+    prior_last_day=monthrange(prior_start.year,prior_start.month)[1]
+    comparison_clamped=as_of.day>prior_last_day
+    prior_through=prior_start.replace(day=min(as_of.day,prior_last_day))
     now=_spend(current_spend,month_start=month_start,through=as_of,legal_owner=legal_owner)
     before=_spend(prior_spend,month_start=prior_start,through=prior_through,legal_owner=legal_owner)
-    growth=_pct_change(now,before)
+    # 31 days of current month cannot honestly be compared with 28 days of
+    # February as a complete like-for-like calendar-day window.
+    growth=None if comparison_clamped else _pct_change(now,before)
     bill_items=[]
     for x in bills:
-        if x.payment_state=="MATCHED_SOURCE_FIXTURE":
-            status="PAID_SOURCE_MATCHED_SAMPLE"
-        elif x.schedule_state!="OWNER_CONFIRMED_FIXTURE":
+        if x.payment_posted_on is not None and x.payment_posted_on>as_of:
+            raise OwnerSignalsBlocked("Future-dated payment cannot be confirmed")
+        if x.schedule_state!="OWNER_CONFIRMED_FIXTURE":
             status="SCHEDULE_REVIEW"
+        elif x.payment_state=="MATCHED_SOURCE_FIXTURE":
+            status="PAID_SOURCE_MATCHED_SAMPLE"
         elif x.payment_state=="OWNER_MARKED":
             status="PAYMENT_REVIEW"
         elif x.due_on<as_of:
@@ -191,7 +196,9 @@ def build_owner_action_brief(
             "next_expected_return_on":x.next_expected_return_on.isoformat()
                                        if x.next_expected_return_on else None,
             "quoted_return_minor":quote,
-            "return_state":("CONTRACT_QUOTE_NOT_GUARANTEED" if quote is not None else
+            "return_state":("EXPECTED_DATE_PASSED_NEEDS_SOURCE_RECEIPT" if
+                            x.next_expected_return_on and x.next_expected_return_on<as_of else
+                            "CONTRACT_QUOTE_NOT_GUARANTEED" if quote is not None else
                             "VARIABLE_OR_UNVERIFIED_RETURN"),
             "maturity_on":x.maturity_on.isoformat() if x.maturity_on else None,
             "actual_return_received_minor":None,
@@ -220,10 +227,12 @@ def build_owner_action_brief(
         "month_to_date":{
             "month_start":month_start.isoformat(),
             "comparison_prior_through":prior_through.isoformat(),
+            "comparison_window_clamped":comparison_clamped,
             "expense_minor":now,"prior_same_window_expense_minor":before,
             "expense_growth_pct":growth,
-            "growth_state":"UNKNOWN_INCOMPLETE_COVERAGE" if growth is None else
-                           "RISING" if growth>0 else "FALLING" if growth<0 else "FLAT",
+            "growth_state":("NOT_COMPARABLE_MONTH_LENGTH" if comparison_clamped else
+                            "UNKNOWN_INCOMPLETE_COVERAGE" if growth is None else
+                            "RISING" if growth>0 else "FALLING" if growth<0 else "FLAT"),
             "own_transfers_excluded_if_available":True,
             "estimated_year_end_spend_minor":None,
         },
