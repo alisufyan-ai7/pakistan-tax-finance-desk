@@ -12,11 +12,11 @@
 
 Each PR used separate files/tests and only fabricated fixtures. PR #49 first failed on a synthetic test-helper name collision, corrected; its exact validated head passed both 297 pytest and the actual PostgreSQL18 typed-fact parity smoke. All five feature PRs merged after verifying exact-head success.
 
-## Combined checkpoint (pending validation when originally authored)
+## Combined checkpoint — VERIFIED merged
 
 `backend/tests/test_parallel_batch2_integration.py` exercises all five together on the merged tree: an arithmetically consistent fictional statement is still not authoritative financial evidence; missing account-months stay unknown, accountant source review remains unverified, a forecast with unknown opening stays null, legal mixed-income tax remains unsupported, and typed canonical facts have no active cutover. All five code paths reject `APP_DATA_MODE=real`.
 
-**Only mark integration accepted after recording the exact final PR/CI run and squash merge SHA in the latest [handoff](CURRENT_HANDOFF.md) and [delivery scorecard](OWNER_MVP_DELIVERY_SCORECARD_2026-11-16.md).**
+**VERIFIED:** [PR #54 MERGED](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/54) with squash `deae7048c33ac05ce2bb29720e92bfe02a87c807`; exact-head [CI 43861939976](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43861939976) **325 pytest PASS + PostgreSQL18 encrypted bank, independent backup/restore, census, candidate encrypted copy/rollback, A5a sealed read and A5b typed fact parity PASS**. [Handoff](CURRENT_HANDOFF.md) and [scorecard](OWNER_MVP_DELIVERY_SCORECARD_2026-11-16.md) updated. G1–G5 real owner release gates remain unchanged.
 
 ## Critical path and next parallel work
 
