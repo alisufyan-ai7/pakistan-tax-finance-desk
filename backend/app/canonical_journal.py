@@ -93,7 +93,7 @@ class JournalEvent(BaseModel):
     primary_account_ref: str = Field(min_length=8, max_length=80)
     posted_on: date
     event_kind: Literal[
-        "bank_receipt", "expense_paid", "own_transfer", "loan_principal",
+        "bank_receipt", "bank_observation_unclassified", "expense_paid", "own_transfer", "loan_principal",
         "investment_contribution", "cash_transfer", "withholding_candidate",
         "owner_opening_assertion",
     ]
@@ -241,6 +241,65 @@ def inspect_synthetic_journal(db: Session, *, primary_account_ref: str, tax_year
         "account_balance_minor": None,
         "actual_income_or_tax_minor": None,
         "fbr_filed_confirmed": False,
+        "legacy_ledger_cutover": False,
+        "real_data_authorized": False,
+    }
+
+
+def record_synthetic_journal_batch(db: Session, events: tuple[JournalEvent, ...]) -> dict:
+    """Atomic encrypted insert of one already-verified synthetic source batch.
+
+    A conflict in ANY event must roll back the entire new posting batch. This
+    does not write any M1 balances, tax classifications, original documents,
+    external position values or official filed FBR state.
+    """
+    if not isinstance(events, tuple) or not 1 <= len(events) <= MAX_SCAN:
+        raise CanonicalJournalBlocked("Empty or unbounded canonical posting batch")
+    if not all(isinstance(e, JournalEvent) for e in events):
+        raise CanonicalJournalBlocked("Unvalidated canonical posting batch")
+    if len({(e.legal_owner, e.source_ref) for e in events}) != len(events):
+        raise CanonicalJournalBlocked("Duplicate canonical source in same batch")
+    staged = []
+    replayed = 0
+    try:
+        _guard(db, create=True)
+        for event in events:
+            source = _blind("source", f"{event.legal_owner}:{event.source_ref}")
+            previous = db.scalar(select(CanonicalJournalEntry).where(
+                CanonicalJournalEntry.source_hmac == source))
+            if previous is not None:
+                if _canon(_verify_record(previous)) != _canon(event):
+                    raise CanonicalJournalBlocked("Conflicting canonical source within source batch")
+                replayed += 1
+                continue
+            row = CanonicalJournalEntry(
+                id=str(uuid.uuid4()),
+                owner_hmac=_blind("owner", event.legal_owner),
+                year_hmac=_blind("year", f"{event.legal_owner}:{tax_year_of(event.posted_on)}"),
+                account_hmac=_blind("account", f"{event.legal_owner}:{event.primary_account_ref}"),
+                source_hmac=source,
+                payload_json=_canon(event),
+            )
+            db.add(row)
+            staged.append(row)
+        db.commit()
+    except CanonicalJournalBlocked:
+        db.rollback()
+        raise
+    except IntegrityError:
+        db.rollback()
+        raise CanonicalJournalBlocked("Concurrent or conflicting canonical batch") from None
+    except Exception:
+        db.rollback()
+        raise CanonicalJournalBlocked("Canonical batch write aborted atomically") from None
+    return {
+        "synthetic_only": True,
+        "source_event_count": len(events),
+        "inserted": len(staged),
+        "already_recorded": replayed,
+        "all_double_entry_balanced": True,
+        "atomic_transaction": True,
+        "official_bank_or_fbr_verified": False,
         "legacy_ledger_cutover": False,
         "real_data_authorized": False,
     }
