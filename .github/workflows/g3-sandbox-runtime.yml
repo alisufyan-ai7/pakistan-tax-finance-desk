@@ -7,6 +7,7 @@ on:
       - 'backend/Dockerfile.document-worker'
       - 'backend/app/docker_document_sandbox.py'
       - 'backend/app/document_worker_entry.py'
+      - 'backend/app/synthetic_document_threat_preflight.py'
       - 'backend/app/private_adapter_registry.py'
       - 'backend/tests/test_docker_document_sandbox.py'
       - '.github/workflows/g3-sandbox-runtime.yml'
@@ -107,6 +108,18 @@ jobs:
               raise AssertionError('Unknown real-looking source accepted')
           except DocumentSandboxBlocked as exc:
               assert 'PRIVATE_SENTINEL' not in str(exc)
+          # Confirm synthetic PDF with active JS object is denied by the
+          # REAL isolated worker even if an otherwise valid synthetic marker.
+          poisoned=data.getvalue()+b"\\n/JavaScript (SYNTHETIC_ACTIVE_SENTINEL)\\n"
+          try:
+              inspect_in_docker(
+                  poisoned,image=image,adapter_key='synthetic_bank_pdf_v1',
+                  kind='bank_statement',synthetic_fixture=True,
+              )
+              raise AssertionError('Active PDF fixture accepted in real sandbox')
+          except DocumentSandboxBlocked as exc:
+              assert 'SYNTHETIC_ACTIVE_SENTINEL' not in str(exc)
+          print('G3_EPHEMERAL_ACTIVE_PDF_OBJECT_QUARANTINE=PASS')
           # Attempt actual outbound connect inside network-disabled container.
           no_net=subprocess.run(
               [*args[:-1],'--entrypoint=python',image,
