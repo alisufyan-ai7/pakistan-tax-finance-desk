@@ -27,6 +27,7 @@ from .canonical_journal import (
     _verify_record, _key, MAX_SCAN,
 )
 from .canonical_bank_posting import _events
+from .canonical_bank_classification import verify_synthetic_bank_classification_graph
 from .confidential_bank import (
     ConfidentialBankBatch, _verified_payload, require_confidential_bank_store,
 )
@@ -143,6 +144,9 @@ def analyze_synthetic_economic_graph(
         for ref, expected in bank_events.items():
             if _canon(actual_neutral[ref]) != _canon(expected):
                 raise CanonicalGraphBlocked("Conflicting bank source-to-journal posting")
+        # Authenticate candidate/reversal graph as SOURCE-BOUND, not merely
+        # balanced double entries; orphan or forged categories must fail closed.
+        classification = verify_synthetic_bank_classification_graph(journal, bank_events)
 
         seen_source = set()
         seen_movement = set()
@@ -183,6 +187,9 @@ def analyze_synthetic_economic_graph(
             "read_only": True,
             "bank_source_rows_verified": len(bank_events),
             "neutral_postings_verified": len(actual_neutral),
+            "source_bound_classification_candidates": classification["authenticated_candidate_entries"],
+            "source_bound_inverse_reversals": classification["authenticated_exact_inverse_reversals"],
+            "owner_classification_is_official_income": False,
             "other_canonical_postings": len(journal) - len(actual_neutral),
             "economic_claim_count": len(claims),
             "domain_claim_counts": {d: counts[d] for d in DOMAINS},
