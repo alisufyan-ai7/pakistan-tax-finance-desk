@@ -291,6 +291,26 @@ jobs:
                   restored_engine.dispose()
               print('POSTGRES_18_G2_INDEPENDENT_ENCRYPTED_RECOVERY_RESTORE=PASS')
 
+              # A wrong HMAC owner-recovery key must NOT authenticate even
+              # when the independently restored AES-GCM rows decrypt.
+              saved_recovery_key=os.environ['OWNER_RECOVERY_HMAC_KEY']
+              os.environ['OWNER_RECOVERY_HMAC_KEY']=base64.urlsafe_b64encode(b'Z'*32).decode()
+              probe_engine=create_engine(
+                  algebra_prefix+'/synthetic_restore_verified',
+                  connect_args={'connect_timeout':3})
+              try:
+                  with Session(probe_engine) as invalid_key_db:
+                      try:
+                          attest_synthetic_recovery_chain(invalid_key_db,owner_ref='owner')
+                          raise AssertionError('Wrong recovery HMAC key authenticated restored record')
+                      except RecoveryBlocked:
+                          pass
+              finally:
+                  probe_engine.dispose()
+                  os.environ['OWNER_RECOVERY_HMAC_KEY']=saved_recovery_key
+              print('POSTGRES_18_G2_WRONG_RECOVERY_KEY_REJECTED=PASS')
+
+
               with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
                   assert chk.execute('SELECT COUNT(*) FROM confidential_bank_batches').fetchone()[0]==1
                   assert chk.execute('SELECT payload_json FROM confidential_bank_batches').fetchone()[0].startswith('TFLE1:')
