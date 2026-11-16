@@ -1,5 +1,7 @@
 # Mandatory GitHub continuity and handoff protocol
 
+> **MANDATORY FIRST-READ POLICY (2026-11-16):** [Personal CFO project-only context and provider firewall](PROJECT_CONTEXT_AND_INFRASTRUCTURE_ISOLATION.md). Never use ChatGPT account-wide Memory or unrelated ChatGPT projects, repositories, linked files or external account resources. This project's own messages/project-only files and the named GitHub repository are the only project context. A connected tool's account-wide visibility is not permission to inspect other projects. Require explicit scoped consent for new cloud providers/resources; halt on 403 instead of fallback vendors.
+
 **Status:** Owner-approved standing project rule (2026-11-16). Applies to ChatGPT, Claude, coding agents and any successor conversation in this project. This file, root `AGENTS.md`, `AGENT_START_HERE.md` and the latest project status are the canonical orientation material.
 
 ## Rule: no knowledge should depend on a single chat window
