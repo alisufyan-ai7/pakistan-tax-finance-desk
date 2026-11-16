@@ -104,4 +104,7 @@ def test_source_periods_invalid_or_rejected_claims_block():
     with pytest.raises(ValueError):
         src("synthetic-inverted", start="2024-08-01", end="2024-07-01")
     with pytest.raises(ValueError):
-        src("synthetic-unverifiable", state="unsupported", balanced=True)
+        SourcePeriod(synthetic_fixture=True, source_ref="synthetic-unverifiable",
+                     account_ref=A.account_ref,
+                     period_start=date(2024, 7, 1), period_end=date(2024, 7, 31),
+                     source_state="unsupported", balances_verified=True)
