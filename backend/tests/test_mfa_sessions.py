@@ -49,12 +49,13 @@ def test_mfa_login_cookie_csrf_replay_logout(mfa_settings):
     assert client.get('/api/health').status_code==401
     bad=client.post('/api/auth/login',json={'username':'owner','password':'wrong','totp_code':_otp(secret)})
     assert bad.status_code==401
-    login=client.post('/api/auth/login',json={'username':'owner','password':password,'totp_code':_otp(secret)})
+    one_time_code=_otp(secret)
+    login=client.post('/api/auth/login',json={'username':'owner','password':password,'totp_code':one_time_code})
     assert login.status_code==200,login.text
     cookie=login.headers['set-cookie']
     assert '__Host-taxfin-session=' in cookie and 'Secure' in cookie and 'HttpOnly' in cookie and 'SameSite=strict' in cookie
     assert client.get('/api/health').json()['status']=='ok'
-    replay=client.post('/api/auth/login',json={'username':'owner','password':password,'totp_code':_otp(secret)})
+    replay=client.post('/api/auth/login',json={'username':'owner','password':password,'totp_code':one_time_code})
     assert replay.status_code==401 and 'already used' in replay.text
     session=client.get('/api/auth/session').json()
     assert session['mode']=='totp_session' and len(session['csrf_token'])==64
