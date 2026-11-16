@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import os
 import re
 from secrets import token_bytes
 from time import time
