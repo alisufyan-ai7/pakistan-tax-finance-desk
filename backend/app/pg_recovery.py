@@ -30,7 +30,7 @@ from .ledger_crypto import keyring
 MAGIC = b"TFPG1"
 MAX_PLAIN = 24 * 1024 * 1024
 MAX_FILE = 26 * 1024 * 1024
-SCHEMA_REVISION = "0011_canonical_mirror"
+SCHEMA_REVISION = "0012_canonical_journal"
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,60}$")
 
 
