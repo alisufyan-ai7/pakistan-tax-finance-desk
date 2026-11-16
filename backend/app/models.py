@@ -262,3 +262,17 @@ class ConfidentialBankBatch(Base):
     source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(EncryptedText("confidential_bank_batches.payload_json"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CanonicalSourceMirror(Base):
+    """G1-c RESTORED-CANDIDATE ONLY: encrypted complete legacy source row.
+
+    No live API reads this table, no plaintext money/date/account foreign keys;
+    exact source identity is HMAC-blinded. Not a cutover or production ledger.
+    """
+    __tablename__ = "canonical_source_mirrors"
+    __table_args__ = (Index("uq_canonical_source_mirrors_source_hmac", "source_hmac", unique=True),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(EncryptedText("canonical_source_mirrors.payload_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
