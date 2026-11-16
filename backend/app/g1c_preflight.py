@@ -51,6 +51,7 @@ SOURCE_COLUMNS = {
     "private_financial_events": "id owner_hmac year_hmac source_hmac payload_json created_at",
     "confidential_bank_key_state": "id verifier_hmac sentinel",
     "confidential_bank_batches": "id owner_hmac account_hmac source_hmac payload_json created_at",
+    "canonical_source_mirrors": "id source_hmac payload_json created_at",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000
