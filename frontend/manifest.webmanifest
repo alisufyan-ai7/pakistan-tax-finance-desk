@@ -1,0 +1,28 @@
+{
+  "name": "Personal CFO — Financial Desk",
+  "short_name": "Personal CFO",
+  "description": "Installable synthetic preview of your future private Personal CFO. No real bank or tax data is connected.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#123936",
+  "theme_color": "#123936",
+  "lang": "en-PK",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+/* Mobile-first PWA shell enhancements — no change to owner data/auth. */
+.install-app{font-size:11px;font-weight:800;white-space:nowrap;border:1px solid #cfe3d5;background:#e9f5ed;color:#22624f;padding:9px 12px;border-radius:10px}
+.install-app:hover{background:#d4ebdf}.install-app[hidden]{display:none}
+.install-app span{font-size:17px;margin-right:4px;vertical-align:-2px}
+.install-help{background:#f3f9f3;border-bottom:1px solid #d6e9da;padding:12px clamp(16px,4vw,58px)}
+.install-help[hidden]{display:none}.install-help-inner{max-width:1400px;margin:auto;display:flex;gap:18px;align-items:center;justify-content:space-between}
+.install-help strong{font-size:13px;color:#204d3f}.install-help p{font-size:12px;line-height:1.45;color:#4f695b;margin:5px 0}
+.install-help .install-disclaimer{font-size:10px;color:#7c9084}.install-help button{border:1px solid #b6d3c0;background:#fff;padding:9px 11px;border-radius:8px;color:#245d46;font-weight:750;flex-shrink:0}
+.mobile-bottom-nav{display:none}
+@media(max-width:900px){
+  .mobile-bottom-nav{position:fixed;z-index:20;inset:auto 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #dce4de;background:#fffc;backdrop-filter:blur(15px);padding:6px 7px max(7px,env(safe-area-inset-bottom));box-shadow:0 -3px 22px #19382d13}
+  .mobile-bottom-nav button{border:0;background:transparent;color:#667e73;border-radius:10px;display:grid;gap:3px;justify-items:center;align-content:center;padding:6px 0 4px;font-size:10px;font-weight:740;min-height:51px}
+  .mobile-bottom-nav button span{font-size:22px;line-height:1}
+  .mobile-bottom-nav button.active{background:#e7f5ec;color:#1a6953}
+  .content{padding-bottom:calc(95px + env(safe-area-inset-bottom))}
+  .footer{margin-bottom:5px}
+}
+@media(max-width:480px){
+  .topbar{align-items:center;gap:7px}
+  .top-actions{gap:7px}
+  .install-app{font-size:10px;padding:7px 8px}
+  .install-app span{font-size:14px}
+  .avatar{width:30px;height:30px}
+  .install-help{padding:12px 14px}
+}
+@media(display-mode:standalone){.install-app{display:none!important}}
