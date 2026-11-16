@@ -23,7 +23,7 @@ from .ledger_crypto import assert_encrypted_ledger, LedgerKeyError
 from .models import Account, Document, Transaction, AuditEvent, HistoricalFiling, OwnerSession, OwnerAuthState, LoanAccount, CashHolding
 from .historical import SyntheticFilingInput, register_filing, _as_public, wealth_continuity
 from .evidence_vault import EncryptedEvidenceVault, VaultConfigurationError
-from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session
+from .auth_mfa import SESSION_COOKIE, COOKIE_LIFETIME_SECONDS, check_password, totp_step, session_token, token_digest, csrf_for_session, claim_synthetic_totp_step
 from .importer import ImportErrorDetail, MAX_BYTES, PARSER_VERSION, fingerprint, fingerprint_base, parse_statement
 from .bank_profiles import normalize_synthetic_csv, PROFILES
 from .movement_analysis import analyze_movements, MAX_TRANSFER_DAYS
@@ -199,20 +199,18 @@ def create_app(database_url: str | None = None):
         step=totp_step(totp_secret,payload.totp_code)
         if step is None:
             raise HTTPException(401, "Invalid login credentials")
-        state=db.scalar(select(OwnerAuthState).where(OwnerAuthState.owner_id == "owner").with_for_update())
-        if state and step <= state.last_totp_step:
+        if not claim_synthetic_totp_step(db, step):
             raise HTTPException(401, "One-time code already used")
-        if not state:
-            state=OwnerAuthState(owner_id="owner",last_totp_step=step)
-            db.add(state)
-        else:
-            state.last_totp_step=step
         raw=session_token()
         csrf=csrf_for_session(raw)
         now=datetime.now(timezone.utc)
         db.add(OwnerSession(token_sha256=token_digest(raw),csrf_sha256=token_digest(csrf),
                             created_at=now,expires_at=now+timedelta(seconds=COOKIE_LIFETIME_SECONDS),revoked=False))
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(401, "Login could not be authenticated") from None
         result=JSONResponse({"authenticated":True,"mode":"totp_session","synthetic_only":True})
         result.set_cookie(key=SESSION_COOKIE,value=raw,max_age=COOKIE_LIFETIME_SECONDS,
                           secure=True,httponly=True,samesite="strict",path="/")

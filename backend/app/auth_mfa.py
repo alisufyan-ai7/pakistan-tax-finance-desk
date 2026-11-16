@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import os
 import re
 from secrets import token_bytes
 from time import time
@@ -74,3 +75,36 @@ def csrf_for_session(raw_session_token: str) -> str:
     # The raw session token remains HttpOnly; the derived value can be sent to
     # same-origin JavaScript and authenticated in X-CSRF-Token for mutations.
     return hashlib.sha256(('taxfin:csrf:'+raw_session_token).encode('ascii')).hexdigest()
+
+
+def claim_synthetic_totp_step(db, step: int) -> bool:
+    """Atomically consume owner TOTP counter across PostgreSQL workers.
+
+    The compare-and-update operates *inside the caller's pending session*
+    transaction. It does not commit or issue a login cookie. On a concurrent
+    first login, unique owner PK blocks a second inserted counter.
+    """
+    if os.getenv("APP_DATA_MODE", "synthetic") != "synthetic":
+        return False
+    if type(step) is not int or step < 0:
+        return False
+    from sqlalchemy import update, select
+    from sqlalchemy.exc import IntegrityError
+    from .models import OwnerAuthState
+    try:
+        updated = db.execute(update(OwnerAuthState).where(
+            OwnerAuthState.owner_id == "owner",
+            OwnerAuthState.last_totp_step < step,
+        ).values(last_totp_step=step))
+        if updated.rowcount == 1:
+            return True
+        if db.scalar(select(OwnerAuthState.owner_id).where(
+            OwnerAuthState.owner_id == "owner"
+        )) is not None:
+            return False
+        db.add(OwnerAuthState(owner_id="owner", last_totp_step=step))
+        db.flush()
+        return True
+    except IntegrityError:
+        db.rollback()
+        return False

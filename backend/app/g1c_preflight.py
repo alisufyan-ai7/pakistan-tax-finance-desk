@@ -54,6 +54,8 @@ SOURCE_COLUMNS = {
     "canonical_source_mirrors": "id source_hmac payload_json created_at",
     "canonical_journal_key_state": "id verifier_hmac sentinel",
     "canonical_journal_entries": "id owner_hmac year_hmac account_hmac source_hmac payload_json created_at",
+    "owner_recovery_states": "owner_hmac revision bundle_json updated_at",
+    "owner_recovery_audit": "id owner_hmac revision action previous_hmac bundle_hmac event_hmac detail_json created_at",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000

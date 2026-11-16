@@ -37,6 +37,8 @@ ENCRYPTED_COLUMNS = {
     "canonical_source_mirrors": ("payload_json",),
     "canonical_journal_entries": ("payload_json",),
     "canonical_journal_key_state": ("sentinel",),
+    "owner_recovery_states": ("bundle_json",),
+    "owner_recovery_audit": ("detail_json",),
 }
 
 
