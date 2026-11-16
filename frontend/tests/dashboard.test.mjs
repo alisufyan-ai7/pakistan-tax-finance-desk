@@ -66,7 +66,7 @@ test("frontend has seven navigable sections, a visible synthetic warning and no 
     assert.match(html,new RegExp(warning,"i"));
   assert.ok(html.includes('id="app"'));
   assert.ok(html.includes('type="module" src="./ui.mjs"'));
-  assert.ok(ui.includes('aria-live'));
+  assert.ok(html.includes('aria-live'));
   assert.doesNotMatch(html,/type=["']file["']/i);
   assert.doesNotMatch(ui,/\bfetch\s*\(|\blocalStorage\b|\bsessionStorage\b/);
   assert.doesNotMatch(html,/https?:\/\//i);
