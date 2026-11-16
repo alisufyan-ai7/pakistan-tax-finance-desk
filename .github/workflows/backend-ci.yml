@@ -323,6 +323,34 @@ jobs:
                   assert chk.execute('SELECT COUNT(*) FROM transactions').fetchone()[0]==1
               os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_candidate'
               result=create_verified_sealed_candidate(Path(work)/'backup-valid.tfpg')
+
+              # A8: actually switch and ROLLBACK a SQL TEMP authority pointer
+              # within the separately restored encrypted-candidate database.
+              # Test every failure phase, always on ephemeral disposable CI.
+              from app.synthetic_clone_cutover_rehearsal import (
+                  rehearse_synthetic_clone_switch,SyntheticCutoverRehearsalBlocked)
+              os.environ['G1_A8_EPHEMERAL_CI_ONLY']='1'
+              backup_path=Path(work)/'backup-valid.tfpg'
+              for failure_phase in ('after_legacy','after_switch','before_rollback'):
+                  try:
+                      rehearse_synthetic_clone_switch(
+                          backup_path,candidate_receipt=result,
+                          inject_failure_at=failure_phase)
+                      raise AssertionError('Injected clone authority failure did not abort')
+                  except SyntheticCutoverRehearsalBlocked as err:
+                      assert 'Injected A8' in str(err)
+              rehearsal=rehearse_synthetic_clone_switch(
+                  backup_path,candidate_receipt=result)
+              assert rehearsal['encrypted_backup_bytes_rehashed']
+              assert rehearsal['independently_verified_source_mirror_parity']
+              assert rehearsal['sql_temp_pointer_switched']
+              assert rehearsal['sql_savepoint_rollback_verified']
+              assert rehearsal['temporary_pointer_dropped_on_commit']
+              assert rehearsal['original_source_untouched']
+              assert not rehearsal['active_application_financial_authority_switched']
+              assert not rehearsal['legacy_plaintext_retired']
+              print('POSTGRES_18_G1_A8_BACKUP_FIRST_CLONE_SQL_ROLLBACK=PASS')
+
               assert result['independent_restore_verified'] and result['full_source_row_parity_verified']
               assert result['original_database_untouched'] and not result['active_ledger_cutover']
               assert result['legacy_plaintext_still_present'] and not result['complete_g1']
