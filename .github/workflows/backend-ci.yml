@@ -303,3 +303,33 @@ jobs:
 
 
           PY
+
+      - name: Prove least-privilege connectivity on disposable PostgreSQL 18 CI role
+        env:
+          APP_DATA_MODE: synthetic
+          G2_EPHEMERAL_CI_ONLY: '1'
+        run: |
+          python - <<'PY'
+          import psycopg
+          from sqlalchemy import create_engine
+          from app.synthetic_preview_role_bootstrap import provision_synthetic_preview_role
+          from app.preview_role_policy import attest_synthetic_preview_role
+          password='synthetic_ci_probe_password_for_tests_123'
+          with psycopg.connect(
+              'postgresql://postgres:synthetic_ci_not_a_real_secret@localhost:5432/synthetic_ci_db',
+              autocommit=True
+          ) as admin:
+              receipt=provision_synthetic_preview_role(admin,password=password)
+              assert receipt['ephemeral_ci_role_provisioned']
+          url='postgresql+psycopg://personal_cfo_preview_connectivity_ci:'+password+'@localhost:5432/synthetic_ci_db'
+          engine=create_engine(url,connect_args={'connect_timeout':3})
+          try:
+              with engine.connect() as connection:
+                  assert connection.exec_driver_sql('SELECT 1').scalar_one()==1
+                  checks=attest_synthetic_preview_role(connection)
+                  assert checks['preview_role_privileges']=='NO_APP_TABLE_ACCESS'
+                  assert checks['g2_full_security_accepted'] is False
+          finally:
+              engine.dispose()
+          print('POSTGRES_18_G2_SYNTHETIC_RESTRICTED_ROLE=PASS')
+          PY
