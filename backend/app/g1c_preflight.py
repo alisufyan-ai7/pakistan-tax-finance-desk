@@ -132,15 +132,23 @@ def analyze_source_rows(rows: dict[str, list[dict]]) -> dict:
         issues[(table, code)] += 1
 
     # Every relationship is checked from the ORM's complete foreign-key map.
+    # Precompute target indexes to avoid an O(n^2) scan of financial records.
+    fk_targets = {
+        (fk.column.table.name, fk.column.name)
+        for table in Base.metadata.sorted_tables for fk in table.foreign_keys
+    }
+    fk_values = {
+        (table, column): {entry[column] for entry in rows[table]}
+        for table, column in fk_targets
+    }
     for table in Base.metadata.sorted_tables:
         for entry in rows[table.name]:
             for fk in table.foreign_keys:
                 parent_val = entry[fk.parent.name]
                 if parent_val is None:
                     continue
-                target = fk.column.table.name
-                target_col = fk.column.name
-                if not any(ref[target_col] == parent_val for ref in rows[target]):
+                target = (fk.column.table.name, fk.column.name)
+                if parent_val not in fk_values[target]:
                     flag(table.name, "BROKEN_SOURCE_LINK")
 
     accounts = {x["id"]: x for x in rows["accounts"]}
