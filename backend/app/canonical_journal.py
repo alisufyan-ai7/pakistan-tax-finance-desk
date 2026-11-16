@@ -222,19 +222,17 @@ def inspect_synthetic_journal(db: Session, *, primary_account_ref: str, tax_year
         raise CanonicalJournalBlocked("Invalid canonical tax year")
     _guard(db, create=False)
     owner = "individual"
-    rows = db.scalars(select(CanonicalJournalEntry).where(
-        CanonicalJournalEntry.owner_hmac == _blind("owner", owner),
-        CanonicalJournalEntry.account_hmac == _blind("account", f"{owner}:{primary_account_ref}"),
-        CanonicalJournalEntry.year_hmac == _blind("year", f"{owner}:{tax_year}"),
-    ).limit(MAX_SCAN + 1)).all()
+    # Until full account-authority/cutover reconciliation exists, validate
+    # the ENTIRE bounded encrypted journal. A tampered blind account index
+    # must never make one source silently disappear into an empty result.
+    rows = db.scalars(select(CanonicalJournalEntry).limit(MAX_SCAN + 1)).all()
     if len(rows) > MAX_SCAN:
-        raise CanonicalJournalBlocked("Incomplete journal account scan refused")
+        raise CanonicalJournalBlocked("Incomplete journal source scan refused")
     receipt = []
     for row in rows:
         event = _verify_record(row)
-        if event.primary_account_ref != primary_account_ref or tax_year_of(event.posted_on) != tax_year:
-            raise CanonicalJournalBlocked("Canonical owner/account/period index mismatch")
-        receipt.append(_receipt(row, event))
+        if event.legal_owner == owner and event.primary_account_ref == primary_account_ref and tax_year_of(event.posted_on) == tax_year:
+            receipt.append(_receipt(row, event))
     return {
         "synthetic_only": True, "source_event_count": len(receipt),
         "balanced_source_events": len(receipt),
