@@ -1,0 +1,5 @@
+# B4/F1 — synthetic ZIP ingestion preflight security
+
+`backend/app/synthetic_archive_gate.py` provides a **central-directory-only** bounded preflight for fabricated bank/FBR ZIP test cases. No member extraction, content parsing, real bank adapter, password prompting, file storage or financial import. Permits only .pdf/.xlsx/.csv inside safe relative paths; rejects absolute/backtracking, symlinks, encrypted members, unexpected extensions/nested archives, duplicate case-insensitive names, excessive members, total size, and suspect decompression ratios. Outputs status counts only, never original file names or bytes. APP_DATA_MODE=real is refused.
+
+This is early G3 isolated conversion and G2 worker threat hardening, **not a production ZIP extractor**. Real private uploads need dedicated ephemeral sandbox, AV/content signatures, parser subprocess resource limits, evidence vault/immutable originals, owner role auth, password handling outside public GitHub, and B2/B3 verified bank balance provenance. This code and all CI fixtures are fake and must never process the user's actual `Saad Accounts.zip` or genuine statements in a public repo/provider.
