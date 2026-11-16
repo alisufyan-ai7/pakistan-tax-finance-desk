@@ -146,3 +146,21 @@ def test_owner_hmac_only_no_plain_owner_fields(engine):
         assert owner==_tag(b"owner",OWNER)
         assert OWNER not in owner
         assert len(owner)==64
+
+
+def test_recovery_code_redemption_revokes_existing_synthetic_sessions(engine):
+    from datetime import datetime, timedelta, timezone
+    from app.models import OwnerSession
+    with Session(engine) as db:
+        _,codes=issue(db)
+        db.add(OwnerSession(
+            token_sha256="a"*64, csrf_sha256="b"*64,
+            created_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc)+timedelta(hours=2),
+            revoked=False))
+        db.commit()
+        result=redeem(db,codes[0])
+        assert result["active_sessions_revoked"]==1
+        assert result["login_session_issued"] is False
+    with engine.connect() as c:
+        assert c.execute(text("SELECT revoked FROM owner_sessions")).scalar_one() == 1
