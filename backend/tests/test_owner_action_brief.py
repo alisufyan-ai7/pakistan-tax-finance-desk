@@ -90,7 +90,9 @@ def test_calendar_boundary_clamps_prior_february_same_day():
         prior_spend=spending(date(2027,2,1),date(2027,2,28),10000),
     )
     assert out["month_to_date"]["comparison_prior_through"]=="2027-02-28"
-    assert out["month_to_date"]["expense_growth_pct"]==20
+    assert out["month_to_date"]["comparison_window_clamped"] is True
+    assert out["month_to_date"]["expense_growth_pct"] is None
+    assert out["month_to_date"]["growth_state"]=="NOT_COMPARABLE_MONTH_LENGTH"
 
 def test_bill_attention_does_not_assume_owner_marked_means_bank_paid():
     out=briefing(bills=(
@@ -165,3 +167,26 @@ def test_no_payment_trade_or_income_filing_is_executed():
     assert out["investments"]["items"][0]["automatic_trade_authorized"] is False
     assert out["financial_source_ready"] is False
     assert "tax_due_minor" not in out
+
+
+def test_future_dated_payment_never_makes_an_outstanding_bill_paid():
+    future=bill(payment_state="MATCHED_SOURCE_FIXTURE",
+                payment_posted_on=date(2026,11,20))
+    with pytest.raises(OwnerSignalsBlocked,match="Future-dated"):
+        briefing(bills=(future,))
+
+def test_candidate_recurring_schedule_needs_review_even_with_a_source_matched_debit():
+    candidate=bill(schedule_state="CANDIDATE",
+                   payment_state="MATCHED_SOURCE_FIXTURE",
+                   payment_posted_on=date(2026,11,15))
+    out=briefing(bills=(candidate,))
+    assert out["bills"]["items"][0]["status"]=="SCHEDULE_REVIEW"
+    assert out["bills"]["items"][0]["amount_minor"] is None
+
+def test_expected_coupon_date_past_does_not_imply_realized_return():
+    sample=invest(next_expected_return_on=date(2026,11,15))
+    out=briefing(investments=(sample,))
+    item=out["investments"]["items"][0]
+    assert item["return_state"]=="EXPECTED_DATE_PASSED_NEEDS_SOURCE_RECEIPT"
+    assert item["actual_return_received_minor"] is None
+    assert item["tax_due_or_withholding_minor"] is None
