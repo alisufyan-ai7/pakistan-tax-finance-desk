@@ -1,5 +1,7 @@
 # Mandatory engineering rules — Pakistan Tax & Wealth Desk / Personal CFO
 
+> **HIGHEST-PRIORITY PROJECT SCOPE RULE (owner, 2026-11-16):** [PROJECT CONTEXT & INFRASTRUCTURE ISOLATION](docs/PROJECT_CONTEXT_AND_INFRASTRUCTURE_ISOLATION.md). Use only THIS Personal CFO ChatGPT project's conversation/files/project-only memory (if enabled) and GitHub `alisufyan-ai7/pakistan-tax-finance-desk` as the project source of truth. **NEVER USE CHATGPT ACCOUNT-WIDE MEMORY OR INFORMATION FROM OTHER PROJECTS.** Do not access another project's files, repositories, apps, credentials or cloud resources. A connected account ≠ authorization. New cloud service/provider, persistent resource or billable work requires explicit authorization scoped to Personal CFO; a 403 from an approved provider is a stop condition, NOT permission to switch providers. Apply this rule before all other agent tasks.
+
 > **Canonical project authority: this GitHub repository, its latest `main`, maintained docs, reviewed issues/PRs and verified CI. This rule applies to every agent, assistant and future chat.**
 >
 > No assistant's conversation history substitutes for a committed handoff. Before any meaningful implementation, **read [the continuity protocol](docs/CHAT_CONTINUITY_PROTOCOL.md)** and its mandatory starting documents.
