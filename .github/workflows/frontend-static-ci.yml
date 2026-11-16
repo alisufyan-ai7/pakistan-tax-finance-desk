@@ -25,4 +25,4 @@ jobs:
           node --check frontend/ui.mjs
           node --check frontend/demo-data.mjs
       - name: Test synthetic owner dashboard contracts
-        run: node --test frontend/tests/dashboard.test.mjs
+        run: node --test frontend/tests/*.test.mjs
