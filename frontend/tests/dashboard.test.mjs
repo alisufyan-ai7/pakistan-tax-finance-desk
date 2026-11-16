@@ -91,3 +91,11 @@ test("legacy local synthetic import prototype remains in GitHub history and repo
   assert.ok(source.includes("DEVELOPMENT ONLY"));
   assert.ok(source.includes("Import & reconcile"));
 });
+
+test("security copy reflects Railway-only synthetic private link, never a completed financial backend",()=>{
+  const ui=sibling("ui.mjs");
+  assert.match(ui,/Railway hosts this public synthetic dashboard/);
+  assert.match(ui,/one same-origin, synthetic status request/);
+  assert.match(ui,/Full financial database security/);
+  assert.doesNotMatch(ui,/A free Vercel preview can show this synthetic screen/);
+});
