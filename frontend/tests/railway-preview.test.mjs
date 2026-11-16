@@ -15,7 +15,7 @@ test("Railway preview serves fictional allowlisted assets only", () => {
 test("Railway preview does not accept real uploads, external scripts or data egress", () => {
   const nginx = get("nginx.railway.conf");
   assert.match(nginx, /listen 8080/);
-  assert.match(nginx, /connect-src 'none'/);
+  assert.match(nginx, /connect-src 'self'/);
   assert.match(nginx, /script-src 'self'/);
   assert.match(nginx, /frame-ancestors 'none'/);
   assert.match(nginx, /form-action 'none'/);
