@@ -54,9 +54,10 @@ def test_closed_case_must_have_matching_chain():
 
 
 def test_real_mode_refused(monkeypatch):
+    evidence=missing()
     monkeypatch.setenv("APP_DATA_MODE","real")
     with pytest.raises(ReviewPackageBlocked,match="Real"):
-        review_package_manifest([],[],missing())
+        review_package_manifest([],[],evidence)
 
 
 def test_unverified_coverage_not_silently_accepted():
