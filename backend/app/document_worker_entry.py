@@ -10,6 +10,7 @@ import os
 import sys
 
 from .source_contracts import inspect_synthetic_source
+from .synthetic_document_threat_preflight import inspect_synthetic_pdf_threats
 
 
 def main() -> None:
@@ -24,6 +25,7 @@ def main() -> None:
     } or item["synthetic_fixture"] is not True:
         raise RuntimeError("Invalid synthetic converter protocol")
     raw = base64.b64decode(item["raw_b64"], validate=True)
+    inspect_synthetic_pdf_threats(raw, synthetic_fixture=True)
     result = inspect_synthetic_source(
         raw, adapter_key=item["adapter_key"], extension=".pdf",
         kind=item["kind"], synthetic_fixture=True, tax_year=item["tax_year"])
