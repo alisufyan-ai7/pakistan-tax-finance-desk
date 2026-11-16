@@ -1,0 +1,9 @@
+# E1 — coverage-gated recurring outflow candidates, synthetic only
+
+[Owner MVP completion blueprint](OWNER_MVP_COMPLETION_BLUEPRINT_2026-11-16.md), [recurring bills #25](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/25).
+
+**Delivered synthetic pure projection:** `backend/app/recurring_expenses.py` consumes explicit reviewed, independently source-verified fictional outflow entries with opaque merchant keys and separate monthly account coverage. It identifies monthly or quarterly 3+ observed-month cadence, stable charges within 10% of median, no duplicate merchant-month charges, and **complete observed account coverage between first and last observation** before any annualized candidate estimate. Unverified, excluded, transfer/loan principal, investment and tax entries never become subscription-like spending.
+
+All estimates are **hypotheses**, never a statement of observed annual spending, guaranteed future charge, realized subscription cancellation saving or deductible tax expense. Missing account-month source coverage, variable amounts, duplicate charges, unstable cadence or incomplete evidence return REVIEW_REQUIRED / INSUFFICIENT_EVIDENCE with `estimated_annual_minor=null`. Financial arithmetic uses integer minor units, not floating point; no current bank record or account name is used. Input account coverage is a precondition supplied by future verified B2+private adapter integration, not independently authenticated in this function.
+
+Unit tests cover cadence, quarterly complete-month coverage, source replay conflict, missing-month unknown, false transfer/principal categorization, unreviewed sources, variable price, duplicate month, float rejection and `APP_DATA_MODE=real` fail closed. No actual cost optimization executed, no payments, no third-party service or API endpoints.
