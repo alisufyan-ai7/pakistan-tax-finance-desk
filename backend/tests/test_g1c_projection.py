@@ -1,5 +1,6 @@
 """A5a encrypted candidate source-only read-side parity, fabricated records."""
 from datetime import date
+import base64
 import json
 import pytest
 from app.g1c_preflight import SOURCE_COLUMNS, analyze_source_rows, _tag, _canonical
@@ -72,7 +73,10 @@ def test_wrong_key_or_tampered_token_fail_closed(monkeypatch):
     src=_rows()
     mirrors=_mirrors(src)
     first,token=mirrors[0]
-    bad=token[:-1]+("A" if token[-1]!="A" else "B")
+    marker,kid,encoded=token.split(":",2)
+    damaged=bytearray(base64.urlsafe_b64decode(encoded))
+    damaged[-1] ^= 1
+    bad=":".join((marker,kid,base64.urlsafe_b64encode(damaged).decode()))
     with pytest.raises(SealedProjectionBlocked,match="authentication"):
         verify_sealed_candidate_rows([(first,bad),*mirrors[1:]],analyze_source_rows(src))
 
