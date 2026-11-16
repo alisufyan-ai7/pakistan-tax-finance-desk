@@ -1,0 +1,11 @@
+# Source-only prototype: build an isolated worker image in the approved
+# synthetic CI/local environment, then pin its immutable SHA256 digest.
+# Never pull/build/run automatically for live Railway or genuine financial data.
+FROM python:3.12-slim
+WORKDIR /build
+COPY pyproject.toml .
+COPY app ./app
+RUN python -m pip install --no-cache-dir . && rm -rf /build
+WORKDIR /tmp
+USER 65532:65532
+ENTRYPOINT ["python", "-I", "-B", "-m", "app.document_worker_entry"]
