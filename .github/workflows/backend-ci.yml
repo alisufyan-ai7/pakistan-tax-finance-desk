@@ -311,6 +311,23 @@ jobs:
               with psycopg.connect(source_dsn) as chk:
                   assert chk.execute('SELECT COUNT(*) FROM canonical_source_mirrors').fetchone()[0]==0
           print('POSTGRES_18_G1C_ENCRYPTED_RESTORED_CANDIDATE=PASS')
+
+          from app.legacy_retirement_preflight import inspect_restored_legacy_schema
+          independent_engine=create_engine(
+              algebra_prefix+'/synthetic_restore_candidate',
+              connect_args={'connect_timeout':3})
+          try:
+              retirement=inspect_restored_legacy_schema(independent_engine)
+              assert retirement['restored_clone_only'] and retirement['read_only']
+              assert retirement['legacy_finance_tables_present']>=10
+              assert retirement['legacy_finance_tables_containing_rows']>=2
+              assert not retirement['plaintext_legacy_schema_retired']
+              assert not retirement['legacy_finance_ownership_cutover']
+              assert not retirement['drop_or_truncate_performed']
+          finally:
+              independent_engine.dispose()
+          print('POSTGRES_18_G1_A8_READ_ONLY_LEGACY_RETIREMENT_PRECHECK=PASS')
+
           # A5a read-only candidate inspection uses ONLY sealed payload table.
           # Compare independent original-source census and exact row/account/year parity.
           from app.g1c_projection import inspect_restored_sealed_candidate
