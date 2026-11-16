@@ -35,6 +35,9 @@ def _replace_sheet_xml(blob, old: bytes, new: bytes) -> bytes:
 
 def test_only_structure_no_sheet_title_formula_or_values_leak():
     original = _workbook()
+    # ZIP member timestamps and workbook properties can differ between saves,
+    # so compare the same input before/after diagnostics, not two new XLSXs.
+    original_snapshot = bytes(original)
     found = review_synthetic_draft(original, synthetic_fixture=True, tax_year=2026)
     assert found["read_only"] is True
     assert not found["workbook_modified"]
@@ -44,7 +47,8 @@ def test_only_structure_no_sheet_title_formula_or_values_leak():
     assert found["issues"] == [{"sheet_index": 0, "cell": "B2", "code": "MISSING_CACHED_RESULT"}]
     assert not found["filing_status_verified"] and found["tax_due_minor"] is None
     assert "Private fictional statement" not in str(found)
-    assert "=A2*2" not in str(found) and original == _workbook()
+    assert "=A2*2" not in str(found)
+    assert original == original_snapshot
 
 
 def test_broken_ref_and_uncertified_cached_value():
