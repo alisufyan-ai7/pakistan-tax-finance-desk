@@ -96,7 +96,7 @@ def test_real_mode_rejected(monkeypatch):
     monkeypatch.setenv("APP_DATA_MODE", "real")
     with pytest.raises(ReviewWorkflowBlocked, match="Real"):
         start_case(case_ref="synthetic-case-0001", synthetic_fixture=True)
-    with pytest.raises(ReviewWorkflowBlocked, match="synthetic"):
+    with pytest.raises(ReviewWorkflowBlocked, match="Real"):
         start_draft(version_ref="synthetic-book-v1", tax_year=2026, synthetic_fixture=True)
 
 
