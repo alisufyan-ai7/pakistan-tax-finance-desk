@@ -91,6 +91,6 @@ def test_database_failure_yields_503_without_credentials(api,monkeypatch):
 def test_read_only_connection_options(monkeypatch):
     config(monkeypatch)
     url,token,tls=preview_api._configuration()
-    assert url.startswith("postgresql+psycopg://")
+    assert str(url).startswith("postgresql+psycopg://")
     assert tls is True
-    assert token=="X"*48
+    assert token=="X"*48\n    assert url.password=="fiction"
