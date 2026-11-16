@@ -105,6 +105,70 @@ def _candidate_event(neutral: JournalEvent, candidate: str) -> JournalEvent:
     )
 
 
+
+def _inverse_event(neutral: JournalEvent, before: JournalEvent) -> JournalEvent:
+    """Exact separate opposite posting, not a mutable/deleted bank movement."""
+    return JournalEvent(
+        synthetic_fixture=True, legal_owner=before.legal_owner,
+        currency=before.currency, source_ref=_reversal_ref(neutral),
+        posted_on=before.posted_on, primary_account_ref=before.primary_account_ref,
+        event_kind="classification_reversal",
+        legs=tuple(
+            JournalLeg(account_kind=leg.account_kind,
+                       account_ref=leg.account_ref,
+                       signed_minor=-leg.signed_minor)
+            for leg in before.legs
+        ),
+    )
+
+
+def verify_synthetic_bank_classification_graph(
+    journal: dict[str, JournalEvent], bank_events: dict[str, JournalEvent],
+) -> dict:
+    """No orphan classification, fake category, reversal without exact original.
+
+    Used only after callers authenticate the full encrypted bank/journal source
+    row census. This verifier never computes taxable income or real spending.
+    """
+    if (os.getenv("APP_DATA_MODE", "synthetic") != "synthetic"
+        or type(journal) is not dict or type(bank_events) is not dict):
+        raise ClassificationBlocked("Unverified canonical graph inputs")
+    expected_refs = set()
+    candidates = 0
+    reversals = 0
+    for neutral in bank_events.values():
+        if neutral.event_kind != "bank_observation_unclassified":
+            raise ClassificationBlocked("Unverified neutral bank observation")
+        cref = _candidate_ref(neutral)
+        rref = _reversal_ref(neutral)
+        expected_refs.update((cref, rref))
+        candidate = journal.get(cref)
+        undo = journal.get(rref)
+        if candidate is not None:
+            legs = [leg for leg in neutral.legs if leg.account_kind == "bank"]
+            if len(legs) != 1 or legs[0].signed_minor == 0:
+                raise ClassificationBlocked("Ambiguous bank observation")
+            kind = "income_candidate" if legs[0].signed_minor > 0 else "expense_candidate"
+            if candidate != _candidate_event(neutral, kind):
+                raise ClassificationBlocked("Classification is not backed by an exact bank row")
+            candidates += 1
+        if undo is not None:
+            if candidate is None or undo != _inverse_event(neutral, candidate):
+                raise ClassificationBlocked("Orphan or mismatched bank reversal")
+            reversals += 1
+    for ref, event in journal.items():
+        if event.event_kind in ("classification_candidate", "classification_reversal"):
+            if ref not in expected_refs:
+                raise ClassificationBlocked("Orphan canonical bank classification source")
+    return {
+        "synthetic_only": True, "authenticated_candidate_entries": candidates,
+        "authenticated_exact_inverse_reversals": reversals,
+        "classified_income_or_expense_verified": False,
+        "tax_due_minor": None, "real_data_authorized": False,
+    }
+
+
+
 def annotate_synthetic_bank_candidate(
     db: Session, *, annotation: BankCandidate,
 ) -> dict:
@@ -162,18 +226,7 @@ def reverse_synthetic_bank_candidate(
                          else "expense_candidate")
         if before != _candidate_event(neutral, expected_kind):
             raise ClassificationBlocked("Classification is not linked to authenticated bank evidence")
-        reverse = JournalEvent(
-            synthetic_fixture=True, legal_owner=before.legal_owner,
-            currency=before.currency, source_ref=_reversal_ref(neutral),
-            posted_on=before.posted_on, primary_account_ref=before.primary_account_ref,
-            event_kind="classification_reversal",
-            legs=tuple(
-                JournalLeg(account_kind=leg.account_kind,
-                           account_ref=leg.account_ref,
-                           signed_minor=-leg.signed_minor)
-                for leg in before.legs
-            ),
-        )
+        reverse = _inverse_event(neutral, before)
         receipt, replayed = record_synthetic_journal(db, reverse)
         return {
             "synthetic_only": True,
