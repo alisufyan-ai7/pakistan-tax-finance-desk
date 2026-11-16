@@ -80,7 +80,7 @@ def test_person_and_company_wealth_sources_separated():
 def test_wrong_revision_chain_and_duplicate_filed_starts_fail_closed():
     one=src("synthetic-a-2025",2025)
     two=src("synthetic-b-2025",2025)
-    with pytest.raises(WealthContinuityBlocked,match="multiple filed originals"):
+    with pytest.raises(WealthContinuityBlocked,match="Conflicting filed revision numbers"):
         review(one,two)
     revision=src("synthetic-rev-2025",2025,state="filed_revision",
                  revision=2,parent="missing-original")
