@@ -235,5 +235,22 @@ jobs:
           assert not verified['active_ledger_cutover'] and not verified['canonical_operational_store_ready']
           assert verified['legacy_plaintext_still_present'] and verified['tax_due_minor'] is None
           print('POSTGRES_18_G1C_SEALED_READ_SIDE_PARITY=PASS')
+          # A5b read-only TYPED source facts (not a canonical active write path):
+          # independently verify the original source graph and sealed candidate.
+          from app.canonical_fact_parity import canonical_facts_from_sealed_mirrors
+          with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
+              sealed_mirrors=chk.execute(
+                  'SELECT source_hmac, payload_json FROM canonical_source_mirrors'
+              ).fetchall()
+          independent_source=preflight_postgres_source()
+          typed=canonical_facts_from_sealed_mirrors(sealed_mirrors, independent_source)
+          assert typed['original_source_census_matched']
+          assert typed['typed_fact_type_counts']['bank_source']==1
+          assert typed['unreviewed_bank_rows']==1
+          assert len(typed['typed_facts_integrity_hmac'])==64
+          assert not typed['ledger_authority_switched']
+          assert not typed['plaintext_legacy_tables_retired']
+          assert typed['actual_tax_due_minor'] is None
+          print('POSTGRES_18_G1C_TYPED_FACT_PARITY=PASS')
 
           PY
