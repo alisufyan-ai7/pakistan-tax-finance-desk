@@ -1,0 +1,7 @@
+# C4 — accountant review-package **manifest** only, synthetic
+
+Part of [accountant Issue #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30), built on [C2/C3 cases](IMPLEMENTATION_C2_ACCOUNTANT_REVIEW_STATES.md) and [B2 coverage](IMPLEMENTATION_B2_ACCOUNT_MONTH_COVERAGE.md). No private accountant document or credentials.
+
+`backend/app/accountant_review_package.py` accepts existing in-memory immutable synthetic ReviewCase, DraftWorkbook and B2 coverage receipt. It validates basic event-chain consistency, repeated IDs and coverage status enums, refuses unverified economic totals, and returns a redacted **counts + opaque keyed-HMAC case identity** summary: number of missing/partial/conflicting account-months, review cases awaiting proof, draft versions and cited evidence count. It never includes evidence text, sheet names, workbook formulas, personal identifiers, source contents or financial amounts.
+
+Output explicitly sets `accountant_export_ready=false`, `official_fbr_filing_verified=false`, `full_wealth_reconciled=false` and tax due null. It **does not produce a downloadable accountant pack**, independently authenticate any document, recalculate workbook formulas, authorize users or verify FBR filing. Future: encrypted event persistence and real evidence references behind G1/G2, proper role auth and redacted owner export. Negative synthetic tests include forged status, duplicate cases, economic amounts, missing coverage and real-mode guard.
