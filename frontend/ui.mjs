@@ -209,12 +209,12 @@ function security() {
     gates.map(([gate,label,status,detail])=>'<tr><td class="table-strong">'+e(gate)+'</td><td>'+e(label)+'</td><td>'+pill(status)+'</td><td>'+e(detail)+'</td></tr>').join("")+
     '</tbody></table></div></section>'+
     '<div class="layout-2" style="margin-top:20px"><section class="panel">'+title("This preview's privacy properties","Only fictional objects, no network or browser persistence.")+
-    '<div class="feature-list"><div class="feature-line">Static HTML, CSS and JavaScript; no external fonts, trackers or API requests.</div>'+
+    '<div class="feature-list"><div class="feature-line">Static HTML, CSS and JavaScript with one same-origin, synthetic status request; no external fonts, trackers or financial API requests.</div>'+
     '<div class="feature-line">No file upload field or secret entry point.</div>'+
     '<div class="feature-line">No local storage, cookies or personally identifying samples.</div>'+
     '<div class="feature-line">No automatic financial transactions or filing.</div></div></section>'+
     '<section class="panel">'+title("Deployment boundary","Free public UI hosting is separate from secure financial operations.")+
-    '<div class="warning-note">A free Vercel preview can show this synthetic screen. Financial API, encrypted PostgreSQL, private source storage, MFA and independent backups remain controlled acceptance decisions before genuine use.</div></section></div>';
+    '<div class="warning-note">Railway hosts this public synthetic dashboard and a private PostgreSQL-connected status API. Full financial database security, MFA, private document storage, independent backups and authenticated real-data workflows still require separate acceptance.</div></section></div>';
 }
 function render() {
   const [heading,sub,breadcrumb]=titles[state.view] ?? titles.overview;
