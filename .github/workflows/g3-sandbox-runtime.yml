@@ -1,0 +1,128 @@
+name: g3-synthetic-sandbox-runtime
+# Actual disposable GitHub runner container runtime test, no real documents.
+# No Railway/live service/secret access and no external cloud deployment.
+on:
+  pull_request:
+    paths:
+      - 'backend/Dockerfile.document-worker'
+      - 'backend/app/docker_document_sandbox.py'
+      - 'backend/app/document_worker_entry.py'
+      - 'backend/app/private_adapter_registry.py'
+      - 'backend/tests/test_docker_document_sandbox.py'
+      - '.github/workflows/g3-sandbox-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: g3-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install synthetic fixtures and host contract
+        run: python -m pip install -e '.[dev]'
+      - name: Build isolated source-only image on ephemeral GitHub runner
+        run: |
+          docker build -f Dockerfile.document-worker --tag personal-cfo-synthetic-document:ci .
+          docker image inspect personal-cfo-synthetic-document:ci --format '{{.Id}}' | grep -Eq '^sha256:[a-f0-9]{64}$'
+      - name: Run *actual* image in network-none non-root read-only sandbox and inspect controls
+        env:
+          APP_DATA_MODE: synthetic
+          G3_EPHEMERAL_CI_ONLY: '1'
+          CI: 'true'
+        run: |
+          python - <<'PY'
+          import io
+          import json
+          import os
+          import subprocess
+          from reportlab.pdfgen import canvas
+          from reportlab.lib.pagesizes import landscape,A4
+          from app.docker_document_sandbox import docker_args, inspect_in_docker, DocumentSandboxBlocked
+          from app.synthetic_pdf_adapters import SYNTHETIC_BANK_MARKER
+          image=subprocess.check_output([
+              'docker','image','inspect','personal-cfo-synthetic-document:ci','--format','{{.Id}}'
+          ],text=True).strip()
+          assert image.startswith('sha256:') and len(image)==71
+          args=docker_args(image)
+          # Create an ACTUAL Docker container from exactly the same host
+          # security contract and inspect kernel-runtime HostConfig.
+          config=[a for a in args[2:-1] if a not in ('--rm','-i')]
+          made=subprocess.check_output([
+              'docker','create',*config,'--entrypoint=python',image,'-c',"print('safe')"
+          ],text=True).strip()
+          try:
+              meta=json.loads(subprocess.check_output(['docker','inspect',made],text=True))[0]
+              cfg=meta['HostConfig']
+              assert cfg['NetworkMode']=='none'
+              assert cfg['ReadonlyRootfs'] is True
+              assert 'ALL' in cfg['CapDrop']
+              assert any('no-new-privileges' in s for s in cfg['SecurityOpt'])
+              assert cfg['PidsLimit']==48 and cfg['Memory']==512*1024*1024
+              assert cfg['MemorySwap']==512*1024*1024
+              assert cfg['NanoCpus']==500_000_000
+              assert meta['Config']['User']=='65532:65532'
+              assert not cfg['Binds']
+          finally:
+              subprocess.run(['docker','rm','-f',made],check=True,stdout=subprocess.DEVNULL)
+          data=io.BytesIO()
+          pdf=canvas.Canvas(data,pagesize=landscape(A4))
+          pdf.setFont('Courier',9)
+          for n,line in enumerate([
+              SYNTHETIC_BANK_MARKER,'Opening Balance: 100.00',
+              'Date | Description | Debit | Credit | Balance | Reference',
+              '2024-05-01 | Synthetic credit | 0.00 | 30.00 | 130.00 | DEMO1',
+          ]):
+              pdf.drawString(25,570-n*17,line)
+          pdf.save()
+          parsed=inspect_in_docker(
+              data.getvalue(),image=image,adapter_key='synthetic_bank_pdf_v1',
+              kind='bank_statement',synthetic_fixture=True,
+          )
+          assert parsed['balance_validated'] is True and parsed['preview_rows']==1
+          assert parsed['import_performed'] is False
+          assert parsed['production_sandbox_attested'] is False
+          assert parsed['real_document_acceptance'] is False
+          # Invalid/unknown real-looking PDF MUST fail with no leaked bytes.
+          with open('/dev/null','wb') as unused:
+              pass
+          bad=io.BytesIO()
+          pdf=canvas.Canvas(bad)
+          pdf.drawString(25,700,'PRIVATE_SENTINEL_REAL_LOOKING_BANK_STATEMENT')
+          pdf.save()
+          try:
+              inspect_in_docker(
+                  bad.getvalue(),image=image,adapter_key='synthetic_bank_pdf_v1',
+                  kind='bank_statement',synthetic_fixture=True,
+              )
+              raise AssertionError('Unknown real-looking source accepted')
+          except DocumentSandboxBlocked as exc:
+              assert 'PRIVATE_SENTINEL' not in str(exc)
+          # Attempt actual outbound connect inside network-disabled container.
+          no_net=subprocess.run(
+              [*args[:-1],'--entrypoint=python',image,
+               '-I','-B','-c',
+               "import socket; s=socket.socket(); s.settimeout(2); s.connect(('192.0.2.1',443))"],
+              stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
+          )
+          assert no_net.returncode!=0
+          # Attempt actual root-filesystem modification; must fail.
+          no_write=subprocess.run(
+              [*args[:-1],'--entrypoint=python',image,
+               '-I','-B','-c',"open('/etc/cfo-synthetic-write-probe','wb').write(b'x')"],
+              stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
+          )
+          assert no_write.returncode!=0
+          print('G3_EPHEMERAL_DOCKER_REAL_RUNTIME_ISOLATION=PASS')
+          print('G3_SYNTHETIC_PDF_POSITIVE_AND_UNKNOWN_LAYOUT_QUARANTINE=PASS')
+          print('G3_PRODUCTION_REAL_DOCUMENT_ACCEPTANCE=BLOCKED')
+          PY
