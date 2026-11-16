@@ -235,6 +235,28 @@ def create_app(database_url: str | None = None):
     def homepage(_: Auth):
         return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "index.html", media_type="text/html", headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'", "Referrer-Policy": "no-referrer"})
 
+    # Same-origin static assets for the synthetic owner dashboard.
+    # No public API is exposed: in the local backend, these routes inherit
+    # the existing authentication dependency. Public Vercel static previews
+    # may only display fabricated fixtures; APP_DATA_MODE=real remains blocked.
+    @app.get("/ui.css", include_in_schema=False)
+    def dashboard_styles(_: Auth):
+        return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "ui.css",
+            media_type="text/css", headers={"Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
+    @app.get("/ui.mjs", include_in_schema=False)
+    def dashboard_script(_: Auth):
+        return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "ui.mjs",
+            media_type="text/javascript", headers={"Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
+    @app.get("/demo-data.mjs", include_in_schema=False)
+    def fictional_data_module(_: Auth):
+        return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "demo-data.mjs",
+            media_type="text/javascript", headers={"Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
     @app.get("/api/health")
     def health(_: Auth):
         return {"status": "ok", "data_safety": "synthetic_only", "tax_engine": "not_implemented"}
