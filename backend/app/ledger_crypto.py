@@ -34,6 +34,7 @@ ENCRYPTED_COLUMNS = {
     "private_financial_events": ("payload_json",),
     "confidential_bank_batches": ("payload_json",),
     "confidential_bank_key_state": ("sentinel",),
+    "canonical_source_mirrors": ("payload_json",),
 }
 
 
