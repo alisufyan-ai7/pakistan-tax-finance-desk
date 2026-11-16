@@ -252,5 +252,19 @@ jobs:
           assert not typed['plaintext_legacy_tables_retired']
           assert typed['actual_tax_due_minor'] is None
           print('POSTGRES_18_G1C_TYPED_FACT_PARITY=PASS')
+          # The remote synthetic-only preview API uses a separate connection
+          # that defaults to read-only transactions: no legacy finance app.
+          from sqlalchemy.engine import make_url
+          from app.preview_api import _engine as preview_engine, _check_database
+          probe=preview_engine(make_url(source_dsn).set(drivername='postgresql+psycopg'),False)
+          try:
+              assert _check_database(probe)
+              with probe.connect() as readonly:
+                  assert readonly.scalar(text('SHOW default_transaction_read_only'))=='on'
+                  assert readonly.scalar(text('SELECT 1'))==1
+          finally:
+              probe.dispose()
+          print('POSTGRES_18_PRIVATE_PREVIEW_READONLY=PASS')
+
 
           PY
