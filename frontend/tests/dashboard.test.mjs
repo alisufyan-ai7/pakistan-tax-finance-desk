@@ -62,13 +62,16 @@ test("frontend has seven navigable sections, a visible synthetic warning and no 
   const html=sibling("index.html"),ui=sibling("ui.mjs");
   for(const view of ["overview","accounts","transactions","accountant","tax","planning","security"])
     assert.ok(html.includes('data-view="'+view+'"'),view);
-  for(const warning of ["synthetic","Do not enter personal financial information","Backend not connected"])
+  for(const warning of ["synthetic","Do not enter personal financial information","Checking private synthetic backend"])
     assert.match(html,new RegExp(warning,"i"));
   assert.ok(html.includes('id="app"'));
   assert.ok(html.includes('type="module" src="./ui.mjs"'));
   assert.ok(html.includes('aria-live'));
   assert.doesNotMatch(html,/type=["']file["']/i);
-  assert.doesNotMatch(ui,/\bfetch\s*\(|\blocalStorage\b|\bsessionStorage\b/);
+  assert.match(ui,/fetch\("\/api\/preview\/status\?tax_year=2027"/);
+  assert.match(ui,/credentials:"omit"/);
+  assert.doesNotMatch(ui,/\blocalStorage\b|\bsessionStorage\b/);
+  assert.doesNotMatch(ui,/fetch\(["']https?:/);
   assert.doesNotMatch(html,/https?:\/\//i);
 });
 
@@ -76,7 +79,7 @@ test("Vercel configuration is a zero-dependency static site with no API access",
   const config=JSON.parse(sibling("vercel.json"));
   const headers=config.headers[0].headers;
   const csp=headers.find(x=>x.key==="Content-Security-Policy").value;
-  assert.ok(csp.includes("connect-src 'none'"));
+  assert.ok(csp.includes("connect-src 'self'"));
   assert.ok(csp.includes("script-src 'self'"));
   assert.ok(csp.includes("frame-ancestors 'none'"));
   assert.ok(headers.some(x=>x.key==="X-Robots-Tag"&&x.value.includes("noindex")));
