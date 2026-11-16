@@ -4,12 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#123936">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Personal CFO">
   <meta name="robots" content="noindex,nofollow">
   <meta name="description" content="Personal CFO owner dashboard — synthetic development preview, not connected to real financial information.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; manifest-src 'self'; worker-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Personal CFO | Financial workspace preview</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="stylesheet" href="./ui.css">
+  <link rel="stylesheet" href="./pwa.css">
   <script type="module" src="./ui.mjs"></script>
+  <script type="module" src="./pwa.mjs"></script>
 </head>
 <body>
 <div class="shell">
@@ -30,7 +39,7 @@
     </nav>
     <div class="side-bottom">
       <div class="env-badge"><span aria-hidden="true"></span>SYNTHETIC PREVIEW</div>
-      <p class="side-note">Every amount and institution on this screen is fictional. No bank connection, upload, tax filing or live backend is enabled.</p>
+      <p class="side-note">Every amount and institution on this screen is fictional. Private synthetic status only; no bank accounts, uploads, tax filing or real financial data are connected.</p>
     </div>
   </aside>
   <div class="workspace">
@@ -38,9 +47,19 @@
       <div class="crumb"><span>Workspace</span><span aria-hidden="true">/</span><strong id="currentSection">Overview</strong></div>
       <div class="top-actions">
         <span class="top-status" id="backendConnection">Checking private synthetic backend…</span>
+        <button id="installApp" type="button" class="install-app" aria-haspopup="true"> <span aria-hidden="true">↧</span> Add to phone</button>
         <div class="avatar" aria-label="Demo owner">DO</div>
       </div>
     </header>
+    <section id="installHelp" class="install-help" aria-label="Install Personal CFO" hidden>
+      <div class="install-help-inner">
+        <div><strong>Add Personal CFO to your home screen</strong>
+          <p id="installHelpText">Use your browser's Add to Home Screen menu to install this fictional preview.</p>
+          <p class="install-disclaimer">This installs only the demo. It does not connect your personal financial accounts.</p>
+        </div>
+        <button id="installClose" type="button" aria-label="Close installation instructions">Close</button>
+      </div>
+    </section>
     <main class="content">
       <div class="hero">
         <div>
@@ -61,10 +80,16 @@
         <span><strong>Development preview, not your financial account.</strong> All figures are synthetic. This site does not accept uploads, save information, retrieve bank records, verify filed returns or calculate payable FBR tax. Do not enter personal financial information.</span>
       </div>
       <div id="app" aria-live="polite"><div class="empty">Loading fictional financial dashboard…</div></div>
-      <footer class="footer"><span>Personal CFO · Owner-first Pakistan finance workspace</span><span>Synthetic-only · No external requests · No real-data authorization</span></footer>
+      <footer class="footer"><span>Personal CFO · Owner-first Pakistan finance workspace</span><span>Synthetic-only · One private status check · No real-data authorization</span></footer>
     </main>
   </div>
 </div>
+<nav class="mobile-bottom-nav" aria-label="Mobile quick navigation">
+  <button type="button" data-view="overview"><span aria-hidden="true">⌂</span>Today</button>
+  <button type="button" data-view="transactions"><span aria-hidden="true">⇄</span>Activity</button>
+  <button type="button" data-view="planning"><span aria-hidden="true">◎</span>Planning</button>
+  <button type="button" data-view="accountant"><span aria-hidden="true">▣</span>Reviews</button>
+</nav>
 <noscript><p>This synthetic preview needs JavaScript to display fictional sample charts. No personal data is collected.</p></noscript>
 </body>
 </html>
