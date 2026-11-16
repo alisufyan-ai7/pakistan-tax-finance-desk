@@ -276,3 +276,33 @@ class CanonicalSourceMirror(Base):
     source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_json: Mapped[str] = mapped_column(EncryptedText("canonical_source_mirrors.payload_json"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CanonicalJournalKeyState(Base):
+    """Distinct HMAC anchor and AES-GCM key verification; synthetic A6 only."""
+    __tablename__ = "canonical_journal_key_state"
+    id: Mapped[str] = mapped_column(String(8), primary_key=True)
+    verifier_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    sentinel: Mapped[str] = mapped_column(
+        EncryptedText("canonical_journal_key_state.sentinel"), nullable=False)
+
+
+class CanonicalJournalEntry(Base):
+    """Active encrypted balanced posting; isolated from legacy plaintext financial SQL.
+
+    All economic values, date, account identifiers and source identity are only
+    inside the protected payload; SQL columns are random id and blind indexes.
+    """
+    __tablename__ = "canonical_journal_entries"
+    __table_args__ = (
+        Index("uq_canonical_journal_source_hmac", "source_hmac", unique=True),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    year_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    account_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(
+        EncryptedText("canonical_journal_entries.payload_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False)
