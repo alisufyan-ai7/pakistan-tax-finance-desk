@@ -226,5 +226,14 @@ jobs:
               with psycopg.connect(source_dsn) as chk:
                   assert chk.execute('SELECT COUNT(*) FROM canonical_source_mirrors').fetchone()[0]==0
           print('POSTGRES_18_G1C_ENCRYPTED_RESTORED_CANDIDATE=PASS')
+          # A5a read-only candidate inspection uses ONLY sealed payload table.
+          # Compare independent original-source census and exact row/account/year parity.
+          from app.g1c_projection import inspect_restored_sealed_candidate
+          verified=inspect_restored_sealed_candidate()
+          assert verified['read_only'] and verified['full_source_row_parity_verified']
+          assert verified['authenticated_mirror_count']==result['sealed_source_rows']
+          assert not verified['active_ledger_cutover'] and not verified['canonical_operational_store_ready']
+          assert verified['legacy_plaintext_still_present'] and verified['tax_due_minor'] is None
+          print('POSTGRES_18_G1C_SEALED_READ_SIDE_PARITY=PASS')
 
           PY
