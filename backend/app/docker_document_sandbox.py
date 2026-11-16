@@ -22,6 +22,7 @@ class DocumentSandboxBlocked(ValueError):
 
 
 DIGEST_REF = re.compile(r"^[a-z0-9][a-z0-9./_-]*@sha256:[0-9a-f]{64}$")
+LOCAL_IMAGE_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
 KIND = {
     "synthetic_bank_pdf_v1": "bank_statement",
     "synthetic_iris_income_pdf_v1": "iris_income_return",
@@ -31,7 +32,13 @@ KIND = {
 
 def docker_args(image: str) -> list[str]:
     """Explicit minimal container runtime flags, never shell interpolation."""
-    if not isinstance(image, str) or not DIGEST_REF.fullmatch(image):
+    ephemeral_id = (
+        isinstance(image, str) and LOCAL_IMAGE_ID.fullmatch(image) is not None
+        and os.getenv("G3_EPHEMERAL_CI_ONLY") == "1"
+        and os.getenv("CI", "").lower() == "true"
+        and os.getenv("APP_DATA_MODE") == "synthetic"
+    )
+    if not isinstance(image, str) or (not DIGEST_REF.fullmatch(image) and not ephemeral_id):
         raise DocumentSandboxBlocked("Trusted digest-pinned worker image required")
     if os.getenv("DOCKER_HOST", "") not in ("", "unix:///var/run/docker.sock") or os.getenv("DOCKER_CONTEXT", ""):
         raise DocumentSandboxBlocked("Remote or alternate Docker runtime prohibited")
