@@ -265,3 +265,33 @@ root.addEventListener("input",event=>{
   catch{document.getElementById("scenarioOutput").textContent="Invalid fictional scenario assumptions.";}
 });
 render();
+
+/* Same-origin, exact-route synthetic status only. No financial inputs or secrets
+   are ever placed in this request; real finance APIs remain unavailable. */
+async function checkPrivatePreview() {
+  const element=document.getElementById("backendConnection");
+  if(!element)return;
+  try{
+    const response=await fetch("/api/preview/status?tax_year=2027",{
+      method:"GET",credentials:"omit",cache:"no-store",
+      headers:{"Accept":"application/json"}
+    });
+    if(!response.ok)throw new Error("Synthetic backend check failed");
+    const payload=await response.json();
+    if(payload.contract!=="personal_cfo_private_preview_status_v1" ||
+       payload.synthetic_only!==true ||
+       payload.backend!=="connected" ||
+       payload.postgresql!=="private_connected" ||
+       payload.canonical_finance_schema!=="NOT_CERTIFIED" ||
+       payload.real_data_authorized!==false ||
+       payload.owner_workspace?.financial_facts?.bank_balance_minor!==null ||
+       payload.owner_workspace?.actions?.real_evidence_upload_enabled!==false)
+      throw new Error("Unsupported preview readiness contract");
+    element.textContent="Private synthetic backend + PostgreSQL connected";
+    element.classList.add("connected");
+  }catch{
+    element.textContent="Private backend unavailable · demo remains local";
+    element.classList.remove("connected");
+  }
+}
+checkPrivatePreview();
