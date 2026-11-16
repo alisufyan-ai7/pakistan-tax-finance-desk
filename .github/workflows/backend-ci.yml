@@ -254,6 +254,43 @@ jobs:
               os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_verified'
               recovered=restore_pg_snapshot(path)
               assert recovered['full_row_parity_verified'] and recovered['independent_target']
+
+              # G2: independently restored full encrypted PostgreSQL snapshot
+              # must preserve a consumed recovery code, chain and revocations;
+              # keys stay unchanged; no real MFA sessions are granted.
+              restored_engine=create_engine(
+                  algebra_prefix+'/synthetic_restore_verified',
+                  connect_args={'connect_timeout':3})
+              try:
+                  with Session(restored_engine) as restored_db:
+                      for synthetic_owner in ('owner','owner-race'):
+                          integrity=attest_synthetic_recovery_chain(
+                              restored_db,owner_ref=synthetic_owner)
+                          assert integrity['audit_revision']==2
+                          assert integrity['active_code_count']==7
+                      for synthetic_owner,old_code in (
+                          ('owner',one_time[0]),('owner-race',challenge_codes[0])):
+                          try:
+                              consume_persisted_synthetic_code(
+                                  restored_db,owner_ref=synthetic_owner,
+                                  presented_code=old_code,
+                                  password_confirmed=True,now_epoch=1760000110)
+                              raise AssertionError('Restored one-time code was improperly reusable')
+                          except RecoveryBlocked:
+                              pass
+                      assert attest_synthetic_recovery_chain(
+                          restored_db,owner_ref='owner')['audit_chain_verified']
+                  with restored_engine.connect() as restored_conn:
+                      sealed=restored_conn.execute(
+                          text('SELECT bundle_json FROM owner_recovery_states')).scalars().all()
+                      assert len(sealed)==2 and all(value.startswith('TFLE1:') for value in sealed)
+                      assert all(one_time[0].replace('-','') not in value for value in sealed)
+                      assert restored_conn.execute(
+                          text('SELECT COUNT(*) FROM owner_recovery_audit')).scalar_one()==4
+              finally:
+                  restored_engine.dispose()
+              print('POSTGRES_18_G2_INDEPENDENT_ENCRYPTED_RECOVERY_RESTORE=PASS')
+
               with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
                   assert chk.execute('SELECT COUNT(*) FROM confidential_bank_batches').fetchone()[0]==1
                   assert chk.execute('SELECT payload_json FROM confidential_bank_batches').fetchone()[0].startswith('TFLE1:')
