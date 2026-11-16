@@ -1,0 +1,9 @@
+# C2/C3 — append-only synthetic accountant review and DRAFT lifecycle
+
+[Owner MVP completion blueprint](OWNER_MVP_COMPLETION_BLUEPRINT_2026-11-16.md), [accountant workflow #30](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/30).
+
+**Delivered synthetic domain contract:** `backend/app/accountant_review.py` defines immutable review cases, evidence citations and event logs. Supports OPEN → EVIDENCE_REQUESTED → OWNER_RESPONDED → REVIEWED → separately authorized accountant ACCEPTED or REJECTED, with reason and per-command idempotency/conflict detection. A correspondence screenshot or mutable workbook cannot be independently verified original bank/FBR evidence. Owner approval and accountant acceptance are DISTINCT from official IRIS acknowledgement.
+
+**DRAFT version rules:** DRAFT → UNDER_REVIEW → OWNER_APPROVED, revision lineage retained. No FILED state is derived from a spreadsheet, correspondence or owner approval; a separately verified authentic IRIS acknowledgment remains an independent later requirement. The module has **no web endpoint, no account login/accountant invitation and no persistent storage**; its `accountant_authorized` argument is purely a domain precondition, **not authentication** and must not be exposed directly to callers. Actual RBAC must be supplied by future private G2 runtime. Never invoke on real data.
+
+**Privacy & acceptance:** in-memory simulated citations/notes only, redacted status summary without reasons or financial figures, immutable frozen events, duplicate exact replay/no conflicting replay, missing evidence/refused transitions, denial in `APP_DATA_MODE=real`. No genuine accountant workbook, messages, source IDs or financial records entered GitHub. Follow-up: encrypted append-only case persistence, role isolation, source-linked exceptions, owner question queue and safe redacted export after G1/G2.
