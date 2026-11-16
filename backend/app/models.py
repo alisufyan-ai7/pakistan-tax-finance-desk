@@ -306,3 +306,33 @@ class CanonicalJournalEntry(Base):
         EncryptedText("canonical_journal_entries.payload_json"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False)
+
+class OwnerRecoveryState(Base):
+    """G2 synthetic encrypted one-time recovery state; no owner login integration."""
+    __tablename__ = "owner_recovery_states"
+    owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    bundle_json: Mapped[str] = mapped_column(
+        EncryptedText("owner_recovery_states.bundle_json"), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class OwnerRecoveryAudit(Base):
+    """Append-only source-authenticated recovery issuance/consumption audit."""
+    __tablename__ = "owner_recovery_audit"
+    __table_args__ = (
+        UniqueConstraint("owner_hmac", "revision", name="uq_owner_recovery_audit_revision"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    action: Mapped[str] = mapped_column(String(12), nullable=False)
+    previous_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    bundle_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    detail_json: Mapped[str] = mapped_column(
+        EncryptedText("owner_recovery_audit.detail_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False)
+
