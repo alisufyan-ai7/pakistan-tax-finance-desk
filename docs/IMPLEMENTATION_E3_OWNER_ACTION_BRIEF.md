@@ -12,3 +12,11 @@ Owner priority: make the **first phone screen immediately useful**: What is happ
 **Security and scope:** cross-owner input, duplicate IDs, malformed periods, unsupported dates, unexpected fields and real mode blocked. No bank data, accountant messages, account IDs, passwords, or real evidence in this public repository. Test cases use explicitly invented records.
 
 **Important:** this is not yet a source-connected or secure authenticated owner endpoint. It is a vetted contract awaiting G1 encrypted authoritative financial data, G2 private owner MFA and scoped accounts, G3 verified bank/FBR adapters and audited user action workflows. Real financial totals and returns must remain blank until sources meet those gates.
+
+## Boundary corrections — 2026-11-16
+
+- A March 31 vs February 28 month-to-date comparison now returns `comparison_window_clamped=true`, **growth null** and `NOT_COMPARABLE_MONTH_LENGTH` instead of a misleading percent computed from unequal calendar-day coverage. Source-known individual expense amounts may still display separately.
+- No bill can be marked source-matched paid using an evidence posting date **after** `as_of`. A matched debit with an unconfirmed recurring schedule retains `SCHEDULE_REVIEW`; a bank debit alone does not certify the bill schedule or obligation.
+- Once an expected investment return date passes, status becomes `EXPECTED_DATE_PASSED_NEEDS_SOURCE_RECEIPT`. This triggers a follow-up, not an assumption that profit was received or a tax amount is due.
+
+All checks remain synthetic-only. No actual owner data can be imported or paid through this module.
