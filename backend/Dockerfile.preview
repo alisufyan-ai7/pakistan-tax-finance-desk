@@ -1,0 +1,12 @@
+# Restricted private-network synthetic read-only connectivity API, NOT
+# the legacy finance app. No real data uploads, no migrations and no public domain.
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /srv/backend
+COPY pyproject.toml ./
+COPY app ./app
+RUN python -m pip install --no-cache-dir '.[postgres]'
+RUN useradd --create-home --uid 10001 preview
+USER 10001
+EXPOSE 8000
+CMD ["uvicorn", "app.preview_api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
