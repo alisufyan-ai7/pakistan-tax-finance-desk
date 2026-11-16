@@ -1,17 +1,17 @@
 import { DEMO, MONTHS, formatPKR, transactionsForYear, summaryForYear,
-  coverageSummary, monthlyMovement, hypotheticalBuffer } from "./demo-data.mjs";
+  coverageSummary, monthlyMovement, hypotheticalBuffer, monthPulseSummary } from "./demo-data.mjs";
 
 const state = { view:"overview", year:2027, search:"",
   opening:180000, essential:85000, reserveMonths:6 };
 const root = document.getElementById("app");
 const nav = Array.from(document.querySelectorAll("[data-view]"));
 const titles = {
-  overview:["A clearer picture of your money.","Your money, evidence gaps and decisions in one place — a fictional example of the future owner workspace.","Overview"],
+  overview:["Your money, at a glance.","This month’s spending, bills to check, expected investment dates and follow-ups — shown using a fictional snapshot.","Overview"],
   accounts:["Know what's covered.","Track accounts, source periods and missing statement months before trusting balances.","Accounts & coverage"],
-  transactions:["Every movement has a source.","Inspect example money movements and review uncertainty without treating bank credits as tax income.","Transactions"],
+  transactions:["Bills & spending.","See example upcoming bills, activity and evidence gaps. Nothing is marked paid without proof.","Transactions"],
   accountant:["Turn uncertainty into questions.","Keep your accountant's drafts, source requests and actual filed evidence distinct.","Accountant review"],
   tax:["Evidence before tax numbers.","Year-specific Pakistan tax rules, withholding and wealth continuity will require verified source documents.","Tax & wealth"],
-  planning:["Plan from facts, not guesses.","Model hypothetical reserves and goals without representing forecasts as observed balances.","Planning"],
+  planning:["Investments & plans.","See illustrative holdings, possible return dates and savings goals without guaranteed return claims.","Planning"],
   security:["Private by design.","Follow the security gates required before this workspace can work with genuine bank or FBR records.","Security & status"],
 };
 function e(value) {
@@ -83,23 +83,113 @@ function reviewList(limit=4) {
     '<div class="list-name">'+e(item.title)+'</div><div class="list-meta">'+e(item.type)+' · '+e(item.detail)+'</div>'+
     pill(item.status)+'</div></div>').join("")+'</div>';
 }
+
+/* Owner-first, plain-language visual pulse: only fictional snapshot assumptions.
+   Nothing here is inferred from real bank data or the year-wide ledger samples. */
+function shortDate(value) {
+  if(!value)return "Date not known";
+  return new Intl.DateTimeFormat("en-PK",{day:"numeric",month:"short",
+    timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"));
+}
+function pulseBills(limit=4) {
+  const p=monthPulseSummary();
+  const rows=p.bills.filter(x=>x.state!=="PAID_SAMPLE").slice(0,limit);
+  return '<section class="panel pulse-panel">'+
+    title("Bills to check","Scheduled examples; no payment has been verified.",
+      '<button class="section-link" type="button" data-go="transactions">All sample bills →</button>')+
+    '<div class="pulse-list">'+rows.map(bill=>
+      '<div class="pulse-list-row"><div class="pulse-mini-icon" aria-hidden="true">▣</div>'+
+      '<div class="pulse-main"><strong>'+e(bill.name)+'</strong>'+
+      '<span>'+e(bill.cycle)+' · '+e(shortDate(bill.dueOn))+'</span></div>'+
+      '<div class="pulse-right"><strong>'+e(formatPKR(bill.displayAmountMinor))+'</strong>'+
+      '<span class="pulse-tag '+(bill.needsChecking?'amber':'muted')+'">'+
+      (bill.needsChecking?'Check payment':'Schedule unverified')+'</span></div></div>'
+    ).join("")+'</div><p class="pulse-helper">This is not a payment reminder from your bank. Confirm due dates and whether anything was paid.</p></section>';
+}
+function pulseInvestments(limit=3) {
+  const p=monthPulseSummary();
+  return '<section class="panel pulse-panel">'+
+    title("Investments & next returns","Illustrative holdings. Expected dates are not guaranteed payouts.",
+      '<button type="button" class="section-link" data-go="planning">View investments →</button>')+
+    '<div class="pulse-list">'+p.investments.slice(0,limit).map(item=>
+      '<div class="pulse-investment"><div class="pulse-main"><strong>'+e(item.name)+'</strong>'+
+      '<span>'+e(item.kind)+' · Example capital '+e(formatPKR(item.principalMinor))+'</span></div>'+
+      '<div class="pulse-return"><strong>'+(item.nextReturnOn?e(shortDate(item.nextReturnOn)):'Not scheduled')+'</strong>'+
+      '<span>'+(item.quotedReturnMinor!==null
+         ?e(formatPKR(item.quotedReturnMinor))+' quoted'
+         :'Variable return')+'</span></div></div>'
+    ).join("")+'</div><p class="pulse-helper">No actual profit received, market value or tax has been verified.</p></section>';
+}
+function pulseSpending() {
+  const p=monthPulseSummary();
+  const max=Math.max(1,...p.categories.map(x=>x.currentMinor));
+  return '<section class="panel pulse-panel">'+
+    title("Where the example money goes","Illustrative November category comparison; real expense coverage is incomplete.")+
+    '<div class="pulse-spend-list">'+p.categories.map(x=>{
+      const pct=Math.max(2,Math.round(x.currentMinor/max*100));
+      const change=x.priorMinor>0?Math.round((x.currentMinor-x.priorMinor)*100/x.priorMinor):null;
+      return '<div class="pulse-spend-row"><div class="pulse-spend-label"><span>'+e(x.name)+'</span>'+
+        '<strong>'+e(formatPKR(x.currentMinor))+'</strong></div>'+
+        '<div class="pulse-spend-track"><div class="pulse-spend-bar" style="width:'+pct+'%"></div></div>'+
+        '<div class="pulse-spend-change">'+(change===null?'Comparison unavailable':
+          (change>0?'+'+change:change)+'% example vs prior')+'</div></div>';
+    }).join("")+'</div>'+
+    '<p class="pulse-helper"><strong>Important:</strong> these bars illustrate the planned view. They are not calculated from your statements.</p></section>';
+}
+function pulseFollowups(limit=3) {
+  const p=monthPulseSummary();
+  return '<section class="panel pulse-panel">'+
+    title("What needs your attention","A clear next-action list, not an automated notification.",
+      '<button class="section-link" type="button" data-go="accountant">Reviews →</button>')+
+    '<div class="pulse-list">'+p.followups.slice(0,limit).map((item,i)=>
+      '<div class="pulse-followup"><span class="pulse-sequence" aria-hidden="true">'+(i+1)+'</span>'+
+      '<div class="pulse-main"><strong>'+e(item.title)+'</strong>'+
+      '<span>'+e(item.subtitle)+'</span></div><span class="pulse-due">'+e(shortDate(item.dueOn))+'</span></div>'
+    ).join("")+'</div><p class="pulse-helper">Future version: assign, resolve and remind with your approval.</p></section>';
+}
+function pulseHeadline() {
+  const p=monthPulseSummary();
+  return '<section class="pulse-hero" aria-label="Illustrative monthly financial pulse">'+
+    '<div class="pulse-hero-copy"><span class="pulse-demo-label">● FICTIONAL MONTHLY SNAPSHOT</span>'+
+    '<h2>Your month, in one look.</h2>'+
+    '<p>'+e(p.monthLabel)+' · Example snapshot as of '+e(shortDate(p.asOf))+
+    '. This is what your real dashboard will show after source verification.</p></div>'+
+    '<div class="pulse-hero-alert"><span>Spending comparison</span>'+
+    '<strong>'+(p.exampleGrowthPct>0?'+':'')+e(String(p.exampleGrowthPct))+'%</strong>'+
+    '<small>Illustrative only · actual change unknown</small></div></section>'+
+    '<section class="pulse-stats" aria-label="Illustrative monthly summary">'+
+    '<div class="pulse-stat"><span>Example spending so far</span><strong>'+e(formatPKR(p.exampleCurrentExpenseMinor))+'</strong>'+
+    '<small>Not verified from statements</small></div>'+
+    '<div class="pulse-stat"><span>Bills to check</span><strong>'+p.billReviewCount+'</strong>'+
+    '<small>Due or overdue in sample</small></div>'+
+    '<div class="pulse-stat"><span>Sample invested capital</span><strong>'+e(formatPKR(p.exampleInvestedPrincipalMinor))+'</strong>'+
+    '<small>Not your actual portfolio</small></div>'+
+    '<div class="pulse-stat"><span>Open follow-ups</span><strong>'+p.pendingFollowupCount+'</strong>'+
+    '<small>Examples to resolve</small></div></section>';
+}
+
 function overview() {
   const s=summaryForYear(state.year), cov=coverageSummary(state.year);
-  return '<div class="cards">'+
-    metric("Illustrative liquid position",formatPKR(s.illustrativeLiquidMinor),"Synthetic balances · not verified","◫")+
+  return pulseHeadline()+
+    '<div class="layout-2 pulse-main-grid">'+pulseBills(3)+pulseInvestments(2)+'</div>'+
+    '<div class="layout-2 pulse-main-grid">'+pulseSpending()+pulseFollowups(3)+'</div>'+
+    '<div class="pulse-section-title"><div><h2>Explore the evidence</h2>'+
+    '<p>Additional fictional ledger screens. Missing statement months never mean zero spending.</p></div></div>'+
+    '<div class="cards">'+
+    metric("Illustrative liquid position",formatPKR(s.illustrativeLiquidMinor),"Different fictional ledger sample · not verified","◫")+
     metric("Sample cash inflows",formatPKR(s.incomeMinor),"Unclassified receipts are not taxable income","↗","warn")+
-    metric("Sample cash outflows",formatPKR(s.outflowMinor),"Observed examples, not full annual spending","↘")+
-    metric("Open evidence questions",String(DEMO.reviews.length),"Action needed before accountant readiness","!","warn")+
+    metric("Sample cash outflows",formatPKR(s.outflowMinor),"Incomplete ledger sample, not full spending","↘")+
+    metric("Open evidence questions",String(DEMO.reviews.length),"Sample accountant review list","!","warn")+
     '</div><div class="layout-2"><section class="panel">'+
-    title("Financial movement","Illustrative monthly movements · FY July–June",'<span class="stat-chip">Source-led view</span>')+
+    title("Financial movement","Separate fictional ledger sample · fiscal July–June",'<span class="stat-chip">Sample only</span>')+
     movementsChart(state.year)+'</section><section class="panel">'+
     title("Statement coverage","Missing months are never assumed to have zero activity.",'<button class="section-link" data-go="accounts" type="button">See all →</button>')+
     accountsMini(state.year)+'</section></div>'+
     '<div class="layout-2">'+transactionsPanel(state.year,5)+
-    '<section class="panel">'+title("Needs your attention","Sample review queue, not connected to an accountant.",'<button class="section-link" data-go="accountant" type="button">Review queue →</button>')+
+    '<section class="panel">'+title("Accountant review sample","Example evidence queue, not connected to your accountant.",'<button class="section-link" data-go="accountant" type="button">Review queue →</button>')+
     reviewList(3)+'</section></div>'+
-    '<section class="banner-card"><div><strong>A complete financial picture starts with complete evidence.</strong>'+
-    '<p>'+cov.counts.missing+' account-months are missing from this synthetic period. Build the habit of resolving gaps before tax and wealth calculations.</p></div>'+
+    '<section class="banner-card"><div><strong>A clear dashboard needs complete records.</strong>'+
+    '<p>'+cov.counts.missing+' account-months are missing in this separate fictional ledger example. Actual accounts, bills, investments and returns will remain unverified until source evidence is available.</p></div>'+
     '<button type="button" data-go="accounts">Review coverage</button></section>';
 }
 function accounts() {
@@ -118,7 +208,8 @@ function accounts() {
 }
 function transactions() {
   const rows=transactionsForYear(state.year,state.search);
-  return '<section class="panel">'+title("Transaction review","Search fictional records; classification and reconciliation write actions are intentionally disabled.")+
+  return '<div class="pulse-subsection">'+pulseBills(4)+'</div>'+
+    '<section class="panel">'+title("Transaction review","Search fictional records; classification and reconciliation write actions are intentionally disabled.")+
     '<div class="form-controls"><label class="field" for="transactionSearch">Search description, source or status'+
     '<input id="transactionSearch" class="input-search" type="search" autocomplete="off" maxlength="120" placeholder="Try consulting, expense, review..." value="'+e(state.search)+'"></label>'+
     '<span class="small-status gray" id="transactionCount">'+rows.length+' sample movements</span></div>'+
@@ -186,7 +277,8 @@ function scenarioResult() {
     '</div>';
 }
 function planning() {
-  return '<div class="split">'+DEMO.goals.map(goalCard).join("")+'</div>'+
+  return '<div class="pulse-subsection">'+pulseInvestments(3)+'</div>'+
+    '<div class="split">'+DEMO.goals.map(goalCard).join("")+'</div>'+
     '<section class="panel" style="margin-top:18px">'+
     title("Emergency reserve simulator","Edit assumptions and see a hypothetical result. Nothing is saved or transferred.")+
     '<div class="scenario"><div class="split">'+
