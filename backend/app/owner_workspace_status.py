@@ -47,8 +47,9 @@ def _scope_coverage(coverage: dict | None, legal_owner: str) -> dict:
             raise OwnerWorkspaceBlocked("Unknown or mixed-owner coverage facts")
         tally[row["status"]]+=1
     return {
-        "state":"REVIEW_REQUIRED" if any(tally[k] for k in STATUS_ORDER[1:]) else
-                "OBSERVED_SOURCE_COVERAGE_ONLY",
+        "state":"UNAVAILABLE" if not rows else
+                ("REVIEW_REQUIRED" if any(tally[k] for k in STATUS_ORDER[1:]) else
+                "OBSERVED_SOURCE_COVERAGE_ONLY"),
         "account_month_count":len(rows),
         "status_counts":{k:tally[k] for k in STATUS_ORDER},
         "coverage_complete_and_verified":False,
