@@ -156,3 +156,70 @@ def test_real_mode_forbids_annotation_and_reversal(engine,monkeypatch):
         with pytest.raises(ClassificationBlocked):
             reverse_synthetic_bank_candidate(
                 db,source_ref=SOURCE,row_number=1,explicit_correction=True)
+
+
+def test_economic_graph_proves_source_bound_candidate_and_inverse(engine):
+    with Session(engine) as db:
+        seed(db)
+        base=analyze_synthetic_economic_graph(db)
+        assert base["source_bound_classification_candidates"]==0
+        assert base["source_bound_inverse_reversals"]==0
+        annotate_synthetic_bank_candidate(db,annotation=annotation(1,"income_candidate"))
+        checked=analyze_synthetic_economic_graph(db)
+        assert checked["source_bound_classification_candidates"]==1
+        assert checked["source_bound_inverse_reversals"]==0
+        assert checked["owner_classification_is_official_income"] is False
+        assert checked["tax_due_minor"] is None
+        reverse_synthetic_bank_candidate(
+            db,source_ref=SOURCE,row_number=1,explicit_correction=True)
+        checked=analyze_synthetic_economic_graph(db)
+        assert checked["source_bound_classification_candidates"]==1
+        assert checked["source_bound_inverse_reversals"]==1
+        assert checked["financial_scope_complete"] is False
+
+
+def test_graph_rejects_unbacked_or_misclassified_encrypted_candidate(engine):
+    from app.canonical_journal import JournalEvent,record_synthetic_journal
+    from app.canonical_economic_graph import CanonicalGraphBlocked
+    from app.canonical_bank_posting import _events
+    from app.canonical_bank_classification import _candidate_ref
+    with Session(engine) as db:
+        seed(db)
+        neutral=_events(statement())[0]
+        wrong=JournalEvent.model_validate({
+            "synthetic_fixture":True,"source_ref":_candidate_ref(neutral),
+            "primary_account_ref":"SYNTHETIC-UNCLASSIFIED-COUNTERENTRY",
+            "event_kind":"classification_candidate",
+            "posted_on":neutral.posted_on,
+            "legs":[
+                {"account_ref":"SYNTHETIC-UNCLASSIFIED-COUNTERENTRY",
+                 "account_kind":"transfer_clearing","signed_minor":10},
+                {"account_ref":"SYNTHETIC-OWNER-CANDIDATE-INCOME",
+                 "account_kind":"income","signed_minor":-10},
+            ],
+        })
+        record_synthetic_journal(db,wrong)
+        with pytest.raises(CanonicalGraphBlocked):
+            analyze_synthetic_economic_graph(db)
+
+
+def test_graph_rejects_orphan_candidate_unlinked_to_bank_source(engine):
+    from app.canonical_journal import JournalEvent,record_synthetic_journal
+    from app.canonical_economic_graph import CanonicalGraphBlocked
+    with Session(engine) as db:
+        seed(db)
+        orphan=JournalEvent.model_validate({
+            "synthetic_fixture":True,"source_ref":"ORPHAN-CLASSIFICATION-01",
+            "primary_account_ref":"SYNTHETIC-UNCLASSIFIED-COUNTERENTRY",
+            "event_kind":"classification_candidate",
+            "posted_on":"2025-07-03",
+            "legs":[
+                {"account_ref":"SYNTHETIC-UNCLASSIFIED-COUNTERENTRY",
+                 "account_kind":"transfer_clearing","signed_minor":10},
+                {"account_ref":"SYNTHETIC-OWNER-CANDIDATE-INCOME",
+                 "account_kind":"income","signed_minor":-10},
+            ],
+        })
+        record_synthetic_journal(db,orphan)
+        with pytest.raises(CanonicalGraphBlocked):
+            analyze_synthetic_economic_graph(db)
