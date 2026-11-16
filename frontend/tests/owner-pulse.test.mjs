@@ -75,3 +75,13 @@ test("dashboard prioritizes plain-language spending, bills, investments and foll
  assert.match(css,/@media\(max-width:610px\)/);
  assert.doesNotMatch(js,/\bfetch\(["']https?:/);
 });
+
+
+test("duplicate action references and malformed dates cannot silently enter the preview",()=>{
+ const data=structuredClone(DEMO.monthPulse);
+ data.bills[0].id=data.investments[0].id;
+ assert.throws(()=>monthPulseSummary(data),RangeError);
+ data.bills[0].id="sample-internet";
+ data.bills[0].dueOn="2026-13-99";
+ assert.throws(()=>monthPulseSummary(data),TypeError);
+});
