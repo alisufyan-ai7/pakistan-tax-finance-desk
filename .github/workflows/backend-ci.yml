@@ -99,6 +99,40 @@ jobs:
               assert raw.startswith('TFLE1:')
               assert all(secret not in raw for secret in ('12345','12545','2024-07-15',
                                                          'SYNTHETIC-POSTGRES-ACCOUNT-1','synthetic only'))
+
+          # A6: proof that the NEW independently keyed synthetic canonical
+          # journal can WRITE, IDEMPOTENTLY REPLAY and READ its own AES-GCM
+          # entries in PostgreSQL18; legacy summary remains untouched.
+          from app.canonical_journal import JournalEvent,record_synthetic_journal,inspect_synthetic_journal
+          from sqlalchemy.orm import Session
+          posting = JournalEvent.model_validate({
+              'synthetic_fixture':True,
+              'legal_owner':'individual',
+              'currency':'PKR',
+              'source_ref':'SYNTHETIC-POSTGRES-CANONICAL-ROW-1',
+              'primary_account_ref':'SYNTHETIC-POSTGRES-ACCOUNT-1',
+              'posted_on':'2024-07-15',
+              'event_kind':'bank_receipt',
+              'legs':[
+                  {'account_ref':'SYNTHETIC-POSTGRES-ACCOUNT-1','account_kind':'bank','signed_minor':777},
+                  {'account_ref':'SYNTHETIC-INCOME-SOURCE','account_kind':'income','signed_minor':-777},
+              ],
+          })
+          with Session(engine) as db:
+              receipt,already=record_synthetic_journal(db,posting)
+              assert receipt['balanced_to_zero'] and not already
+              repeat,already=record_synthetic_journal(db,posting)
+              assert already and repeat['id']==receipt['id']
+              account_receipt=inspect_synthetic_journal(db,
+                  primary_account_ref='SYNTHETIC-POSTGRES-ACCOUNT-1',tax_year=2025)
+              assert account_receipt['source_event_count']==1
+              assert account_receipt['account_balance_minor'] is None
+          with engine.connect() as db:
+              cipher=db.execute(text('SELECT payload_json FROM canonical_journal_entries')).scalar_one()
+              assert cipher.startswith('TFLE1:')
+              for sensitive in ('777','2024-07-15','SYNTHETIC-POSTGRES-CANONICAL-ROW-1'):
+                  assert sensitive not in cipher
+          print('POSTGRES_18_CANONICAL_JOURNAL_ACTIVE_SYNTHETIC=PASS')
           print('POSTGRES_18_SYNTHETIC_SCHEMA=PASS')
           print('POSTGRES_18_CONFIDENTIAL_BANK_OPERATIONAL=PASS')
           # G1-b: a separate empty schema, sealed PostgreSQL DATA backup,
