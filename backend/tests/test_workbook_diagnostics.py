@@ -53,7 +53,7 @@ def test_broken_ref_and_uncertified_cached_value():
     assert res["broken_reference_count"] == 1
     assert {v["code"] for v in res["issues"]} == {"BROKEN_REFERENCE", "MISSING_CACHED_RESULT"}
     formula = _workbook()
-    cached = _replace_sheet_xml(formula, b"<v></v>", b"<v>4</v>")
+    cached = _replace_sheet_xml(formula, b"<v />", b"<v>4</v>")
     res = review_synthetic_draft(cached, synthetic_fixture=True)
     assert res["missing_cached_result_count"] == 0
     assert res["issues"] == [{"sheet_index": 0, "cell": "B2", "code": "CACHE_PRESENT_UNVERIFIED"}]
