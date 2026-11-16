@@ -47,8 +47,7 @@ def test_strict_no_float_no_duplicate_or_horizon_extra():
     bad=ScenarioFlow(synthetic_fixture=True,month_offset=3,kind="assumed_expense",
                      amount_minor=100,assumption_ref="fictional-late-outflow")
     with pytest.raises(ValueError):
-        scenario().model_copy(update={"flows":(bad,)}) if False else BufferScenario(
-            **{**scenario().model_dump(),"flows":(bad,)})
+        BufferScenario(**{**scenario().model_dump(),"flows":(bad,)})
     with pytest.raises(ValueError):
         BufferScenario(**{**scenario().model_dump(),"opening_month":date(2024,6,3)})
 
