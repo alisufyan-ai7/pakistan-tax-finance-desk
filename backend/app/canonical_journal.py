@@ -93,7 +93,7 @@ class JournalEvent(BaseModel):
     primary_account_ref: str = Field(min_length=8, max_length=80)
     posted_on: date
     event_kind: Literal[
-        "bank_receipt", "expense_paid", "own_transfer", "loan_principal",
+        "bank_receipt", "bank_observation_unclassified", "expense_paid", "own_transfer", "loan_principal",
         "investment_contribution", "cash_transfer", "withholding_candidate",
         "owner_opening_assertion",
     ]
