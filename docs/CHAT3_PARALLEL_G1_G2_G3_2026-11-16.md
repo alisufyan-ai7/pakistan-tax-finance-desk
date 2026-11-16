@@ -1,0 +1,48 @@
+# Chat 3 — G1/G2/G3 parallel implementation, verified boundaries and continuation (2026-11-16)
+
+**Source:** only this Personal CFO GitHub repository and project-visible owner instructions. This document describes implementation facts, not genuine financial records or release authorization. All committed fixtures and CI credentials are fictional.
+
+## Owner instruction and operating boundary
+
+Owner authorized continued parallel engineering of G1 authoritative encrypted source ledger, G2 restricted PostgreSQL and owner MFA/recovery, and G3 isolated parsing and genuine-format acceptance. Work was confined to this GitHub repository, synthetic fixtures and preexisting approved GitHub Actions. **No new provider/project or direct Railway service/role/secret change was requested or performed.** Existing GitHub-to-Railway auto-deployment state was not independently inspected; do not infer live deployment of the new financial modules. User-attached genuine private statements, workbook and correspondence are **not** authorized for this public repository, Actions, or the public synthetic preview. `APP_DATA_MODE=real` stays disabled.
+
+## Four independently verified, merged PRs
+
+| PR / gate | Tested code and truth boundary | Exact-head CI |
+| --- | --- | --- |
+| [#76 G1 A6](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/76), merge `b657ba2297165c5ef848225ccc1d5d58de2d02da` | New **actively writable but separate SYNTHETIC-only** `canonical_journal_entries` + `canonical_journal_key_state` (additive Alembic `0012_canonical_journal`); purpose-separated HMAC indexes and key anchor, authenticated AES-GCM full postings, double-entry balancing, idempotent/immutable source ref, tamper-detecting bounded full scan. Does not replace old plaintext M1 financial authority. | [43926659329](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43926659329) **416 pytest PASS, 2 warnings** + PostgreSQL18 `CANONICAL_JOURNAL_ACTIVE_SYNTHETIC=PASS`, Alembic, encrypted backup/independent restore, G1c sealed candidate/typed parity and private preview status PASS |
+| [#77 G2 F1/F2](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/77), merge `5da3fb4b72a5fefb87c5cf2fd86fc3e1353bef97` | Strict ephemeral **`synthetic_ci_db` only** role bootstrap (no superuser, DDL, TEMP, public table grants) with independent live PG role attestation; one-time owner recovery-code pure primitives (peppered HMAC, expiry, replay/owner bound), **not** persisted or connected to a private login. No Railway role/credential changed. | [43925785761](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43925785761) **418 pytest PASS, 2 warnings** + PostgreSQL18 existing gates + `G2_SYNTHETIC_RESTRICTED_ROLE=PASS` |
+| [#78 G3 B5](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/78), merge `414e997e98cc0d5ed321f332aa096bee056eb705` | Digest-pinned Docker synthetic fixture worker contract with `--network=none`, read-only filesystem, all caps dropped, nonroot, no-new-privileges, CPU/RAM/PID constraints, no image pulls, no external Docker contexts, stdin-only bytes, allowlisted output and no raw stderr. Host Docker runtime/image security **not** independently exercised; no authentic PDF, macro workbook or encrypted genuine input accepted. | [43925792793](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43925792793) **418 pytest PASS, 2 warnings** + existing PostgreSQL18 gates. Security flags are asserted via mocked subprocess; **not a certified production sandbox**. |
+| [#79 G1 A6 source projection](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/79), merge `168526ddb1175f08e2c99295cef6ab7eb8e4c93b` | `record_synthetic_journal_batch` commits all validated entries atomically. `accept_recorded_synthetic_bank` authenticates *previously stored* encrypted bank source and reconciled running balances; produces debit/credit pair with **UNCLASSIFIED_CLEARING**, never guesses income, expense, tax or payment. Deterministic keyed row IDs, replay and injected conflict rollback, original M1 totals unaffected. | [43928037498](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43928037498) **446 pytest PASS, 2 warnings** + PG18 `ATOMIC_BANK_TO_CANONICAL_POSTING=PASS`, independent backup, candidate HMAC parity and ephemeral G2 role checks PASS. |
+
+**Cross-merge integration:** `integration/chat3-parallel-batch3-handoff-20261116` adds G1/G2/G3 combined real-mode rejection tests, update to canonical handoff and status; **requires its own exact-head CI PASS before merging**. Separate PR green statuses do not alone verify final combined tree.
+
+## Release gates — still NOT cleared
+
+### G1: active canonical financial confidentiality — BLOCKED, substantial new groundwork
+
+A6 has an independently encrypted **synthetic** journal with genuine SQL writes, separate from old M1 logic. The old `accounts`, `transactions`, loans/cash, `historical_filings` and linked metadata still have plaintext monetary/date/linkage columns. Their old API and projections are unchanged and **not** replaced by A6. No actual owner records, genuine immutable originals, complete owner-account-year wealth/loan/asset/filing reconciliation, posting approval lifecycle, key rotation/escrow, independently tested offsite recovery, backup-first source migration or audited reversible cutover/plaintext retirement have been completed. The new neutral bank posting is only one synthetic source format. Do **not** interpret it as true bank balances, verified investment income, a filed FBR record or a certified accountant export.
+
+**Next owner-independent A7 acceptance:** design and test a source-backed typed event graph for loans, cash, transfers, assets, withholding and FBR claims without double count; encrypted record and source proofs for every account×year; exhaustive parity with independent original source plus rollback/failed-replay tests. A safe cutover controller must refuse authority switch until an encrypted offsite backup and independent restore, legacy plaintext retirement proof, key lifecycle and explicit private owner approval are present. Do not automatically drop legacy SQL or enable real mode.
+
+### G2: private owner MFA, restricted live DB and independent recovery — BLOCKED
+
+A disposable CI role now proves restricted `SELECT 1` connectivity with **no financial table** rights in PostgreSQL18. This does not change the current Railway FastAPI preview's DB credentials or create a production role. Recovery-code issuance/redemption is a pure cryptographic state transition, not database-backed atomic consumption, rate limiting, session reset or MFA enrollment. Live owner MFA, credential/secret rotation, CSRF and device revocation, separate migration/runtime roles, offsite/PITR restore, TLS/security controls and independent recovery drills remain unverified.
+
+**Next owner-independent G2 acceptance:** implement persistent encrypted recovery state with transactional one-use token consumption, audit and cross-worker lock; complete auth/session threat tests and restricted runtime/DDL role plan. Live credential changes require explicit scoped owner consent for the exact approved Personal CFO resource, staged verification and rollback; do not touch unrelated Railway services.
+
+### G3: authentic Pakistan bank/IRIS/broker source intake — BLOCKED
+
+An explicit Docker deny-network sandbox runner is **code**, not a verified deployed isolated image. CI only mocks container launch. The old in-process synthetic parser remains separate; real PDF, encrypted BAHL PDFs, workbook formulas/macros/external links and actual bank/FBR layouts are not accepted, imported or certified. Genuine financial source originals from ChatGPT attachment are not to be inserted into CI/public GitHub/deployed preview. No automatic PDF password collection or bank login credential scraping.
+
+**Next owner-independent G3 acceptance:** reproducible pinned and vulnerability-reviewed worker image; actual isolation attack test in an approved local/ephemeral runner including network denial, file/write/memory limits, interpreter malicious content cases, deletion of scratch, password provided transiently via approved private vault; parser registry with bank/IRIS per-layout versions, page/row provenance and exact balance/dedup/coverage tests using synthetic variants. Genuine owner samples may be validated **only** inside private, authorized G1/G2-safe intake. Quarantine unsupported layouts and preserve accountant DRAFT distinct from authenticated FBR FILED acknowledgment.
+
+### G4 and G5
+
+Current tax and accountant-law verification, real wealth and personal monthly dashboard source-backed figures remain incomplete. Mobile-first PWA still shows fictional figures. Missing documentation/coverage/realized investment return must remain unknown, not zero or assumed paid.
+
+## Handoff and next movement
+
+- Read root `AGENTS.md`, `AGENT_START_HERE.md`, `docs/PROJECT_CONTEXT_AND_INFRASTRUCTURE_ISOLATION.md`, `docs/CHAT_CONTINUITY_PROTOCOL.md` and newest `docs/CURRENT_HANDOFF.md`.
+- Open priorities: [G1 issue #21](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/21), [G2 issue #28](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/28), [G3 issue #29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29).
+- Keep project-only context, synthetic-only public GitHub, same approved infrastructure boundaries and exact-head CI before further merges. No claims of complete real-data release, real money, official tax due or guaranteed returns without private source and legal acceptance.
