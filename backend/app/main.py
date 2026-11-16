@@ -42,6 +42,7 @@ from .confidential_bank import ConfidentialBankInput, record_confidential_bank_s
 from .cfo_planning import CFOScenarioInput, scenario_forecast, private_journal_briefing
 from .investment_lots import LotScenarioInput, calculate_lot_scenario
 from .tax_rules import SalaryPreviewInput, salary_preview, tax_rule_registry, opportunity_rule_index
+from .owner_workspace_status import build_owner_workspace_status, OwnerWorkspaceBlocked
 from .synthetic_pdf_adapters import (preview_synthetic_bank,preview_synthetic_fbr,SyntheticPdfError,MAX_PDF_BYTES)
 
 CREDIT = {"salary", "business_income", "investment_income", "rental_income", "other_income", "loan_received", "loan_repayment_received", "loan_installment_received", "gift_received", "cash_deposit", "refund", "own_transfer"}
@@ -256,6 +257,19 @@ def create_app(database_url: str | None = None):
         return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "demo-data.mjs",
             media_type="text/javascript", headers={"Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
+    @app.get("/api/owner/workspace/status")
+    def owner_workspace_status(_: Auth, tax_year: int = 2027):
+        """Authenticated synthetic-only readiness contract; no legacy ledger SQL."""
+        try:
+            payload = build_owner_workspace_status(tax_year, legal_owner="individual")
+        except OwnerWorkspaceBlocked:
+            raise HTTPException(422, "Owner workspace source contract unavailable") from None
+        return JSONResponse(payload, headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+        })
 
     @app.get("/api/health")
     def health(_: Auth):
