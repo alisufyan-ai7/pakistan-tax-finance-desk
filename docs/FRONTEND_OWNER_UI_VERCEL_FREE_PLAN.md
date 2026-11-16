@@ -1,0 +1,31 @@
+# Owner dashboard frontend — real UI, fictional records only
+
+**Date:** 2026-11-16. This implements owner-MVP G5 *UI groundwork*, not private owner release, authenticated data ingestion or statutory tax calculations. [Owner release blueprint](OWNER_MVP_COMPLETION_BLUEPRINT_2026-11-16.md), [project isolation and provider authorization](PROJECT_CONTEXT_AND_INFRASTRUCTURE_ISOLATION.md).
+
+## What the user can actually use now
+
+The original `frontend/index.html` was a basic local import/review form, not the proposed Personal CFO. Its content remains preserved in `frontend/legacy-import.html` for historic local prototype reference. The **new responsive dashboard** in `frontend/index.html` has seven navigable sections: Overview, Accounts & statement coverage, Transactions (search), Accountant review, Tax & wealth, Planning (editable hypothetical cash-reserve scenario), Security & release status. Display elements include synthetic cashflow chart, source-month evidence coverage, transaction status badges, a redacted-style review case list, savings goal progress and user-visible limitations.
+
+- No React/build tool, external fonts, scripts, images, analytics, dependencies, network calls, browser storage, account numbers, credentials or real owner files. `frontend/demo-data.mjs` is **deliberately fictional**; `frontend/ui.mjs` handles navigation and scenario interactions; `frontend/ui.css` handles mobile/responsive layout and accessible focus/reduced-motion.
+- All financial numbers on the demo are fabricated, not derived from actual user records, supported source parsing or FBR income calculations. Transferred money isn't income or expenditure. Missing statement months are not zero. No financial upload, mutation, bank API, accountant connection, FBR filing or investment execution is supported on the new UI.
+- New asset endpoints in the *existing local development backend* `/ui.css`, `/ui.mjs`, `/demo-data.mjs` retain its already-configured authentication requirement; the homepage remains protected. They do not expose any real financial data.
+- The demo uses strict `connect-src 'none'` and `form-action 'none'`, same-origin-only scripts and styles, no external resources and no indexing. Inline **style attributes** are permitted only for integer-sized progress/chart bars in this static demonstration; inline JavaScript is prohibited. This is not a production security certification.
+
+## Verified release path and what it costs
+
+**Stage 1 — free publicly accessible synthetic frontend:** Use Vercel **Hobby** at $0/month, select **this Personal CFO GitHub repo** with project root directory **`frontend`**, framework preset **Other / no framework**, no build command, no environment variables, no API secrets, no database or cloud storage. The `frontend/vercel.json` is scoped to that project root and sets secure static headers. Default Vercel `*.vercel.app` domain needs no custom-domain purchase. A preview only serves **public static fictional assets**. Git push triggers Vercel deploys *if and only if owner explicitly authorizes and links a Vercel project*. Vercel Hobby is personal/non-commercial only and quota-limited; a future multiuser/commercial SaaS is not eligible for permanent free Hobby usage.
+
+**Stage 2 — genuine private Personal CFO:** Do NOT deploy actual financial use just because the static page loads. Full backend could theoretically run FastAPI as Vercel Python Functions, but files/payloads over **4.5 MB**, memory/time limits, read-only/ephemeral function storage and long-running parsing/restore work require a separate private document upload/processing strategy. Actual PostgreSQL/immutable originals, encryption keys, independent offsite backup/recovery, access controls and isolated PDF/XLS/ZIP handling cannot be satisfied by static hosting alone. Free serverless PostgreSQL services (Neon or Supabase) can be evaluated for **synthetic trials** with explicit owner provider authorization; their free quotas, sleep/inactivity limits, lack of robust backup/PITR and privacy acceptance must be evaluated before real records. A free-host claim cannot replace G1–G3 security evidence.
+
+**NO deployment executed in this PR.** Mentioning Vercel in a question does not authorize creating an account-wide project, touching unrelated team resources, linking private credentials or uploading real statements. Before deployment owner must explicitly say to connect/create the Personal CFO Vercel project (Hobby) for **synthetic preview**. Remain project-only per isolation rule.
+
+## Local/test workflow
+
+- Open `frontend/index.html` through a static HTTP server (ES modules require HTTP, not always `file://`), or use the authenticated local synthetic FastAPI backend homepage.
+- Frontend tests: `node --check frontend/ui.mjs && node --test frontend/tests/dashboard.test.mjs` with Node 22, **no dependencies**.
+- The optimized dedicated `.github/workflows/frontend-static-ci.yml` checks frontend changes on PR only (or manual), cancelling superseded PR heads and running a lightweight Node job without PostgreSQL. Existing `backend-ci` continues to test the API/static asset auth routes on backend changes. Exact green heads are required before merge.
+- Future UI integration should use a versioned owner overview API behind G1 fully confidential canonical store and G2 private MFA/CSRF/TLS; it must **not** call existing plaintext legacy bank APIs from a public Hobby preview. Real-data mode remains fail-closed until independently verified G1/G2/G3. No genuine records in public GitHub, UI screenshots, fixtures or CI.
+
+## Next owner-focused frontend pieces
+
+After initial navigation/visual acceptance: private sign-in/recovery, account timeline and review resolution, encrypted evidence upload status and quarantine, per-account cash/loan/assets reports, draft-vs-filed accountant question actions, statutory tax/wealth working papers with source citations, budget/goals and secure owner export. Every action must receive a reviewed typed backend endpoint with MFA/CSRF/ownership and G1 authoritative data; fake buttons must not silently imply an operation occurred. Functional browser accessibility/E2E and actual private deployment acceptance remain outstanding.
