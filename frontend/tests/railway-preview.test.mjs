@@ -15,12 +15,16 @@ test("Railway preview serves fictional allowlisted assets only", () => {
 test("Railway preview does not accept real uploads, external scripts or data egress", () => {
   const nginx = get("nginx.railway.conf");
   assert.match(nginx, /listen 8080/);
-  assert.match(nginx, /connect-src 'none'/);
+  assert.match(nginx, /connect-src 'self'/);
   assert.match(nginx, /script-src 'self'/);
   assert.match(nginx, /frame-ancestors 'none'/);
   assert.match(nginx, /form-action 'none'/);
   assert.match(nginx, /noindex, nofollow/);
   assert.match(nginx, /X-Content-Type-Options "nosniff"/);
   assert.match(nginx, /location = \/healthz/);
-  assert.doesNotMatch(nginx, /proxy_pass|fastcgi_pass|alias\s|autoindex on/);
+  assert.match(nginx, /location = \/api\/preview\/status/);
+  assert.match(nginx, /proxy_pass http:\/\/personal-cfo-api-preview\.railway\.internal:8000\/internal\/preview\/status/);
+  assert.match(nginx, /X-Personal-CFO-Preview-Key/);
+  assert.match(get("Dockerfile"), /NGINX_ENVSUBST_FILTER/);
+  assert.doesNotMatch(nginx, /fastcgi_pass|alias\s|autoindex on/);
 });
