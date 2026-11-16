@@ -62,7 +62,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0010_confidential_bank'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0011_canonical_mirror'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -180,7 +180,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==19 and audit['source_rows']>=4
+          assert audit['source_tables']==20 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']
@@ -188,5 +188,43 @@ jobs:
           with engine.connect() as verify:
               assert verify.execute(text('SELECT credit_minor FROM transactions WHERE row_number=1')).scalar_one()==23500
           print('POSTGRES_18_G1C_READ_ONLY_CENSUS=PASS')
+          # G1-c candidate is built ONLY on a separately migrated and
+          # independently full-row-restored synthetic database, never source.
+          from app.g1c_candidate import create_verified_sealed_candidate,G1CCandidateBlocked
+          target_names=('synthetic_restore_candidate','synthetic_restore_fail_candidate')
+          with psycopg.connect(source_dsn,autocommit=True) as admin:
+              for name in target_names:
+                  admin.execute('CREATE DATABASE ' + name)
+          for name in target_names:
+              subprocess.run([sys.executable,'-m','alembic','-x',f'db_url={algebra_prefix}/{name}',
+                              'upgrade','head'],check=True)
+          os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_fail_candidate'
+          with tempfile.TemporaryDirectory(prefix='synthetic-g1c-candidate-') as work:
+              sealed=Path(work)/'backup-failure.tfpg'
+              try:
+                  create_verified_sealed_candidate(sealed,inject_failure_after_rows=1)
+                  raise AssertionError('Injected G1c candidate failure did not abort')
+              except G1CCandidateBlocked as exc:
+                  assert 'Injected' in str(exc)
+              with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
+                  assert chk.execute('SELECT COUNT(*) FROM canonical_source_mirrors').fetchone()[0]==0
+                  assert chk.execute('SELECT COUNT(*) FROM transactions').fetchone()[0]==1
+              os.environ['PG_SNAPSHOT_RESTORE_DSN']=prefix+'/synthetic_restore_candidate'
+              result=create_verified_sealed_candidate(Path(work)/'backup-valid.tfpg')
+              assert result['independent_restore_verified'] and result['full_source_row_parity_verified']
+              assert result['original_database_untouched'] and not result['active_ledger_cutover']
+              assert result['legacy_plaintext_still_present'] and not result['complete_g1']
+              with psycopg.connect(os.environ['PG_SNAPSHOT_RESTORE_DSN']) as chk:
+                  source_rows=sum(x[0] for x in chk.execute(
+                      'SELECT COUNT(*) FROM accounts UNION ALL SELECT COUNT(*) FROM documents '
+                      'UNION ALL SELECT COUNT(*) FROM transactions').fetchall())
+                  count=chk.execute('SELECT COUNT(*) FROM canonical_source_mirrors').fetchone()[0]
+                  assert count>=source_rows and count==result['sealed_source_rows']
+                  records=chk.execute('SELECT payload_json FROM canonical_source_mirrors').fetchall()
+                  assert all(x[0].startswith('TFLE1:') for x in records)
+                  assert all('23500' not in x[0] and 'Fictional Account' not in x[0] for x in records)
+              with psycopg.connect(source_dsn) as chk:
+                  assert chk.execute('SELECT COUNT(*) FROM canonical_source_mirrors').fetchone()[0]==0
+          print('POSTGRES_18_G1C_ENCRYPTED_RESTORED_CANDIDATE=PASS')
 
           PY
