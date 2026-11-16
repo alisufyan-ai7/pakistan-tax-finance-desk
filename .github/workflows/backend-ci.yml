@@ -54,7 +54,7 @@ jobs:
           LEDGER_FIELD_ACTIVE_KEY: synthetic_ci
           PRIVATE_EVENT_HMAC_KEY: 'UFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFA='
           LEDGER_DEDUP_HMAC_KEY: 'REREREREREREREREREREREREREREREREREREREREREM='
-          CANONICAL_JOURNAL_HMAC_KEY: 'SkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSko='
+          CANONICAL_JOURNAL_HMAC_KEY: 'SkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSko='
           OWNER_RECOVERY_HMAC_KEY: 'UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE='
         run: |
           python -m alembic upgrade head
@@ -134,6 +134,39 @@ jobs:
               for sensitive in ('777','2024-07-15','SYNTHETIC-POSTGRES-CANONICAL-ROW-1'):
                   assert sensitive not in cipher
           print('POSTGRES_18_CANONICAL_JOURNAL_ACTIVE_SYNTHETIC=PASS')
+
+          # G2: actual ephemeral PostgreSQL18 atomic code consumption,
+          # persisted AES-GCM recovery bundle and chained audit verification.
+          from app.persisted_owner_recovery import (
+              issue_persisted_synthetic_codes, consume_persisted_synthetic_code,
+              attest_synthetic_recovery_chain,
+          )
+          from app.owner_recovery_codes import RecoveryBlocked
+          with Session(engine) as db:
+              recovered,one_time=issue_persisted_synthetic_codes(
+                  db,owner_ref='owner',mfa_confirmed=True,issued_epoch=1760000000)
+              assert recovered['persisted_atomically']
+              consumed=consume_persisted_synthetic_code(
+                  db,owner_ref='owner',presented_code=one_time[0],
+                  password_confirmed=True,now_epoch=1760000001)
+              assert consumed['consumed_once_in_transaction']
+              try:
+                  consume_persisted_synthetic_code(
+                      db,owner_ref='owner',presented_code=one_time[0],
+                      password_confirmed=True,now_epoch=1760000002)
+                  raise AssertionError('Already consumed code was reused')
+              except RecoveryBlocked:
+                  pass
+              integrity=attest_synthetic_recovery_chain(db,owner_ref='owner')
+              assert integrity['audit_chain_verified']
+              assert integrity['audit_revision']==2
+          with engine.connect() as db:
+              row=db.execute(text('SELECT bundle_json FROM owner_recovery_states')).scalar_one()
+              assert row.startswith('TFLE1:')
+              assert all(raw.replace('-','') not in row for raw in one_time)
+              assert db.execute(text('SELECT COUNT(*) FROM owner_recovery_audit')).scalar_one()==2
+          print('POSTGRES_18_G2_ATOMIC_RECOVERY_AUDIT=PASS')
+
 
           from app.canonical_bank_posting import accept_recorded_synthetic_bank
           with Session(engine) as db:
