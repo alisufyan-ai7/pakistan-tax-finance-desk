@@ -16,7 +16,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .models import OwnerRecoveryState, OwnerRecoveryAudit
+from .models import OwnerRecoveryState, OwnerRecoveryAudit, OwnerSession
 from .owner_recovery_codes import (
     RecoveryBlocked, RecoveryBundle, _tag, issue_recovery_bundle,
     redeem_recovery_code,
@@ -218,6 +218,11 @@ def consume_persisted_synthetic_code(
         if changed.rowcount != 1:
             raise RecoveryBlocked("Concurrent recovery consumption blocked")
         _append_audit(db, owner_hmac, revision, "REDEEMED", previous, next_bundle)
+        # Single-owner prototype: recovery invalidates all active synthetic
+        # sessions in the SAME SQL transaction as the one-time consumption.
+        revoked = db.execute(update(OwnerSession).where(
+            OwnerSession.revoked.is_(False)
+        ).values(revoked=True)).rowcount
         db.commit()
     except RecoveryBlocked:
         db.rollback()
@@ -229,6 +234,7 @@ def consume_persisted_synthetic_code(
         "synthetic_only": True, "recovery_revision": revision,
         "consumed_once_in_transaction": True, "audit_chained": True,
         "login_session_issued": False, "totp_reset": False,
+        "active_sessions_revoked": revoked,
         "real_data_authorized": False,
     }
 
