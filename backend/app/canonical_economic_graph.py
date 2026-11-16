@@ -41,7 +41,7 @@ class CanonicalGraphBlocked(ValueError):
 
 DOMAINS = (
     "cash_movement", "loan_principal", "investment_cost", "own_transfer",
-    "withholding_candidate", "asset_valuation_claim", "fbr_income_claim",
+    "withholding_candidate", "asset_cost_opening", "asset_valuation_claim", "fbr_income_claim",
     "fbr_wealth_claim",
 )
 MOVEMENT_LEGS = {
@@ -50,6 +50,7 @@ MOVEMENT_LEGS = {
     "investment_cost": {"investment_cost"},
     "own_transfer": {"bank"},
     "withholding_candidate": {"withholding_candidate"},
+    "asset_cost_opening": {"asset_cost"},
 }
 
 
@@ -62,7 +63,7 @@ class EconomicSourceClaim(BaseModel):
     source_ref: str = Field(min_length=8, max_length=80)
     source_domain: Literal[
         "cash_movement", "loan_principal", "investment_cost", "own_transfer",
-        "withholding_candidate", "asset_valuation_claim", "fbr_income_claim",
+        "withholding_candidate", "asset_cost_opening", "asset_valuation_claim", "fbr_income_claim",
         "fbr_wealth_claim",
     ]
     posted_on: date
