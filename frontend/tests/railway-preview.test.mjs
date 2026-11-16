@@ -22,5 +22,9 @@ test("Railway preview does not accept real uploads, external scripts or data egr
   assert.match(nginx, /noindex, nofollow/);
   assert.match(nginx, /X-Content-Type-Options "nosniff"/);
   assert.match(nginx, /location = \/healthz/);
-  assert.doesNotMatch(nginx, /proxy_pass|fastcgi_pass|alias\s|autoindex on/);
+  assert.match(nginx, /location = \/api\/preview\/status/);
+  assert.match(nginx, /proxy_pass http:\/\/personal-cfo-api-preview\.railway\.internal:8000\/internal\/preview\/status/);
+  assert.match(nginx, /X-Personal-CFO-Preview-Key/);
+  assert.match(get("Dockerfile"), /NGINX_ENVSUBST_FILTER/);
+  assert.doesNotMatch(nginx, /fastcgi_pass|alias\s|autoindex on/);
 });
