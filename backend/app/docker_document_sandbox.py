@@ -67,7 +67,7 @@ def inspect_in_docker(raw: bytes, *, image: str, adapter_key: str,
     }, separators=(",", ":")).encode("ascii")
     try:
         # Stdin only: never print document bytes, passwords, DSNs or file names.
-        result = subprocess.run(command, input=payload, stdin=None,
+        result = subprocess.run(command, input=payload,
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                 timeout=9, check=False,
                                 env={"PATH": "/usr/local/bin:/usr/bin:/bin",
