@@ -45,6 +45,53 @@ export const DEMO = {
     { id:"R-003", type:"Wealth", title:"Opening wealth evidence gap", detail:"Prior filed source vs current draft", status:"Review required", priority:"Medium" },
     { id:"R-004", type:"Transaction", title:"Unreviewed incoming credit", detail:"Sample consulting payment", status:"Unclassified", priority:"Medium" },
   ],
+  // Deliberately independent hypothetical November snapshot. NOT parsed
+  // from the bank transaction examples above or connected to the owner.
+  monthPulse: {
+    asOf:"2026-11-16",
+    evidenceState:"FICTIONAL_SCENARIO_NOT_VERIFIED",
+    actualSourceComplete:false,
+    expenses:{
+      hypotheticalCurrentMinor:24800000,
+      hypotheticalComparablePriorMinor:20900000,
+      categories:[
+        {name:"Home & utilities",currentMinor:10300000,priorMinor:9400000},
+        {name:"Groceries",currentMinor:5800000,priorMinor:4600000},
+        {name:"Transport",currentMinor:3200000,priorMinor:2500000},
+        {name:"Subscriptions",currentMinor:1500000,priorMinor:1200000},
+        {name:"Other essentials",currentMinor:4000000,priorMinor:3200000},
+      ]
+    },
+    bills:[
+      {id:"sample-internet",name:"Home internet",amountMinor:1250000,dueOn:"2026-11-18",
+       state:"PAYMENT_UNCONFIRMED",cycle:"Monthly"},
+      {id:"sample-mobile",name:"Mobile plan",amountMinor:320000,dueOn:"2026-11-20",
+       state:"PAYMENT_UNCONFIRMED",cycle:"Monthly"},
+      {id:"sample-insurance",name:"Insurance contribution",amountMinor:3100000,
+       dueOn:"2026-12-02",state:"SCHEDULE_CANDIDATE",cycle:"Annual"},
+      {id:"sample-rent",name:"Home rent",amountMinor:6500000,dueOn:"2026-11-05",
+       state:"PAID_SAMPLE",cycle:"Monthly"},
+    ],
+    investments:[
+      {id:"sample-term",name:"Example term deposit",kind:"Fixed term",
+       principalMinor:500000000,nextReturnOn:"2026-12-20",quotedReturnMinor:12500000,
+       quoteKind:"FICTIONAL_FIXED_CONTRACT_QUOTE",maturityOn:"2027-12-20"},
+      {id:"sample-fund",name:"Example mutual fund",kind:"Market-linked",
+       principalMinor:165000000,nextReturnOn:null,quotedReturnMinor:null,
+       quoteKind:"VARIABLE_UNKNOWN",maturityOn:null},
+      {id:"sample-certificate",name:"Example savings certificate",kind:"Fixed term",
+       principalMinor:200000000,nextReturnOn:"2027-02-12",quotedReturnMinor:18000000,
+       quoteKind:"FICTIONAL_FIXED_CONTRACT_QUOTE",maturityOn:"2028-02-12"},
+    ],
+    followups:[
+      {id:"sample-doc-1",title:"Request missing bank statement",dueOn:"2026-11-18",
+       subtitle:"Needed before expenses can be verified",kind:"Evidence"},
+      {id:"sample-bill-1",title:"Check internet payment",dueOn:"2026-11-19",
+       subtitle:"Scheduled amount is not a payment confirmation",kind:"Bill"},
+      {id:"sample-tax-1",title:"Review accountant's draft questions",dueOn:"2026-11-22",
+       subtitle:"A draft workbook is not a filed return",kind:"Accountant"},
+    ],
+  },
   goals: [
     { id:"g1", title:"Emergency reserve", targetMinor:120000000, savedMinor:82500000, note:"Illustrative savings balance" },
     { id:"g2", title:"Annual tax buffer", targetMinor:30000000, savedMinor:8200000, note:"Hypothetical goal, not actual liability" },
@@ -117,4 +164,75 @@ export function hypotheticalBuffer({openingMinor, monthlyEssentialMinor, months}
   const target = monthlyEssentialMinor * months;
   return {targetMinor:target, shortfallMinor:openingMinor===null?null:Math.max(0,target-openingMinor),
     coverageVerified:false, scenarioOnly:true};
+}
+
+function validSampleMinor(value) {
+  if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("Invalid fictional minor amount");
+  return value;
+}
+function assertISODate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value+"T12:00:00Z")))
+    throw new TypeError("Invalid fictional ISO date");
+  return value;
+}
+export function monthPulseSummary(snapshot=DEMO.monthPulse) {
+  if (snapshot.evidenceState!=="FICTIONAL_SCENARIO_NOT_VERIFIED" ||
+      snapshot.actualSourceComplete!==false)
+    throw new TypeError("Only an explicitly fictional unverified snapshot can be displayed");
+  const asOf=assertISODate(snapshot.asOf);
+  const expense=snapshot.expenses;
+  const current=validSampleMinor(expense.hypotheticalCurrentMinor);
+  const prior=validSampleMinor(expense.hypotheticalComparablePriorMinor);
+  const catCurrent=expense.categories.reduce((n,x)=>n+validSampleMinor(x.currentMinor),0);
+  const catPrior=expense.categories.reduce((n,x)=>n+validSampleMinor(x.priorMinor),0);
+  if(catCurrent!==current || catPrior!==prior)
+    throw new RangeError("Fictional spending categories do not reconcile");
+  const sampleGrowth=prior===0?null:Math.round((current-prior)*100/prior);
+  const seen=new Set();
+  for(const item of [...snapshot.bills,...snapshot.investments,...snapshot.followups]){
+    if(seen.has(item.id))throw new RangeError("Duplicate fictional action reference");
+    seen.add(item.id);
+    if(item.dueOn)assertISODate(item.dueOn);
+    if(item.nextReturnOn)assertISODate(item.nextReturnOn);
+  }
+  const sevenDays=new Date(asOf+"T12:00:00Z");
+  sevenDays.setUTCDate(sevenDays.getUTCDate()+7);
+  const dueBy=sevenDays.toISOString().slice(0,10);
+  const bills=[...snapshot.bills].map(x=>({
+    ...x,
+    displayAmountMinor:validSampleMinor(x.amountMinor),
+    needsChecking:x.state!=="PAID_SAMPLE" && x.dueOn<=dueBy,
+    amountVerified:false,
+    paymentConfirmed:false,
+  })).sort((a,b)=>a.dueOn.localeCompare(b.dueOn));
+  const investments=[...snapshot.investments].map(x=>{
+    validSampleMinor(x.principalMinor);
+    if(x.quotedReturnMinor!==null){
+      validSampleMinor(x.quotedReturnMinor);
+      if(x.quoteKind!=="FICTIONAL_FIXED_CONTRACT_QUOTE" || !x.nextReturnOn)
+        throw new RangeError("Quoted return requires a dated fictional fixed contract");
+    }
+    return {...x,principalVerified:false,actualReturnMinor:null,returnGuaranteed:false,
+      withholdingTaxMinor:null};
+  }).sort((a,b)=>(a.nextReturnOn??"9999").localeCompare(b.nextReturnOn??"9999"));
+  const followups=[...snapshot.followups].sort((a,b)=>a.dueOn.localeCompare(b.dueOn));
+  return {
+    asOf, dueBy,
+    monthLabel:new Intl.DateTimeFormat("en-PK",{month:"long",year:"numeric",timeZone:"UTC"})
+       .format(new Date(asOf+"T12:00:00Z")),
+    exampleCurrentExpenseMinor:current,
+    examplePriorExpenseMinor:prior,
+    exampleGrowthPct:sampleGrowth,
+    verifiedCurrentExpenseMinor:null,
+    verifiedExpenseGrowthPct:null,
+    coverageComplete:false,
+    billReviewCount:bills.filter(x=>x.needsChecking).length,
+    bills,investments,followups,
+    pendingFollowupCount:followups.length,
+    exampleInvestedPrincipalMinor:investments.reduce((n,x)=>n+x.principalMinor,0),
+    verifiedInvestedPrincipalMinor:null,
+    categories:expense.categories.map(x=>({...x,verified:false})),
+    sourceStatus:"DEMO_ONLY_NOT_CONNECTED_TO_OWNER",
+    taxesAndActualReturnsReady:false,
+  };
 }
