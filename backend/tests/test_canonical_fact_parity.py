@@ -9,8 +9,8 @@ from app.db import Base
 
 def fixture():
     rows={name: [] for name in SOURCE_COLUMNS}
-    def rec(name,**kwargs):
-        return {k:kwargs.get(k) for k in SOURCE_COLUMNS[name]}
+    def rec(table,**kwargs):
+        return {k:kwargs.get(k) for k in SOURCE_COLUMNS[table]}
     rows["accounts"].append(rec("accounts",id="synthetic-account-0001",
                                legal_owner="individual",currency="PKR",
                                name=seal("fiction","accounts.name"),
