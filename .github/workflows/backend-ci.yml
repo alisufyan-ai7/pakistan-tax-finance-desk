@@ -1,13 +1,16 @@
 name: backend-ci
+# Optimize expensive PostgreSQL integration checks: one exact-head PR run,
+# cancel superseded PR heads, and permit explicit manual verification.
+# No redundant main-branch push rerun after a tested squash merge.
 on:
-  push:
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+concurrency:
+  group: backend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -148,5 +151,42 @@ jobs:
               except PgRecoveryBlocked as err:
                   assert 'existing data' in str(err)
           print('POSTGRES_18_ENCRYPTED_DATA_RESTORE_PARITY=PASS')
+          # G1-c source census: the existing PostgreSQL instance, same CI job.
+          # Exercise real PG snapshot isolation, strict schema, redacted HMAC parity,
+          # review-state retention and no writes; no extra database service/job.
+          from sqlalchemy.orm import Session
+          from datetime import date
+          from app.models import Account,Document,Transaction
+          with Session(engine) as db:
+              db.add(Account(id='00000000-0000-4000-8000-000000000051',
+                             name='Fictional Account',institution='Fictional Bank',
+                             currency='PKR',legal_owner='individual'))
+              db.add(Document(id='00000000-0000-4000-8000-000000000052',
+                              account_id='00000000-0000-4000-8000-000000000051',
+                              sha256='f'*64,digest_scheme='hmac_sha256_v1',
+                              file_format='csv',parser_version='synthetic-ci',
+                              period_start=date(2024,7,1),period_end=date(2024,7,31),
+                              coverage_declared=True))
+              db.add(Transaction(id='00000000-0000-4000-8000-000000000053',
+                                 account_id='00000000-0000-4000-8000-000000000051',
+                                 document_id='00000000-0000-4000-8000-000000000052',
+                                 row_number=1,fingerprint='a'*64,
+                                 posted_on=date(2024,7,15),description='Fictional receipt',
+                                 credit_minor=23500,debit_minor=0,balance_minor=23500,
+                                 category='unreviewed',reviewed=False,
+                                 overlap_possible=False,excluded=False,overlap_resolved=False))
+              db.commit()
+          from app.g1c_preflight import preflight_postgres_source
+          os.environ['PG_G1C_SOURCE_DSN']=source_dsn
+          audit=preflight_postgres_source()
+          assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
+          assert audit['source_tables']==19 and audit['source_rows']>=4
+          assert audit['review_needed_transactions']==1
+          assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
+          assert not audit['migration_performed'] and not audit['cutover_authorized']
+          assert 'Fictional receipt' not in str(audit) and '23500' not in str(audit)
+          with engine.connect() as verify:
+              assert verify.execute(text('SELECT credit_minor FROM transactions WHERE row_number=1')).scalar_one()==23500
+          print('POSTGRES_18_G1C_READ_ONLY_CENSUS=PASS')
 
           PY
