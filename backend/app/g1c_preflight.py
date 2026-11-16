@@ -274,13 +274,16 @@ def analyze_source_rows(rows: dict[str, list[dict]]) -> dict:
     }
 
 
-def preflight_postgres_source() -> dict:
+def preflight_postgres_source(*, restored_candidate: bool = False) -> dict:
     """Read-only PG18 preflight from explicit environment-only synthetic DSN."""
     if os.getenv("APP_DATA_MODE", "synthetic") != "synthetic":
         raise G1CPreflightBlocked("G1-c source inspection prohibited for real data")
     _contract()
     _index_key()  # No public/unkeyed aggregate financial digest fallback.
-    dsn, _ = _connection_config("PG_G1C_SOURCE_DSN", restore=False)
+    dsn, _ = _connection_config(
+        "PG_SNAPSHOT_RESTORE_DSN" if restored_candidate else "PG_G1C_SOURCE_DSN",
+        restore=restored_candidate,
+    )
     try:
         import psycopg
         from psycopg import sql
