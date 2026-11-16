@@ -99,3 +99,13 @@ test("security copy reflects Railway-only synthetic private link, never a comple
   assert.match(ui,/Full financial database security/);
   assert.doesNotMatch(ui,/A free Vercel preview can show this synthetic screen/);
 });
+
+test("mobile and desktop labels explain sample ledger scope and owner tasks plainly",()=>{
+  const html=sibling("index.html");
+  assert.match(html,/Older ledger example · Tax year/);
+  assert.match(html,/not this month's sample snapshot/);
+  assert.match(html,/Spending & bills/);
+  assert.match(html,/Investments & goals/);
+  assert.match(html,/>Bills<\/button>/);
+  assert.match(html,/>Investments<\/button>/);
+});
