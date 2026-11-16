@@ -38,7 +38,7 @@ def _bank_graph(*, reviewed=False):
 def test_complete_known_contract_and_all_source_tables_covered():
     _contract()
     report = analyze_source_rows(_empty_graph())
-    assert report["source_tables"] == len(SOURCE_COLUMNS) == 22
+    assert report["source_tables"] == len(SOURCE_COLUMNS) == 24
     assert report["source_rows"] == 0
     assert report["source_graph_consistent"]
     assert report["migration_performed"] is False
