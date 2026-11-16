@@ -1,0 +1,9 @@
+# B2 — synthetic account×month source coverage (independent domain lane)
+
+[Owner MVP completion blueprint](OWNER_MVP_COMPLETION_BLUEPRINT_2026-11-16.md), [G3 adapters #29](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/29).
+
+**Delivered domain contract (not a real-data importer):** `backend/app/statement_coverage.py` provides validated synthetic account/entity/currency scopes and statement source periods; resolves every requested account×month (including months WITHOUT a statement) to **OBSERVED / PARTIAL / MISSING / CONFLICTING / UNSUPPORTED**. Observed requires complete calendar coverage and separately verified source running balances. Disjoint contiguous periods can jointly cover a month. Exact duplicate source-ID replays are idempotent; conflicting same source IDs reject; overlapping distinct accepted sources and accepted/quarantined intersection become review conflicts. Separate legal owner/account/currency scopes are preserved and July–June tax-year labels computed.
+
+**Missing ≠ zero:** transaction counts, account balances and tax due remain `null` for all coverage rows. The output cannot certify financial completeness or tax/wealth calculations. Future integration must source balances and periods from a private certified adapter and validate immutable originals. No bank names, real accounts, actual financial records, database writes or user uploads used.
+
+**Unit acceptance:** missing and unsupported periods, partial-month, unchecked balances, split statements, overlapping sources, replays, multi-entity separation, fiscal-year boundary, bounded 72-month scan, real-data mode denial. No new cloud provider, Docker or GitHub secrets. This is an in-memory synthetic-only backend primitive; `APP_DATA_MODE=real` rejected. Does not pass G1, G2 or G3 real-source certification.
