@@ -35,6 +35,8 @@ ENCRYPTED_COLUMNS = {
     "confidential_bank_batches": ("payload_json",),
     "confidential_bank_key_state": ("sentinel",),
     "canonical_source_mirrors": ("payload_json",),
+    "canonical_journal_entries": ("payload_json",),
+    "canonical_journal_key_state": ("sentinel",),
 }
 
 

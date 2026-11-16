@@ -87,8 +87,9 @@ def create_app(database_url: str | None = None):
     else:
         # PostgreSQL requires explicit Alembic migration: never silently mutate production schema.
         from sqlalchemy import inspect
+        from .pg_recovery import SCHEMA_REVISION
         with engine.connect() as connection:
-            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != "0011_canonical_mirror":
+            if not inspect(connection).has_table("alembic_version") or connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one_or_none() != SCHEMA_REVISION:
                 raise RuntimeError("Database must be upgraded with Alembic before starting")
     try:
         assert_encrypted_ledger(engine)
