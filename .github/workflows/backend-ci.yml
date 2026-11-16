@@ -133,6 +133,22 @@ jobs:
               for sensitive in ('777','2024-07-15','SYNTHETIC-POSTGRES-CANONICAL-ROW-1'):
                   assert sensitive not in cipher
           print('POSTGRES_18_CANONICAL_JOURNAL_ACTIVE_SYNTHETIC=PASS')
+
+          from app.canonical_bank_posting import accept_recorded_synthetic_bank
+          with Session(engine) as db:
+              source_receipt=accept_recorded_synthetic_bank(
+                  db, source_ref='SYNTHETIC-POSTGRES-STMT-0001')
+              assert source_receipt['inserted']==1
+              assert source_receipt['non_earnings_classification']=='UNCLASSIFIED_CLEARING'
+              replay_receipt=accept_recorded_synthetic_bank(
+                  db, source_ref='SYNTHETIC-POSTGRES-STMT-0001')
+              assert replay_receipt['inserted']==0
+              check=inspect_synthetic_journal(db,
+                  primary_account_ref='SYNTHETIC-POSTGRES-ACCOUNT-1',tax_year=2025)
+              assert check['source_event_count']==2
+              assert check['actual_income_or_tax_minor'] is None
+          print('POSTGRES_18_ATOMIC_BANK_TO_CANONICAL_POSTING=PASS')
+
           print('POSTGRES_18_SYNTHETIC_SCHEMA=PASS')
           print('POSTGRES_18_CONFIDENTIAL_BANK_OPERATIONAL=PASS')
           # G1-b: a separate empty schema, sealed PostgreSQL DATA backup,
