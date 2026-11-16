@@ -1,0 +1,28 @@
+name: frontend-static-ci
+# A lightweight independent Node check, not another PostgreSQL runner.
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-static-ci.yml'
+  workflow_dispatch:
+concurrency:
+  group: frontend-static-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify standalone module syntax without installing dependencies
+        run: |
+          node --check frontend/ui.mjs
+          node --check frontend/demo-data.mjs
+      - name: Test synthetic owner dashboard contracts
+        run: node --test frontend/tests/dashboard.test.mjs
