@@ -80,7 +80,7 @@ def build_owner_economic_proposal(movement: OwnerEconomicMovement) -> JournalEve
     other = "opening_equity" if movement.movement_kind == "asset_cost_opening" else "transfer_clearing"
     other_ref = _OPENING if other == "opening_equity" else _CLEARED
     source_key = "ECON-" + _blind("source",
-        f"typed:{movement.legal_owner}:{movement.movement_kind}:{movement.source_ref}")[:48]
+        f"typed:{movement.legal_owner}:{movement.source_ref}")[:48]
     return JournalEvent(
         synthetic_fixture=True, legal_owner=movement.legal_owner,
         currency=movement.currency, source_ref=source_key,
