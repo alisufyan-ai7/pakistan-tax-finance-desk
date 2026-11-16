@@ -154,8 +154,9 @@ def reverse_synthetic_bank_candidate(
         if row is None:
             raise ClassificationBlocked("No original classification candidate")
         before = _verify_record(row)
-        if before.event_kind != "classification_candidate" or before.posted_on != neutral.posted_on:
-            raise ClassificationBlocked("Classification source was altered")
+        if (before != _candidate_event(neutral, "income_candidate")
+            and before != _candidate_event(neutral, "expense_candidate")):
+            raise ClassificationBlocked("Classification is not linked to authenticated bank evidence")
         reverse = JournalEvent(
             synthetic_fixture=True, legal_owner=before.legal_owner,
             currency=before.currency, source_ref=_reversal_ref(neutral),
