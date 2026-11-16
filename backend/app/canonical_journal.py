@@ -96,6 +96,7 @@ class JournalEvent(BaseModel):
         "bank_receipt", "bank_observation_unclassified", "expense_paid", "own_transfer", "loan_principal",
         "investment_contribution", "cash_transfer", "withholding_candidate",
         "owner_opening_assertion",
+        "classification_candidate", "classification_reversal",
     ]
     legs: tuple[JournalLeg, ...] = Field(min_length=2, max_length=12)
     source_statement_reconciled: Literal[False] = False
