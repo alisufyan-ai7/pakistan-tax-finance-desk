@@ -171,7 +171,7 @@ function validSampleMinor(value) {
   return value;
 }
 function assertISODate(value) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value) || Number.isNaN(Date.parse(value+"T12:00:00Z")))
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value+"T12:00:00Z")))
     throw new TypeError("Invalid fictional ISO date");
   return value;
 }
