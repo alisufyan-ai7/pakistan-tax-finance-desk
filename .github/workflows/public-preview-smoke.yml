@@ -1,0 +1,21 @@
+name: Personal CFO public synthetic deployment smoke
+# Intentionally manual, low-cost and no secrets. Run AFTER Railway has
+# deployed both services, especially following a private API rollout.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-cfo-synthetic-deployment-smoke
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact public synthetic-only contract
+        run: node frontend/preview-smoke.mjs
