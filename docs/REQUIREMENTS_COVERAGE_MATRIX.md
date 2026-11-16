@@ -99,3 +99,11 @@ See [`ACCOUNTANT_WORKING_PAPER_AND_EVIDENCE_WORKFLOW.md`](ACCOUNTANT_WORKING_PAP
 | Recoverable PostgreSQL financial data | G1-b [PR #35](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/35): encrypted synthetic full known-table data snapshot, independently migrated blank destination, verified all-table byte parity, transactional rollback and wrong-key checks; 209 tests + PG18 PASS | **Not production/offsite/PITR**, restored legacy SQL still plaintext; key rotation, live database cutover, recovery drill, full canonical migration and data retention policy pending |
 
 **Blocking:** G1 overall is **not done**. No authenticated actual personal bank/FBR files until G1+G2+G3. Next P0 tracked by [G1-c Issue #21](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/21). The owner remains responsible only for later private infrastructure/real-data acceptance, not synthetic code development.
+
+## Parallel synthetic execution coverage checkpoint (2026-11-16)
+
+- [PR #38](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/38): six explicit **synthetic-only** versioned bank/IRIS layout contracts, format and declared kind gating; actual Pakistani bank/FBR acceptance **NOT implemented**.
+- [PR #39](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/39): safe **synthetic-only DRAFT** XLSX cached formula diagnostic, no recalculation/FILED verification or accountant review queue yet.
+- [PR #40](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/40): synthetic offline backup-first encrypted PostgreSQL **restored candidate mirror**, full row authentication and transactional rollback, no live canonical accounting source switch, legacy plaintext remains on restored candidate.
+- [PR #41 exact-head CI](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/43851527422) **253 pytest + PG18 success** proves combined synthetic regressions. G1 live encryption/cutover, G2 deployment and G3 actual formats **BLOCKED**, G4/FBR complete tax and G5 owner-first CFO **NOT CERTIFIED**. Continue independent tracks as per [parallel playbook](PARALLEL_ENGINEERING_EXECUTION.md) while preserving G1–G3 real-data gates and project-only context.
+
