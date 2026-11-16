@@ -11,7 +11,9 @@ import os
 from sqlalchemy import create_engine, inspect
 from .ledger_crypto import ENCRYPTED_COLUMNS, LedgerKeyError, envelope_key_id, keyring, seal, unseal
 
+# Reviewed schema exceptions: not every encrypted source table has an "id" PK.
 PRIMARY_KEYS = {table: "id" for table in ENCRYPTED_COLUMNS}
+PRIMARY_KEYS["owner_recovery_states"] = "owner_hmac"
 
 
 def rotate_fields(engine, *, new_key_id: str, dry_run: bool = True) -> dict[str, int]:
