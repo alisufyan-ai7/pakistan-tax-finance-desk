@@ -7,9 +7,11 @@ const get = name => readFileSync(new URL("../" + name, import.meta.url), "utf8")
 test("Railway preview serves fictional allowlisted assets only", () => {
   const docker = get("Dockerfile");
   assert.match(docker, /FROM nginxinc\/nginx-unprivileged:stable-alpine/);
-  assert.match(docker, /COPY index\.html ui\.css ui\.mjs demo-data\.mjs \/usr\/share\/nginx\/html\//);
+  assert.match(docker, /COPY index\.html ui\.css ui\.mjs demo-data\.mjs document-inbox\.mjs \/usr\/share\/nginx\/html\//);
   assert.doesNotMatch(docker, /COPY\s+\.|legacy-import|\.env|backend|secrets/i);
   assert.match(docker, /EXPOSE 8080/);
+  assert.match(get("ui.mjs"), /import \{ renderFictionalDocumentInbox \} from "\.\/document-inbox\.mjs"/);
+  assert.match(docker, /document-inbox\.mjs/);
 });
 
 test("Railway preview does not accept real uploads, external scripts or data egress", () => {
@@ -32,4 +34,8 @@ test("Railway preview does not accept real uploads, external scripts or data egr
   assert.match(nginx, /X-Personal-CFO-Preview-Key/);
   assert.match(get("Dockerfile"), /NGINX_ENVSUBST_FILTER/);
   assert.doesNotMatch(nginx, /fastcgi_pass|alias\s|autoindex on/);
+  // A registered Google redirect URI does NOT open a safe OAuth endpoint.
+  // The public synthetic preview must deny callback/start routes until G2.
+  assert.doesNotMatch(nginx, /location\s*=\s*\/api\/drive\/oauth\/callback/);
+  assert.doesNotMatch(nginx, /proxy_pass[^;]*\/api\/drive\//);
 });
