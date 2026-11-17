@@ -69,6 +69,7 @@ def review_only_sql() -> str:
         "BEGIN;",
         "SET LOCAL lock_timeout = '5s';",
         "SET LOCAL statement_timeout = '30s';",
+        "SET LOCAL search_path = public, pg_catalog;",
         r"""DO $owner_auth_guard$
 BEGIN
     IF current_database() <> 'personal_cfo_owner_auth' THEN
