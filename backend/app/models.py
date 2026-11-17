@@ -402,3 +402,28 @@ class OwnerLoginThrottle(Base):
     window_started_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     locked_until_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     updated_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class DriveScanLease(Base):
+    """P1J fake-only scan lease and last-good inventory receipt.
+
+    SQL-visible metadata is only keyed folder/lease identities, scan counts
+    and fictional timestamps. No raw Drive ID, name, OAuth token or bytes.
+    """
+    __tablename__ = "drive_scan_leases"
+    __table_args__ = (
+        CheckConstraint("last_outcome IN ('never','success','retryable','denied')",
+                        name="ck_drive_scan_lease_outcome"),
+        CheckConstraint("failure_count >= 0 AND failure_count <= 100",
+                        name="ck_drive_scan_lease_failures"),
+    )
+    folder_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    lease_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    last_success_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    last_source_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_attempt_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    last_outcome: Mapped[str] = mapped_column(String(12), nullable=False)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    permission_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
