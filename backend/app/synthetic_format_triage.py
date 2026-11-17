@@ -74,7 +74,7 @@ def triage_fake_document_container(
             if (not 2 <= len(rows) <= 101 or rows[0] != _CSV_HEADER
                 or any(len(row)!=6 for row in rows[1:])
                 or any(not value or len(value)>180 or
-                       value.lstrip().startswith(("=","+","@","\t"))
+                       (value.startswith(("\t",)) or value.lstrip().startswith(("=","+","@")))
                        for row in rows[1:] for value in row)):
                 raise SyntheticThreatBlocked("Unbounded, formula-like or malformed CSV")
             kind="synthetic_csv_structure"
