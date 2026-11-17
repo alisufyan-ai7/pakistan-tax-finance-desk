@@ -75,6 +75,9 @@ SOURCE_COLUMNS = {
     # Private recovery rows and audit are security provenance, NOT financial sources.
     "owner_private_recovery_states": "owner_hmac revision issued_epoch expires_epoch ciphertext pending row_hmac",
     "owner_private_recovery_audit": "owner_hmac revision action previous_hmac row_hmac event_hmac epoch",
+    # P1R one-use encrypted OAuth state: security custody/provenance ONLY,
+    # never bank, tax, wealth, or investment authority.
+    "owner_private_oauth_attempts": "state_hmac owner_hmac session_hmac folder_hmac client_hmac ciphertext issued_epoch expires_epoch status row_hmac",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000

@@ -520,3 +520,28 @@ class OwnerPrivateRecoveryAudit(Base):
     row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     event_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class OwnerPrivateOAuthAttempt(Base):
+    """P1R: encrypted one-use Google PKCE attempt bound to owner MFA session.
+
+    Only keyed identities, authenticated ciphertext and timing/status metadata
+    are SQL-visible. No raw authorization state, verifier, code or cookie.
+    """
+    __tablename__ = "owner_private_oauth_attempts"
+    __table_args__ = (
+        CheckConstraint("expires_epoch > issued_epoch",
+                        name="ck_owner_private_oauth_expiry"),
+        CheckConstraint("status IN ('pending','claimed','expired')",
+                        name="ck_owner_private_oauth_status"),
+    )
+    state_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    session_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    folder_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    issued_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
