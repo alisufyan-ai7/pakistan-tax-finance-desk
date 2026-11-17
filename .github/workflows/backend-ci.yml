@@ -64,7 +64,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0016_owner_login_throttle'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0017_drive_scan_leases'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -372,6 +372,69 @@ jobs:
               )).scalar_one()==0
           print('POSTGRES_18_P1G_DURABLE_OWNER_THROTTLE_RACE=PASS')
 
+          # P1J: disposable PostgreSQL18 two-worker lease arbitration and
+          # integrity-checked last-good receipt. No Google HTTP/real sources.
+          from app.drive_scan_lease import (
+              acquire_fake_scan_lease,finish_fake_scan_lease,fake_scan_lease_status,
+          )
+          from app.drive_private_sync import scan_private_synthetic_folder
+          from app.drive_inbox_planner import DriveInboxBlocked
+          os.environ['DRIVE_FAKE_TRANSPORT_ONLY']='1'
+          os.environ['P1J_FAKE_SCAN_LEASE_ONLY']='1'
+          p1j_folder='SYNTHETIC_P1J_PG_ONLY_FOLDER_2026'
+          os.environ['DRIVE_ALLOWED_FOLDER_HMAC']=drive_index('folder',p1j_folder)
+          lease_gate=Barrier(2)
+          def acquire_once():
+              lease_gate.wait(timeout=10)
+              with Session(engine) as scoped:
+                  try:
+                      return acquire_fake_scan_lease(
+                          scoped,folder_id=p1j_folder,now_epoch=1800010000)
+                  except DriveInboxBlocked:
+                      return None
+          with ThreadPoolExecutor(max_workers=2) as pool:
+              a=pool.submit(acquire_once)
+              b=pool.submit(acquire_once)
+              collected=[a.result(timeout=20),b.result(timeout=20)]
+          assert len([x for x in collected if x is not None])==1
+          lease=[x for x in collected if x is not None][0]
+          def fictional_page(_):
+              return {'files':[{
+                  'id':'SYNTHETIC_P1J_PG_FILE_0000001',
+                  'name':'fictional source.pdf','mimeType':'application/pdf',
+                  'parents':[p1j_folder],'size':'42',
+                  'modifiedTime':'2026-11-17T12:00:00+00:00'}]}
+          with Session(engine) as scoped:
+              scanned=scan_private_synthetic_folder(
+                  scoped,folder_id=p1j_folder,get_page=fictional_page,
+                  synthetic_authorization_approved=True)
+              assert scanned['complete_folder_scan'] and scanned['scan_number']==1
+          with Session(engine) as scoped:
+              result=finish_fake_scan_lease(
+                  scoped,folder_id=p1j_folder,lease_token=lease,
+                  outcome='success',complete_receipt=scanned,now_epoch=1800010001)
+              assert result['google_drive_connected'] is False
+          with Session(engine) as scoped:
+              s=fake_scan_lease_status(
+                  scoped,folder_id=p1j_folder,now_epoch=1800010002)
+              assert s['last_scan_number']==1 and s['heartbeat_is_real'] is False
+          with Session(engine) as scoped:
+              try:
+                  finish_fake_scan_lease(
+                      scoped,folder_id=p1j_folder,lease_token=lease,
+                      outcome='success',complete_receipt=scanned,now_epoch=1800010003)
+                  raise AssertionError('Replayed Drive scan lease accepted')
+              except DriveInboxBlocked:
+                  pass
+          with engine.connect() as conn:
+              saved=conn.execute(text(
+                  'SELECT folder_hmac,last_source_hmac,last_receipt_hmac '
+                  'FROM drive_scan_leases')).one()
+              assert len(saved[0])==len(saved[1])==len(saved[2])==64
+              assert p1j_folder not in str(saved) and lease not in str(saved)
+          print('POSTGRES_18_P1J_SCAN_LEASE_LAST_GOOD=PASS')
+
+
 
 
 
@@ -532,7 +595,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==29 and audit['source_rows']>=4
+          assert audit['source_tables']==30 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']
