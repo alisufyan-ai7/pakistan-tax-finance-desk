@@ -8,7 +8,7 @@
 .install-help .install-disclaimer{font-size:10px;color:#7c9084}.install-help button{border:1px solid #b6d3c0;background:#fff;padding:9px 11px;border-radius:8px;color:#245d46;font-weight:750;flex-shrink:0}
 .mobile-bottom-nav{display:none}
 @media(max-width:900px){
-  .mobile-bottom-nav{position:fixed;z-index:20;inset:auto 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid #dce4de;background:#fffc;backdrop-filter:blur(15px);padding:6px 7px max(7px,env(safe-area-inset-bottom));box-shadow:0 -3px 22px #19382d13}
+  .mobile-bottom-nav{position:fixed;z-index:20;inset:auto 0 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid #dce4de;background:#fffc;backdrop-filter:blur(15px);padding:6px 7px max(7px,env(safe-area-inset-bottom));box-shadow:0 -3px 22px #19382d13}
   .mobile-bottom-nav button{border:0;background:transparent;color:#667e73;border-radius:10px;display:grid;gap:3px;justify-items:center;align-content:center;padding:6px 0 4px;font-size:10px;font-weight:740;min-height:51px}
   .mobile-bottom-nav button span{font-size:22px;line-height:1}
   .mobile-bottom-nav button.active{background:#e7f5ec;color:#1a6953}
