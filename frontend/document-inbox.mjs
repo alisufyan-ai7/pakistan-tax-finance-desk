@@ -3,6 +3,8 @@
    financial values or live owner connection is present in this build.
    This is a UI contract for a future authenticated, encrypted review queue.
 */
+import {renderFictionalReviewHealth} from "./document-review-states.mjs";
+
 export const FICTIONAL_INBOX = Object.freeze([
   {id:"fictional-doc-1",type:"Bank statement candidate",status:"new",
     collection:"Bank statements",detail:"Fictional PDF · Source verification required",
@@ -61,7 +63,7 @@ export function summarizeFictionalInbox(rows=FICTIONAL_INBOX) {
     realFinancialRecordsImported:0,
   });
 }
-export function renderFictionalDocumentInbox(filter="all") {
+export function renderFictionalDocumentInbox(filter="all", health="never") {
   const stats=summarizeFictionalInbox();
   const entries=selectFictionalInbox(filter);
   const filters=FILTERS.map(item=>
@@ -83,6 +85,7 @@ export function renderFictionalDocumentInbox(filter="all") {
     '<p>Upload all your files into one private Google Drive folder. Personal CFO will sort them virtually and flag missing or changed evidence — no renaming needed.</p>'+
     '<div class="doc-unavailable" role="status">The ChatGPT Drive connection is separate. Personal CFO has no owner OAuth connection or live document sync yet.</div>'+
     '</div></div>'+
+    renderFictionalReviewHealth(health)+
     '<div class="doc-kpis" aria-label="Clearly fictional document preview counts">'+
     '<div><strong>'+stats.sampleFiles+'</strong><span>Sample files</span></div>'+
     '<div><strong>'+stats.needingAttention+'</strong><span>Sample reviews</span></div>'+
