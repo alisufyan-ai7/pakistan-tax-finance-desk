@@ -66,10 +66,10 @@ def enabled(monkeypatch):
     monkeypatch.setenv("P1S_PRIVATE_CREDENTIAL_ROLE_AUDIT", "1")
 
 
-def test_only_five_private_tables_can_be_accessed():
+def test_only_registered_private_tables_can_be_accessed():
     conn = FakePostgres()
     result = attest_private_credential_role(conn)
-    assert result["candidate_credential_tables_attested"] == 5
+    assert result["candidate_credential_tables_attested"] == 6
     assert result["unexpected_table_privileges"] is False
     assert not result["production_g2_accepted"]
     assert len(conn.calls) == 5
