@@ -87,7 +87,7 @@ def test_ciphertext_only_no_original_identifiers_or_plain_refresh(env):
             "FROM owner_google_metadata_grants")).one()
     assert len(row[0])==len(row[1])==len(row[2])==len(row[7])==64
     assert row[3].startswith("P1M1:")
-    assert row[4]=="cfo-google-key-v1" and row[5]==1 and row[6] is False
+    assert row[4]=="cfo-google-key-v1" and row[5]==1 and row[6] in (False, 0)
     assert not any(v in str(row) for v in (OWNER,FOLDER,CLIENT,FAKE_REFRESH))
 
 
@@ -159,7 +159,7 @@ def test_revoke_erases_ciphertext_and_reconnect_requires_new_grant(env):
     with engine.connect() as db:
         item=db.execute(text(
             "SELECT ciphertext,revoked,revision FROM owner_google_metadata_grants")).one()
-    assert item==("",True,2)
+    assert item[0]=="" and bool(item[1]) and item[2]==2
     with pytest.raises(PrivateMetadataCustodyBlocked):
         read(engine)
     assert save(engine,now=NOW+3)["revision"]==3
