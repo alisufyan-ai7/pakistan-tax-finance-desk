@@ -69,6 +69,9 @@ SOURCE_COLUMNS = {
     "drive_scan_leases": "folder_hmac lease_hmac lease_expires_epoch last_success_epoch last_source_hmac last_receipt_hmac last_scan_number last_attempt_epoch last_outcome failure_count permission_revoked",
     # Private P1M custody has no plaintext owner/folder/client/token columns.
     "owner_google_metadata_grants": "owner_hmac folder_hmac client_hmac ciphertext key_version revision revoked updated_epoch row_hmac",
+    # Genuine-compatible unmounted owner security state, never economic authority.
+    "owner_private_identities": "singleton_id owner_hmac password_scrypt totp_cipher last_totp_step failures window_started_epoch locked_until_epoch revision row_hmac",
+    "owner_private_sessions": "token_hmac owner_hmac csrf_hmac issued_epoch expires_epoch revoked",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000
