@@ -39,6 +39,7 @@ ENCRYPTED_COLUMNS = {
     "canonical_journal_key_state": ("sentinel",),
     "owner_recovery_states": ("bundle_json",),
     "owner_recovery_audit": ("detail_json",),
+    "drive_inbox_items": ("payload_json",),
 }
 
 
