@@ -64,7 +64,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0019_private_owner_auth'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0020_private_recovery'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -577,6 +577,65 @@ jobs:
                   pass
           print('POSTGRES_18_P1N_OWNER_MFA_SESSION_THROTTLE=PASS')
 
+          # P1P: one-use private recovery bundle, owner session shutdown and
+          # HMAC/audit hold validated against disposable PostgreSQL18 only.
+          from app.private_owner_recovery import (
+              issue_private_owner_recovery_codes,redeem_private_owner_recovery_code,
+              PrivateOwnerRecoveryBlocked,
+          )
+          os.environ.update({
+              'P1P_PRIVATE_RECOVERY_ONLY':'1',
+              'P1P_G2_RECOVERY_REVIEWED':'1',
+              'P1P_OWNER_RECOVERY_ENCRYPTION_KEY':base64.urlsafe_b64encode(b'G'*32).decode(),
+              'P1P_OWNER_RECOVERY_HMAC_KEY':base64.urlsafe_b64encode(b'H'*32).decode(),
+          })
+          p1p_now=p1n_now+60
+          with Session(engine) as db:
+              newer=issue_private_owner_session(
+                  db,owner_ref=p1n_owner,password=p1n_pwd,
+                  totp_code=p1n_pin(p1p_now),now_epoch=p1p_now)
+          with Session(engine) as db:
+              rec,codes=issue_private_owner_recovery_codes(
+                  db,owner_ref=p1n_owner,token=newer.cookie_token,
+                  csrf=newer.csrf_token,password=p1n_pwd,now_epoch=p1p_now+1)
+              assert rec['recovery_codes_issued']==8
+              assert len(set(codes))==8
+          with engine.connect() as c:
+              record=c.execute(text(
+                  'SELECT owner_hmac,ciphertext,row_hmac FROM owner_private_recovery_states'
+              )).one()
+              assert record[1].startswith('P1P1:')
+              assert len(record[0])==len(record[2])==64
+              assert all(value not in str(record) for value in (
+                  p1n_owner,p1n_pwd,*codes))
+          with Session(engine) as db:
+              done=redeem_private_owner_recovery_code(
+                  db,owner_ref=p1n_owner,password=p1n_pwd,
+                  recovery_code=codes[0],now_epoch=p1p_now+2,
+                  independently_verified_offline_owner=True)
+              assert done['account_recovery_hold_active']
+              assert not done['totp_reset_performed']
+              assert done['owner_sessions_revoked']>=1
+          with Session(engine) as db:
+              try:
+                  verify_private_owner_session(
+                      db,owner_ref=p1n_owner,token=newer.cookie_token,
+                      now_epoch=p1p_now+3)
+                  raise AssertionError('Recovery-held owner session accepted')
+              except PrivateOwnerIdentityBlocked:
+                  pass
+          with Session(engine) as db:
+              try:
+                  redeem_private_owner_recovery_code(
+                      db,owner_ref=p1n_owner,password=p1n_pwd,
+                      recovery_code=codes[0],now_epoch=p1p_now+3,
+                      independently_verified_offline_owner=True)
+                  raise AssertionError('Recovery code replay accepted')
+              except PrivateOwnerRecoveryBlocked:
+                  pass
+          print('POSTGRES_18_P1P_ONE_TIME_OWNER_RECOVERY_HOLD=PASS')
+
+
 
 
 
@@ -740,7 +799,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==33 and audit['source_rows']>=4
+          assert audit['source_tables']==35 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']
