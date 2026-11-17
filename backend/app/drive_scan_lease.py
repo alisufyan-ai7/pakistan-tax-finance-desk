@@ -81,6 +81,7 @@ def acquire_fake_scan_lease(db: Session, *, folder_id: str,
             row = DriveScanLease(
                 folder_hmac=folder, lease_hmac=None, lease_expires_epoch=0,
                 last_success_epoch=None, last_source_hmac=None,
+                last_receipt_hmac=None,
                 last_scan_number=0, last_attempt_epoch=None,
                 last_outcome="never", failure_count=0, permission_revoked=False,
             )
