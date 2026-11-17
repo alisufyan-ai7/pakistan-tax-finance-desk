@@ -36,3 +36,14 @@ A visible masked secret and green Drive API check do **not** prove it is deploye
 - [Owner security issue #110](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/110)
 - [One-folder Google connection issue #98](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/98)
 - [Google OAuth testing refresh token expiry](https://developers.google.com/identity/protocols/oauth2)
+
+## Owner-confirmed completion of the two outstanding checks — 17 November 2026
+
+The owner explicitly confirmed **both** previously pending non-secret configuration checks in Chat 04:
+
+1. The **complete OAuth Web application authorized redirect URI** is exactly `https://personal-cfo-frontend-preview-development.up.railway.app/api/drive/oauth/callback` (no truncation or localhost). This matches the canonical existing Railway callback. No Google OAuth client recreation, extra redirect URI, or new scope is necessary.
+2. The **Google account listed under OAuth Test users is the same account that owns the intended private Drive folder**. No email address or private Drive folder ID is recorded in public GitHub.
+
+**Result:** All currently requested **Google Cloud owner-side configuration checks** are complete (Drive API enabled, External/Testing audience, restricted `drive.metadata.readonly` scope, correct existing Web client/redirect, correct one test user). Owner earlier explicitly approved proceeding toward real OAuth with later interactive Google browser consent. This confirmation **does not itself constitute completed Google OAuth authorization**, an app-issued access/refresh token, verification of the actual Drive folder ID through the Google API, or acceptance of production G2.
+
+**Railway state from prior read-only inspection:** `P1C_GOOGLE_CLIENT_SECRET` is sealed and **STAGED / awaiting Deploy** in the correct private API service. Keep the pending secret staged for now; do not ask the owner to paste it into chat or change `APP_DATA_MODE` to real. Next action is application-side G2 release engineering: real owner MFA/recovery and durable encrypted/recoverable credential storage, trusted exact-route public callback with real access-log redaction/security checks, and private folder-validated metadata-only sync. Only after independently passing those controls should the owner and engineer coordinate applying the sealed Railway change and completing the actual Google Connect/consent flow. Google OAuth External/Testing refresh-token expiry and re-consent planning remain unresolved.
