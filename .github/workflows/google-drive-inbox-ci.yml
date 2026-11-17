@@ -1,0 +1,24 @@
+name: google-drive-inbox-synthetic-ci
+# Static user-owned Google Apps Script, no external Drive auth or real data.
+on:
+  pull_request:
+    paths:
+      - 'integrations/google-drive-inbox/**'
+      - '.github/workflows/google-drive-inbox-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata-inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test integrations/google-drive-inbox/test.mjs
+      - name: Verify no uploaded financial document or Drive token is needed
+        run: |
+          test ! -e integrations/google-drive-inbox/.env
+          ! grep -R -E '(PRIVATE KEY-----|AIza[0-9A-Za-z_-]{32}|ya29\.[A-Za-z0-9_-]+)' integrations/google-drive-inbox/ --include='*.gs'
