@@ -193,6 +193,51 @@ jobs:
               assert final_state['audit_revision']==2 and final_state['active_code_count']==7
           print('POSTGRES_18_G2_TWO_WORKER_ONE_TIME_CODE_RACE=PASS')
 
+          # P1: genuine PostgreSQL18 persistence for synthetic fake Drive
+          # metadata only; never connect OAuth or import original bytes.
+          from app.drive_inbox_planner import DriveFile, _index as drive_index
+          from app.drive_inbox_store import (
+              apply_synthetic_drive_snapshot, read_synthetic_drive_review_queue,
+          )
+          only_fake_folder='SYNTHETIC-CFO-ONLY-INBOX-2026'
+          os.environ['DRIVE_INDEX_HMAC_KEY']=base64.urlsafe_b64encode(b'D'*32).decode()
+          os.environ['DRIVE_FAKE_TRANSPORT_ONLY']='1'
+          os.environ['DRIVE_ALLOWED_FOLDER_HMAC']=drive_index('folder',only_fake_folder)
+          def fake_drive_item(ordinal, date_modified='2026-11-17T12:00:00+05:00'):
+              return DriveFile.model_validate({
+                  'id':f'SYNTHETIC-DRIVE-FILE-{ordinal:05d}',
+                  'name':'Fictional bank statement.pdf' if ordinal==1 else 'IRIS draft.pdf',
+                  'mime_type':'application/pdf','parent_ids':[only_fake_folder],
+                  'size_bytes':2211,'modified_time':date_modified,
+              })
+          with Session(engine) as db:
+              report=apply_synthetic_drive_snapshot(
+                  db,folder_id=only_fake_folder,
+                  files=(fake_drive_item(1),fake_drive_item(2)),
+                  snapshot_complete=True,approved_synthetic_fixture=True)
+              assert report['scan_number']==1 and report['visible_sources']==2
+              repeat=apply_synthetic_drive_snapshot(
+                  db,folder_id=only_fake_folder,
+                  files=(fake_drive_item(1),fake_drive_item(2)),
+                  snapshot_complete=True,approved_synthetic_fixture=True)
+              assert repeat['idempotent_replay'] and repeat['scan_number']==1
+              changed=apply_synthetic_drive_snapshot(
+                  db,folder_id=only_fake_folder,
+                  files=(fake_drive_item(1,'2026-11-17T12:30:00+05:00'),),
+                  snapshot_complete=True,approved_synthetic_fixture=True)
+              assert changed['scan_number']==2 and changed['unavailable_sources_need_review']==1
+              queue=read_synthetic_drive_review_queue(db,folder_id=only_fake_folder)
+              assert queue['integrity_checked'] and len(queue['queue'])==2
+          with engine.connect() as c:
+              ciphertext=c.execute(text(
+                  'SELECT payload_json FROM drive_inbox_items')).scalars().all()
+              assert len(ciphertext)==2 and all(x.startswith('TFLE1:') for x in ciphertext)
+              assert all('Fictional bank' not in x for x in ciphertext)
+              assert c.execute(text(
+                  'SELECT COUNT(*) FROM drive_inbox_checkpoints')).scalar_one()==1
+          print('POSTGRES_18_P1_DRIVE_ATOMIC_ENCRYPTED_INBOX=PASS')
+
+
 
 
           from app.canonical_bank_posting import accept_recorded_synthetic_bank
