@@ -67,10 +67,14 @@ def private_google_configuration() -> DriveOAuthConfig:
     if not _CLIENT_ID.fullmatch(client_id):
         raise PrivateDriveOAuthBlocked("Google app client registration missing")
     url = urlsplit(redirect_uri)
-    railway_contract = (redirect_uri == PERSONAL_CFO_RAILWAY_CALLBACK
-        and os.getenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY") == "1")
+    cloud_contract_mode = os.getenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY") == "1"
+    railway_contract = (cloud_contract_mode
+        and redirect_uri == PERSONAL_CFO_RAILWAY_CALLBACK)
+    # A configured Railway-only deployment must not silently fall back to the
+    # obsolete localhost URI removed by the owner from Google Cloud.
     loopback_contract = (
-        url.scheme == "https" and url.hostname in ("localhost", "127.0.0.1")
+        not cloud_contract_mode
+        and url.scheme == "https" and url.hostname in ("localhost", "127.0.0.1")
         and url.username is None and url.password is None
         and not url.query and not url.fragment
         and url.path == "/api/drive/oauth/callback"
