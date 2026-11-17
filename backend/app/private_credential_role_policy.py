@@ -4,7 +4,7 @@ The candidate runtime role may operate ONLY the six private owner/metadata
 tables. It MUST NOT read/write economic tables, create objects, inherit more
 powerful roles, use PUBLIC TEMP privileges, or use SQL DELETE/TRUNCATE.
 
-No role creation, DB mutations, Railway access or live finance mode. Invoke
+Supports a dedicated six-table owner database or an existing mixed database\nwhere every unrelated table is inaccessible. No role creation, DB mutations,\nRailway access or live finance mode. Invoke
 from a separately approved private operator connection; a passing report is
 one subcheck and never by itself grants real Google or document access.
 """
@@ -15,7 +15,6 @@ import os
 from sqlalchemy import text
 
 from . import models  # noqa: F401
-from .db import Base
 
 
 class PrivateCredentialRoleBlocked(ValueError):
@@ -101,7 +100,7 @@ def attest_private_credential_role(connection) -> dict:
             or db_create is not False
             or schema[0] is not True or schema[1] is not False
             or type(seq_access) is not int or seq_access != 0
-            or len(rows) < len(Base.metadata.tables)):
+            or len(rows) < len(PRIVATE_TABLES)):
             raise PrivateCredentialRoleBlocked("Credential role privileges not accepted")
         visible = set()
         for row in rows:
