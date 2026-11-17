@@ -42,3 +42,7 @@ A failed test run is not accepted as success. Initial #134 CI runs disclosed SQL
 - One unsorted owner-private upload folder, mobile-first installable PWA financial pulse, source-backed accountant/tax continuity, lawful year-specific savings, and no additional paid provider remain fixed goals.
 
 **Continuity:** update this checkpoint and `docs/CURRENT_HANDOFF.md`, `docs/PROJECT_STATUS.md`, root `AGENT_START_HERE.md` after each actual verified merge. Open issues #98, #126, #131–#133 remain authoritative for unfinished production work.
+
+## Additional independent owner login gateway slice
+
+[PR #138](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/138) adds a separately instantiated, nondeployed, default-off private owner-login/session/logout FastAPI gateway. It uses P1N scrypt/TOTP with 15-minute Secure HttpOnly SameSite=Lax cookie, CSRF/Origin, shared internal-gateway proof and strict proxy/request bound; no financial or OAuth routes. **As of writing, exact-head tests and merge remain pending**. The real Railway ingress and actual owner authenticator enrollment remain explicitly unapproved. The public preview still does not mount this gateway.
