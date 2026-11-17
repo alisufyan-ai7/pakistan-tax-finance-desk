@@ -30,7 +30,7 @@ from .ledger_crypto import keyring
 MAGIC = b"TFPG1"
 MAX_PLAIN = 24 * 1024 * 1024
 MAX_FILE = 26 * 1024 * 1024
-SCHEMA_REVISION = "0014_drive_inbox"
+SCHEMA_REVISION = "0015_drive_cloud_oauth_custody"
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,60}$")
 
 
