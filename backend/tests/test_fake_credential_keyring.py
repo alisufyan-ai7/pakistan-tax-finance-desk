@@ -133,3 +133,15 @@ def test_no_public_key_custody_import_or_google_access():
     import app.fake_credential_keyring as candidate
     source=inspect.getsource(candidate)
     assert "requests." not in source and "googleapiclient" not in source
+
+
+def test_rotation_refuses_same_key_material_disguised_under_new_id():
+    old_ring=ring()
+    old=seal_fake_grant(ring=old_ring,owner_hmac=OWNER,folder_hmac=FOLDER,fictional_token=TOKEN)
+    masquerade=make_fake_keyring(active_id="fixture-key-v3",encoded_keys={
+        "fixture-key-v3":ENC(b"A"),  # retired v1 material under different label
+        "fixture-key-v4":ENC(b"C"),
+    })
+    with pytest.raises(FakeKeyCustodyBlocked,match="retire"):
+        rotate_fake_grant(old_ring=old_ring,new_ring=masquerade,
+                          owner_hmac=OWNER,folder_hmac=FOLDER,sealed=old)

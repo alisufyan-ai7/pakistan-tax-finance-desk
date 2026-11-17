@@ -120,7 +120,8 @@ def rotate_fake_grant(*, old_ring: FakeCredentialKeyring,
     if (type(old_ring) is not FakeCredentialKeyring
         or type(new_ring) is not FakeCredentialKeyring
         or hmac.compare_digest(old_ring.active_id,new_ring.active_id)
-        or old_ring.active_id in new_ring.keys):
+        or old_ring.active_id in new_ring.keys
+        or old_ring.keys[old_ring.active_id] in new_ring.keys.values()):
         raise FakeKeyCustodyBlocked("Rotation must retire the old active key")
     fictional=open_fake_grant(ring=old_ring,owner_hmac=owner_hmac,
                              folder_hmac=folder_hmac,sealed=sealed)
