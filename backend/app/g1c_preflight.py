@@ -38,6 +38,9 @@ SOURCE_COLUMNS = {
     "audit_events": "id transaction_id old_category new_category old_excluded new_excluded old_overlap_resolved new_overlap_resolved note changed_at",
     "historical_filings": "id tax_year legal_entity kind filing_status revision_number revision_of_id source_sha256 fields_json imported_at",
     "owner_auth_state": "owner_id last_totp_step",
+    # Synthetic throttle rows carry only keyed owner identity and counters.
+    # They remain in full backup/restore provenance, NOT financial authority.
+    "owner_login_throttles": "owner_hmac failures window_started_epoch locked_until_epoch updated_epoch",
     "owner_sessions": "token_sha256 csrf_sha256 created_at expires_at revoked",
     "loan_accounts": "id legal_owner currency direction counterparty_label opening_as_of opening_principal_minor opening_basis created_at",
     "loan_allocations": "id loan_id transaction_id event_kind active principal_minor markup_minor evidence_note created_at",

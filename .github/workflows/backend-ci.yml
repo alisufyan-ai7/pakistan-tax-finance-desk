@@ -64,7 +64,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0015_drive_cloud_oauth_custody'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0016_owner_login_throttle'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -323,6 +323,56 @@ jobs:
               assert bound_cookie_digest not in sealed and bound_attempt.pkce_verifier not in sealed
           print('POSTGRES_18_P1F_SESSION_BOUND_OAUTH_REPLAY=PASS')
 
+          # P1G: disposable PG18 multi-worker throttle proves that simultaneous
+          # failures share one keyed owner lock and cannot bypass the limit.
+          from app.owner_login_throttle import (
+              issue_throttled_fake_owner_session, OwnerThrottleBlocked,
+          )
+          os.environ['P1F_SYNTHETIC_OWNER_GATEWAY_ONLY']='1'
+          os.environ['P1G_FAKE_LOGIN_THROTTLE_ONLY']='1'
+          os.environ['P1G_FAKE_THROTTLE_KEY']=base64.urlsafe_b64encode(b'T'*32).decode()
+          p1g_barrier=Barrier(2)
+          def p1g_bad_login_worker():
+              p1g_barrier.wait(timeout=10)
+              with Session(engine) as scoped:
+                  try:
+                      issue_throttled_fake_owner_session(
+                          scoped,username='synthetic-owner',
+                          password='synthetic-wrong-password',
+                          totp_code='000000',now_epoch=1800001000)
+                      return False
+                  except OwnerThrottleBlocked:
+                      return True
+          with ThreadPoolExecutor(max_workers=2) as pool:
+              a=pool.submit(p1g_bad_login_worker)
+              b=pool.submit(p1g_bad_login_worker)
+              assert a.result(timeout=20) and b.result(timeout=20)
+          with engine.connect() as conn:
+              row=conn.execute(text(
+                  'SELECT owner_hmac,failures FROM owner_login_throttles'
+              )).one()
+              assert len(row[0])==64 and row[1]==2
+          for t in range(3):
+              with Session(engine) as scoped:
+                  try:
+                      issue_throttled_fake_owner_session(
+                          scoped,username='synthetic-owner',
+                          password='synthetic-wrong-password',
+                          totp_code='000000',now_epoch=1800001001+t)
+                      raise AssertionError('Rejected login bypassed throttle')
+                  except OwnerThrottleBlocked:
+                      pass
+          with engine.connect() as conn:
+              row=conn.execute(text(
+                  'SELECT failures,locked_until_epoch FROM owner_login_throttles'
+              )).one()
+              assert row==(5,1800001003+900)
+              assert conn.execute(text(
+                  'SELECT COUNT(*) FROM owner_sessions'
+              )).scalar_one()==0
+          print('POSTGRES_18_P1G_DURABLE_OWNER_THROTTLE_RACE=PASS')
+
+
 
 
 
@@ -482,7 +532,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==28 and audit['source_rows']>=4
+          assert audit['source_tables']==29 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']

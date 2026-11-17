@@ -389,3 +389,16 @@ class DriveCloudOAuthGrant(Base):
     payload_cipher: Mapped[str] = mapped_column(Text, nullable=False)
     granted_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class OwnerLoginThrottle(Base):
+    """P1G: fake-only owner MFA failures; HMAC identity, never raw username/IP."""
+    __tablename__ = "owner_login_throttles"
+    __table_args__ = (
+        CheckConstraint("failures >= 0 AND failures <= 100", name="ck_owner_login_throttle_failures"),
+    )
+    owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    failures: Mapped[int] = mapped_column(Integer, nullable=False)
+    window_started_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    locked_until_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    updated_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
