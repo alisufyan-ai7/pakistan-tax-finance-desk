@@ -58,6 +58,8 @@ def _guard(state: SyntheticScanHealth, now: datetime):
     success = _stamp(state.last_success_at, now=clock)
     attempt = _stamp(state.last_attempt_at, now=clock)
     if ((state.last_outcome == "never") != (attempt is None)
+        or (state.last_outcome == "never" and (success is not None or state.consecutive_failures != 0))
+        or (state.last_outcome == "denied" and state.provider_permission != "fictional_revoked")
         or (state.last_outcome == "success" and (
             attempt is None or success is None or attempt != success
             or state.consecutive_failures != 0))
