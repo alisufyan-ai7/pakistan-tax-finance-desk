@@ -14,3 +14,7 @@ Existing `drive_folder_pages`, `drive_private_sync` and `drive_inbox_store` alre
 No cron/scheduler installed, no persistent latest-success heartbeat backed by live owner-index provenance, no Google credentials or actual PWA connection. Existing registered Google callback remains disabled. Only after G2 production owner auth/credential lifecycle and explicit owner approval can a reviewed background scheduler be implemented and tested end-to-end. Original bytes/financial facts still require G1/G2/G3.
 
 No shared schema or OAuth/session files are modified here; this lane can run alongside P1G owner-login throttling. Final acceptance requires exact-head CI and combined-main integration proof before marking the milestone merged.
+
+## Final CI acceptance — 17 November 2026
+
+[PR #112](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/112) squash `3f31a68a5762d84ce80beb485d6e58026b416554`, tested head `18138aeb67d83268d16870cf958dc3b75e958563`, [CI 44084245982](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44084245982): **683 backend pytest passed, 3 warnings + PostgreSQL18 PASS**. [Combined integration #113](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/113) **697 tests + PostgreSQL18 PASS**. Strict malformed never-scanned-but-success state check was corrected before acceptance. **Pure simulated health only:** no live Google API/cron, private owner heartbeat, real file names or actual one-folder sync. G1/G2/G3 real data gates remain BLOCKED. [Full handoff](CURRENT_HANDOFF.md).
