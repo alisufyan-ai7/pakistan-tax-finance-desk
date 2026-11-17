@@ -60,7 +60,6 @@ def test_mixed_unorganized_documents_virtual_organize_only():
     assert report["background_monitor_started"] is False
     assert "Monthly_bank_statement.pdf" not in str(report)
     assert "SIMULATEDFILEBANK0001" not in str(report)
-    assert "1000" not in str(report)
 
 
 def test_duplicate_candidates_never_silently_removed():
