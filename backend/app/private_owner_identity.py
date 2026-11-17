@@ -230,6 +230,22 @@ def _failed(db: Session,row: OwnerPrivateIdentity,mac: bytes,now: int) -> None:
     raise PrivateOwnerIdentityBlocked("Owner MFA rejected")
 
 
+def _deny_private_recovery_hold(db: Session, owner: str) -> None:
+    # The new recovery record is independently encrypted and authenticated.
+    # Any absent recovery key, tampered audit or pending redemption FAILS CLOSED.
+    from .models import OwnerPrivateRecoveryState
+    if db.get(OwnerPrivateRecoveryState,owner) is None:
+        return
+    from .private_owner_recovery import (
+        PrivateOwnerRecoveryBlocked,private_recovery_hold_active,
+    )
+    try:
+        if private_recovery_hold_active(db,owner_hmac=owner):
+            raise PrivateOwnerIdentityBlocked("Owner MFA recovery is pending")
+    except PrivateOwnerRecoveryBlocked:
+        raise PrivateOwnerIdentityBlocked("Owner MFA recovery attestation unavailable") from None
+
+
 def issue_private_owner_session(
     db: Session, *, owner_ref: str, password: str, totp_code: str,
     now_epoch: int | None=None,
@@ -247,6 +263,7 @@ def issue_private_owner_session(
         if row is None or row.owner_hmac != owner:
             raise PrivateOwnerIdentityBlocked("Owner MFA rejected")
         _verify_identity(mac,row)
+        _deny_private_recovery_hold(db,owner)
         if row.locked_until_epoch>now:
             raise PrivateOwnerIdentityBlocked("Owner MFA rejected")
         if row.locked_until_epoch and now>=row.locked_until_epoch:
@@ -315,6 +332,7 @@ def verify_private_owner_session(
     now=_now(now_epoch)
     try:
         _session(db,owner,session_mac,token,now,csrf=csrf,mutation=mutation)
+        _deny_private_recovery_hold(db,owner)
         db.rollback()
         return {"private_owner_mfa_session_valid":True,
                 "google_consent_authorized_by_session_alone":False,
