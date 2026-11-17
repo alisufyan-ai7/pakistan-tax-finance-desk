@@ -15,7 +15,7 @@ test("one-folder mobile documents navigation is visible in desktop and phone",()
   assert.match(main,/documents:\(\)=>renderFictionalDocumentInbox\(state\.docFilter,state\.docHealth\)/);
   assert.match(main,/data-doc-filter/);
   assert.match(css,/doc-inbox/);
-  assert.match(pwa,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(pwa,/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(html,/type=["']file["']/i);
   assert.doesNotMatch(main, /fetch\(["']https?:/);
 });

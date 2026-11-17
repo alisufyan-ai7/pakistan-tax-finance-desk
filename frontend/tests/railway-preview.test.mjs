@@ -7,7 +7,7 @@ const get = name => readFileSync(new URL("../" + name, import.meta.url), "utf8")
 test("Railway preview serves fictional allowlisted assets only", () => {
   const docker = get("Dockerfile");
   assert.match(docker, /FROM nginxinc\/nginx-unprivileged:stable-alpine/);
-  assert.match(docker, /COPY index\.html ui\.css ui\.mjs demo-data\.mjs document-inbox\.mjs \/usr\/share\/nginx\/html\//);
+  assert.match(docker, /COPY index\.html ui\.css ui\.mjs demo-data\.mjs document-inbox\.mjs owner-setup\.mjs \/usr\/share\/nginx\/html\//);
   assert.doesNotMatch(docker, /COPY\s+\.|legacy-import|\.env|backend|secrets/i);
   assert.match(docker, /EXPOSE 8080/);
   assert.match(get("ui.mjs"), /import \{ renderFictionalDocumentInbox \} from "\.\/document-inbox\.mjs"/);
