@@ -64,7 +64,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0014_drive_inbox'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0015_drive_cloud_oauth_custody'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -236,6 +236,55 @@ jobs:
               assert c.execute(text(
                   'SELECT COUNT(*) FROM drive_inbox_checkpoints')).scalar_one()==1
           print('POSTGRES_18_P1_DRIVE_ATOMIC_ENCRYPTED_INBOX=PASS')
+
+          # P1E cloud custody: actual transient PG18 cross-worker concurrency.
+          # All Google identity, folder, verifier and grants below are fictional.
+          from app.drive_google_oauth import (
+              PERSONAL_CFO_RAILWAY_CALLBACK, private_google_configuration,
+              begin_google_metadata_consent,
+          )
+          from app.cloud_drive_oauth_vault import (
+              remember_fake_cloud_attempt, claim_fake_cloud_attempt,
+              seal_fake_cloud_grant, read_fake_cloud_grant, CloudOAuthCustodyBlocked,
+          )
+          from sqlalchemy import inspect
+          assert {'drive_cloud_oauth_attempts','drive_cloud_oauth_grants'} <= set(inspect(engine).get_table_names())
+          fake_cloud_folder='SYNTHETIC_P1E_PG_ONLY_CLOUD_FOLDER_2026'
+          os.environ['P1B_PRIVATE_OAUTH_CONTRACT_ONLY']='1'
+          os.environ['P1D_RAILWAY_CALLBACK_CONTRACT_ONLY']='1'
+          os.environ['P1E_SYNTHETIC_CLOUD_CUSTODY_ONLY']='1'
+          os.environ['P1B_GOOGLE_CLIENT_ID']='000000000000-syntheticdev.apps.googleusercontent.com'
+          os.environ['P1B_GOOGLE_REDIRECT_URI']=PERSONAL_CFO_RAILWAY_CALLBACK
+          os.environ['P1B_GOOGLE_FOLDER_ID']=fake_cloud_folder
+          os.environ['DRIVE_ALLOWED_FOLDER_HMAC']=drive_index('folder',fake_cloud_folder)
+          os.environ['P1E_FAKE_CLOUD_VAULT_KEY']=base64.urlsafe_b64encode(b'E'*32).decode()
+          os.environ['P1E_FAKE_CLOUD_INDEX_KEY']=base64.urlsafe_b64encode(b'J'*32).decode()
+          challenge=begin_google_metadata_consent(private_google_configuration())
+          with Session(engine) as db:
+              assert remember_fake_cloud_attempt(db,pending=challenge,now_epoch=1800000000)['fake_attempt_sealed']
+          race=Barrier(2)
+          def race_google_state():
+              race.wait(timeout=10)
+              with Session(engine) as scoped:
+                  try:
+                      return claim_fake_cloud_attempt(scoped,state=challenge.state,now_epoch=1800000001).pkce_verifier == challenge.pkce_verifier
+                  except CloudOAuthCustodyBlocked:
+                      return False
+          with ThreadPoolExecutor(max_workers=2) as concurrent:
+              a=concurrent.submit(race_google_state)
+              b=concurrent.submit(race_google_state)
+              assert sorted([a.result(timeout=15),b.result(timeout=15)])==[False,True]
+          fake_token='SYNTHETIC_FAKE_REFRESH_POSTGRES_ONLY_NEVER_REAL_12345'
+          with Session(engine) as db:
+              seal_fake_cloud_grant(db,refresh_token=fake_token,now_epoch=1800000002)
+              assert read_fake_cloud_grant(db)==fake_token
+          with engine.connect() as db:
+              ciphertext=db.execute(text('SELECT payload_cipher FROM drive_cloud_oauth_grants')).scalar_one()
+              assert ciphertext.startswith('CFOC1:') and fake_token not in ciphertext
+              claimed=db.execute(text('SELECT status,payload_cipher FROM drive_cloud_oauth_attempts')).one()
+              assert claimed[0]=='claimed' and challenge.pkce_verifier not in str(claimed)
+          print('POSTGRES_18_P1E_FAKE_CLOUD_OAUTH_ATOMIC_CUSTODY=PASS')
+
 
 
 
