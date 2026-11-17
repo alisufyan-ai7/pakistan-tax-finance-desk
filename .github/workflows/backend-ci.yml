@@ -64,7 +64,7 @@ jobs:
           import os
           engine=create_engine(os.environ['DATABASE_URL'])
           with engine.connect() as c:
-              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0017_drive_scan_leases'
+              assert c.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0018_owner_google_grants'
               assert {'accounts','documents','transactions','audit_events','historical_filings'} <= set(inspect(c).get_table_names())
           # Test the operational encrypted bank-source path against real ephemeral PG18,
           # not just DDL. All identifiers and figures are fabricated.
@@ -434,6 +434,81 @@ jobs:
               assert p1j_folder not in str(saved) and lease not in str(saved)
           print('POSTGRES_18_P1J_SCAN_LEASE_LAST_GOOD=PASS')
 
+          # P1M: disposable PostgreSQL18 real-compatible GRANT CUSTODY contract.
+          # All keys, refresh strings, owner/folder/client IDs are invented;
+          # no token exchange, Google account or live Railway database touched.
+          import json
+          from app.private_metadata_grant_custody import (
+              store_private_metadata_grant,read_private_metadata_grant,
+              rotate_private_metadata_grant,revoke_private_metadata_grant,
+              PrivateMetadataCustodyBlocked,
+          )
+          os.environ['P1M_PRIVATE_METADATA_CUSTODY_ONLY']='1'
+          os.environ['P1M_G2_REAL_CREDENTIAL_RELEASE_REVIEWED']='1'
+          os.environ['P1M_METADATA_ENCRYPTION_KEYS_JSON']=json.dumps({
+              'cfo-google-key-v1':base64.urlsafe_b64encode(b'A'*32).decode(),
+              'cfo-google-key-v2':base64.urlsafe_b64encode(b'B'*32).decode(),
+          })
+          os.environ['P1M_METADATA_ACTIVE_KEY_ID']='cfo-google-key-v1'
+          os.environ['P1M_METADATA_ROW_HMAC_KEY']=base64.urlsafe_b64encode(b'H'*32).decode()
+          p1m_owner='SYNTHETIC_OWNER_CUSTODY_PG_2026'
+          p1m_folder='SYNTHETIC_FOLDER_CUSTODY_PG_2026'
+          p1m_client='000000000000-syntheticdev.apps.googleusercontent.com'
+          p1m_refresh='SYNTHETIC_FAKE_REFRESH_'+'X'*72
+          p1m_barrier=Barrier(2)
+          def p1m_save():
+              p1m_barrier.wait(timeout=10)
+              with Session(engine) as scoped:
+                  return store_private_metadata_grant(
+                      scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                      client_id=p1m_client,refresh_token=p1m_refresh,
+                      now_epoch=1800020000)
+          with ThreadPoolExecutor(max_workers=2) as pool:
+              f1=pool.submit(p1m_save)
+              f2=pool.submit(p1m_save)
+              revs=sorted([f1.result(timeout=20)['revision'],
+                           f2.result(timeout=20)['revision']])
+              assert revs==[1,2],revs
+          with engine.connect() as conn:
+              row=conn.execute(text(
+                  'SELECT owner_hmac,folder_hmac,client_hmac,ciphertext,'
+                  'row_hmac,revision FROM owner_google_metadata_grants'
+              )).one()
+              assert len(row[0])==len(row[1])==len(row[2])==len(row[4])==64
+              assert row[3].startswith('P1M1:') and row[5]==2
+              assert all(v not in str(row) for v in (
+                  p1m_owner,p1m_folder,p1m_client,p1m_refresh))
+          with Session(engine) as scoped:
+              assert read_private_metadata_grant(
+                  scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                  client_id=p1m_client)==p1m_refresh
+          os.environ['P1M_METADATA_ACTIVE_KEY_ID']='cfo-google-key-v2'
+          with Session(engine) as scoped:
+              result=rotate_private_metadata_grant(
+                  scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                  client_id=p1m_client,now_epoch=1800020001)
+              assert result['ciphertext_rotated'] and result['revision']==3
+          with Session(engine) as scoped:
+              assert read_private_metadata_grant(
+                  scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                  client_id=p1m_client)==p1m_refresh
+          with Session(engine) as scoped:
+              revoked=revoke_private_metadata_grant(
+                  scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                  client_id=p1m_client,now_epoch=1800020002)
+              assert revoked['local_ciphertext_erased']
+              assert revoked['provider_token_revoked'] is False
+          with Session(engine) as scoped:
+              try:
+                  read_private_metadata_grant(
+                      scoped,owner_ref=p1m_owner,folder_id=p1m_folder,
+                      client_id=p1m_client)
+                  raise AssertionError('Revoked metadata grant was readable')
+              except PrivateMetadataCustodyBlocked:
+                  pass
+          print('POSTGRES_18_P1M_ENCRYPTED_OWNER_METADATA_GRANTS=PASS')
+
+
 
 
 
@@ -595,7 +670,7 @@ jobs:
           os.environ['PG_G1C_SOURCE_DSN']=source_dsn
           audit=preflight_postgres_source()
           assert audit['read_only'] and audit['source_graph_consistent'], audit['blocking_issues']
-          assert audit['source_tables']==30 and audit['source_rows']>=4
+          assert audit['source_tables']==31 and audit['source_rows']>=4
           assert audit['review_needed_transactions']==1
           assert len(audit['source_integrity_hmac'])==64 and len(audit['year_owner_account_direction_hmac'])==64
           assert not audit['migration_performed'] and not audit['cutover_authorized']

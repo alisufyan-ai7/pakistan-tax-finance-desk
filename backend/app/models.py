@@ -428,3 +428,24 @@ class DriveScanLease(Base):
     last_outcome: Mapped[str] = mapped_column(String(12), nullable=False)
     failure_count: Mapped[int] = mapped_column(Integer, nullable=False)
     permission_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class OwnerGoogleMetadataGrant(Base):
+    """P1M: unmounted private metadata-only OAuth grant envelope, NOT a live API.
+
+    SQL-visible rows hold HMAC identities, version, state and ciphertext only.
+    No raw Google account, folder, client ID, refresh code or financial content.
+    """
+    __tablename__ = "owner_google_metadata_grants"
+    __table_args__ = (
+        CheckConstraint("revision > 0", name="ck_owner_google_grant_revision"),
+    )
+    owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    folder_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    key_version: Mapped[str] = mapped_column(String(36), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    updated_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
