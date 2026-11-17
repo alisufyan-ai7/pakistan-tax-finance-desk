@@ -41,7 +41,7 @@ def test_three_parallel_capabilities_are_non_authoritative_and_read_only():
     assert review["read_only"] and review["draft_status"] == "draft"
     assert review["missing_cached_result_count"] == 1
     assert not review["filing_status_verified"]
-    assert inventory["read_only"] and inventory["source_tables"] == 35
+    assert inventory["read_only"] and inventory["source_tables"] == 36
     assert not inventory["actual_private_canonical_ledger_ready"]
     assert preview["tax_due_minor"] is review["tax_due_minor"] is inventory["tax_due_minor"] is None
 
