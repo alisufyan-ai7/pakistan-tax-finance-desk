@@ -263,6 +263,94 @@ def create_app(database_url: str | None = None):
             media_type="text/javascript", headers={"Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
 
+    # The Google Drive OAuth web-server callback exists only in the *local*
+    # owner-authenticated HTTPS synthetic app. It is not part of the public
+    # Railway preview API, and is disabled by default. Never expose access,
+    # refresh, authorization code, client secret, folder IDs or source names.
+    def _private_drive_local_setup(request: Request, *, owner_login: bool):
+        _local_only(request)
+        if (request.url.scheme != "https"
+            or request.url.hostname not in {"localhost", "127.0.0.1"}
+            or request.url.port not in (443, 8443, 9443)
+            or os.getenv("APP_DATA_MODE", "synthetic") != "synthetic"
+            or os.getenv("OWNER_AUTH_MODE") != "totp_session"
+            or os.getenv("P1C_PRIVATE_OWNER_MFA_ACCEPTED") != "1"
+            or os.getenv("P1C_GOOGLE_NETWORK_ENABLED") != "1"):
+            raise HTTPException(403, "Private loopback MFA Google connection disabled")
+        from .private_drive_google_http import _guard_network
+        try:
+            _guard_network()
+        except Exception:
+            raise HTTPException(503, "Private Google connection unavailable") from None
+        if not owner_login and request.method not in {"GET", "HEAD"}:
+            raise HTTPException(403, "Google callback is GET only")
+
+    @app.post("/api/drive/oauth/start")
+    def begin_private_drive_connection(request: Request, _: Auth):
+        _private_drive_local_setup(request, owner_login=True)
+        from .drive_google_oauth import (
+            private_google_configuration, begin_google_metadata_consent,
+        )
+        from .private_drive_oauth_vault import PrivateGoogleOAuthVault
+        from .private_drive_google_http import _client_secret
+        try:
+            config = private_google_configuration()
+            _client_secret()  # Fail before issuing an unusable consent link.
+            vault = PrivateGoogleOAuthVault()
+            prepared = begin_google_metadata_consent(config)
+            vault.remember_attempt(prepared, current=config)
+        except Exception:
+            raise HTTPException(503, "Private Google consent unavailable") from None
+        return JSONResponse({
+            "authorization_url":prepared.authorization_url,
+            "scope":"DRIVE_METADATA_ONLY",
+            "app_google_connected":False,
+            "source_content_access":False,
+            "financial_data_authorized":False,
+        }, headers={"Cache-Control":"no-store","Referrer-Policy":"no-referrer"})
+
+    @app.get("/api/drive/oauth/callback")
+    def receive_private_drive_callback(request: Request,
+                                       state: str|None = None, code: str|None = None,
+                                       error: str|None = None):
+        _private_drive_local_setup(request, owner_login=False)
+        if error or not state or not code or len(state)>128 or len(code)>2048:
+            raise HTTPException(400, "Google consent declined or malformed")
+        from .private_drive_oauth_vault import PrivateGoogleOAuthVault
+        from .private_drive_google_http import complete_private_google_oauth
+        try:
+            result=complete_private_google_oauth(
+                PrivateGoogleOAuthVault(),state=state,code=code)
+        except Exception:
+            raise HTTPException(400, "Google consent could not be completed") from None
+        return JSONResponse(result,headers={
+            "Cache-Control":"no-store","Referrer-Policy":"no-referrer",
+            "X-Content-Type-Options":"nosniff",
+        })
+
+    @app.get("/api/drive/oauth/status")
+    def private_drive_connection_status(request: Request, _: Auth):
+        _private_drive_local_setup(request, owner_login=True)
+        from .private_drive_oauth_vault import PrivateGoogleOAuthVault
+        try:
+            status=PrivateGoogleOAuthVault().redacted_status()
+        except Exception:
+            raise HTTPException(503, "Private Google status unavailable") from None
+        return JSONResponse(status,headers={"Cache-Control":"no-store"})
+
+    @app.post("/api/drive/oauth/disconnect")
+    def disconnect_private_drive_connection(request: Request, _: Auth):
+        _private_drive_local_setup(request, owner_login=True)
+        from .private_drive_oauth_vault import PrivateGoogleOAuthVault
+        try:
+            PrivateGoogleOAuthVault().local_disconnect()
+        except Exception:
+            raise HTTPException(503, "Private Google disconnect unavailable") from None
+        return JSONResponse({
+            "local_grant_erased":True,
+            "google_remote_revocation_still_required":True,
+        },headers={"Cache-Control":"no-store"})
+
     @app.get("/api/owner/workspace/status")
     def owner_workspace_status(_: Auth, tax_year: int = 2027):
         """Authenticated synthetic-only readiness contract; no legacy ledger SQL."""
