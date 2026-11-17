@@ -1,5 +1,7 @@
 """G2 preview DB role: fail closed on excessive PostgreSQL privilege."""
 from types import SimpleNamespace
+from app.db import Base
+from app import models  # noqa: F401
 import pytest
 from app.preview_role_policy import attest_synthetic_preview_role, RoleAttestationBlocked
 
@@ -17,12 +19,12 @@ class Result:
 
 class FakeConnection:
     dialect = SimpleNamespace(name="postgresql")
-    def __init__(self, *, elevated=False, db_ddl=False, schema_ddl=False, accessible=0, tables=35):
+    def __init__(self, *, elevated=False, db_ddl=False, schema_ddl=False, accessible=0, tables=None):
         self.elevated = elevated
         self.db_ddl = db_ddl
         self.schema_ddl = schema_ddl
         self.accessible = accessible
-        self.tables = tables
+        self.tables = len(Base.metadata.tables) if tables is None else tables
         self.calls = []
     def execute(self, query):
         sql = str(query)
