@@ -28,6 +28,7 @@ PRIVATE_TABLES = frozenset({
     "owner_private_recovery_states",
     "owner_private_recovery_audit",
     "owner_google_metadata_grants",
+    "owner_private_oauth_attempts",
 })
 
 _ROLE = text("""
