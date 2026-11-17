@@ -45,6 +45,7 @@ def env(tmp_path, monkeypatch):
         "P1F_SYNTHETIC_OWNER_GATEWAY_ONLY":"1",
         "P1G_FAKE_LOGIN_THROTTLE_ONLY":"1",
         "P1G_SQLITE_TEST_ONLY":"1",
+        "P1E_SQLITE_TEST_ONLY":"1",
         "P1B_GOOGLE_REDIRECT_URI":PERSONAL_CFO_RAILWAY_CALLBACK,
         "P1B_GOOGLE_CLIENT_ID":"000000000000-syntheticdev.apps.googleusercontent.com",
         "P1B_GOOGLE_FOLDER_ID":FOLDER,
