@@ -962,3 +962,58 @@ jobs:
               engine.dispose()
           print('POSTGRES_18_G2_SYNTHETIC_RESTRICTED_ROLE=PASS')
           PY
+
+      - name: Verify isolated one-owner database and restricted SQL role on disposable PostgreSQL 18
+        env:
+          APP_DATA_MODE: synthetic
+          P1S_PRIVATE_CREDENTIAL_ROLE_AUDIT: '1'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import psycopg
+          from sqlalchemy import create_engine, inspect
+          from app.private_owner_auth_schema import (
+              OWNER_AUTH_TABLES, OWNER_AUTH_SCHEMA_REV, review_only_sql, schema_signature
+          )
+          from app.private_credential_role_policy import attest_private_credential_role
+          admin = "host=localhost port=5432 user=postgres password=synthetic_ci_not_a_real_secret"
+          with psycopg.connect(admin + " dbname=synthetic_ci_db", autocommit=True) as c:
+              c.execute("CREATE DATABASE personal_cfo_owner_auth")
+          with psycopg.connect(admin + " dbname=personal_cfo_owner_auth") as c:
+              c.execute(review_only_sql(), prepare=False)
+              c.execute(
+                  (Path("../ops/owner_auth_isolated_role.review.sql")).read_text(),
+                  prepare=False)
+          engine = create_engine(
+              "postgresql+psycopg://postgres:synthetic_ci_not_a_real_secret"
+              "@localhost:5432/personal_cfo_owner_auth"
+          )
+          try:
+              with engine.connect() as c:
+                  names = set(inspect(c).get_table_names())
+                  assert names == set(OWNER_AUTH_TABLES) | {"owner_auth_schema_version"}, names
+                  revision, signature = c.exec_driver_sql(
+                      "SELECT revision,model_signature FROM public.owner_auth_schema_version"
+                  ).one()
+                  assert revision == OWNER_AUTH_SCHEMA_REV and signature == schema_signature()
+                  role = c.exec_driver_sql(
+                      "SELECT rolcanlogin FROM pg_roles "
+                      "WHERE rolname='personal_cfo_owner_credentials'"
+                  ).scalar_one()
+                  assert role is False
+                  c.exec_driver_sql("SET ROLE personal_cfo_owner_credentials")
+                  check = attest_private_credential_role(c)
+                  assert check["candidate_credential_tables_attested"] == 6
+                  assert not check["production_g2_accepted"]
+                  assert not c.exec_driver_sql(
+                      "SELECT has_table_privilege(current_user, "
+                      "'public.owner_auth_schema_version','SELECT')"
+                  ).scalar_one()
+                  assert not c.exec_driver_sql(
+                      "SELECT has_database_privilege(current_user,"
+                      "current_database(),'TEMP')"
+                  ).scalar_one()
+          finally:
+              engine.dispose()
+          print("POSTGRES_18_ISOLATED_OWNER_AUTH_STORE_AND_ROLE=PASS")
+          PY
