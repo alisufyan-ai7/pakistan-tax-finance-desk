@@ -72,6 +72,9 @@ SOURCE_COLUMNS = {
     # Genuine-compatible unmounted owner security state, never economic authority.
     "owner_private_identities": "singleton_id owner_hmac password_scrypt totp_cipher last_totp_step failures window_started_epoch locked_until_epoch revision row_hmac",
     "owner_private_sessions": "token_hmac owner_hmac csrf_hmac issued_epoch expires_epoch revoked",
+    # Private recovery rows and audit are security provenance, NOT financial sources.
+    "owner_private_recovery_states": "owner_hmac revision issued_epoch expires_epoch ciphertext pending row_hmac",
+    "owner_private_recovery_audit": "owner_hmac revision action previous_hmac row_hmac event_hmac epoch",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000
