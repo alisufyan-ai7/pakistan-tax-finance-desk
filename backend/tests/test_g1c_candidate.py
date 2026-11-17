@@ -78,4 +78,4 @@ def test_only_reviewed_registered_mirror_schema_is_copyable(monkeypatch):
     assert "historical_filings" in tables
     assert "cash_movement_reversals" in tables
     assert "canonical_source_mirrors" not in tables
-    assert len(tables) == 34
+    assert len(tables) == 35
