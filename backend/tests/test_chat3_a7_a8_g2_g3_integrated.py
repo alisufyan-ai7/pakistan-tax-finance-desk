@@ -62,7 +62,7 @@ def test_integrated_all_gates_fail_closed_in_real_data_mode(monkeypatch,tmp_path
 
 
 def test_all_known_sensitive_storage_registered_and_recovery_schema_additive():
-    assert SCHEMA_REVISION == "0014_drive_inbox"
+    assert SCHEMA_REVISION == "0015_drive_cloud_oauth_custody"
     assert "canonical_journal_entries" in Base.metadata.tables
     assert "owner_recovery_states" in Base.metadata.tables
     assert "owner_recovery_audit" in Base.metadata.tables

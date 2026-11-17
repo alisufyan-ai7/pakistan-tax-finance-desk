@@ -17,7 +17,7 @@ class Result:
 
 class FakeConnection:
     dialect = SimpleNamespace(name="postgresql")
-    def __init__(self, *, elevated=False, db_ddl=False, schema_ddl=False, accessible=0, tables=26):
+    def __init__(self, *, elevated=False, db_ddl=False, schema_ddl=False, accessible=0, tables=28):
         self.elevated = elevated
         self.db_ddl = db_ddl
         self.schema_ddl = schema_ddl

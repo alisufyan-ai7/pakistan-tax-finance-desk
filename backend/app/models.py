@@ -367,3 +367,25 @@ class DriveInboxItem(Base):
         DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class DriveCloudOAuthAttempt(Base):
+    """P1E synthetic-only OAuth attempt: HMAC state, AES-GCM PKCE, no public API."""
+    __tablename__ = "drive_cloud_oauth_attempts"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending','claimed')", name="ck_drive_cloud_oauth_attempt_status"),
+    )
+    state_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    folder_hmac: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    payload_cipher: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+
+
+class DriveCloudOAuthGrant(Base):
+    """P1E separate test-vault grant. Cannot persist real Google tokens."""
+    __tablename__ = "drive_cloud_oauth_grants"
+    folder_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    payload_cipher: Mapped[str] = mapped_column(Text, nullable=False)
+    granted_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

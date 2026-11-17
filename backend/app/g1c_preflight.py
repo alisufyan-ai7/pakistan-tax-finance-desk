@@ -58,6 +58,10 @@ SOURCE_COLUMNS = {
     "owner_recovery_audit": "id owner_hmac revision action previous_hmac bundle_hmac event_hmac detail_json created_at",
     "drive_inbox_checkpoints": "folder_hmac scan_number source_snapshot_hmac state_hmac updated_at",
     "drive_inbox_items": "id folder_hmac file_hmac revision_hmac payload_json created_at updated_at",
+    # Fully inventoried for backup/provenance, NEVER treated as financial facts.
+    # Independently keyed, fake-only OAuth secrets are not G1 income/wealth.
+    "drive_cloud_oauth_attempts": "state_hmac folder_hmac payload_cipher expires_epoch status",
+    "drive_cloud_oauth_grants": "folder_hmac payload_cipher granted_epoch revoked",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000
