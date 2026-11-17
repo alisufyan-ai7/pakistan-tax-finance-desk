@@ -33,7 +33,7 @@ def test_alembic_baseline_fresh_sqlite(tmp_path):
     expected=set(Base.metadata.tables)|{'alembic_version'}
     assert expected == found
     with engine.connect() as session:
-        assert session.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0016_owner_login_throttle'
+        assert session.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == '0017_drive_scan_leases'
     second=subprocess.run([sys.executable,'-m','alembic','-x',f'db_url=sqlite:///{db}','upgrade','head'],cwd=Path(__file__).parents[1],env=env,capture_output=True,text=True,check=True)
     assert second.returncode == 0
 
