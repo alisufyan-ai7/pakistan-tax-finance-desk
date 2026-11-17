@@ -65,6 +65,8 @@ SOURCE_COLUMNS = {
     # Independently keyed, fake-only OAuth secrets are not G1 income/wealth.
     "drive_cloud_oauth_attempts": "state_hmac folder_hmac payload_cipher expires_epoch status",
     "drive_cloud_oauth_grants": "folder_hmac payload_cipher granted_epoch revoked",
+    # Scan-lease rows carry only synthetic keyed identities, counts and HMAC receipts.
+    "drive_scan_leases": "folder_hmac lease_hmac lease_expires_epoch last_success_epoch last_source_hmac last_receipt_hmac last_scan_number last_attempt_epoch last_outcome failure_count permission_revoked",
 }
 SOURCE_COLUMNS = {name: tuple(value.split()) for name, value in SOURCE_COLUMNS.items()}
 MAX_ROWS = 20_000
