@@ -10,6 +10,8 @@ test("Railway preview serves fictional allowlisted assets only", () => {
   assert.match(docker, /COPY index\.html ui\.css ui\.mjs demo-data\.mjs \/usr\/share\/nginx\/html\//);
   assert.doesNotMatch(docker, /COPY\s+\.|legacy-import|\.env|backend|secrets/i);
   assert.match(docker, /EXPOSE 8080/);
+  assert.match(get("ui.mjs"), /import \{ renderFictionalDocumentInbox \} from "\.\/document-inbox\.mjs"/);
+  assert.match(docker, /document-inbox\\.mjs/);
 });
 
 test("Railway preview does not accept real uploads, external scripts or data egress", () => {
