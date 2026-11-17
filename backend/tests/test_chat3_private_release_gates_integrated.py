@@ -86,4 +86,4 @@ def test_no_live_authority_or_certification_http_route_created():
     ):
         assert forbidden not in paths
     from app.pg_recovery import SCHEMA_REVISION
-    assert SCHEMA_REVISION=="0014_drive_inbox"
+    assert SCHEMA_REVISION=="0015_drive_cloud_oauth_custody"
