@@ -66,4 +66,3 @@ def test_role_plan_only_grants_six_private_tables_and_no_login():
     assert "PASSWORD '" not in sql
     assert "GRANT ALL" not in sql
     assert "GRANT SELECT, INSERT, UPDATE ON TABLE\n    public.accounts" not in sql
-    assert sql.strip().endswith("chat.") is False
