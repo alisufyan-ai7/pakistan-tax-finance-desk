@@ -34,4 +34,8 @@ test("Railway preview does not accept real uploads, external scripts or data egr
   assert.match(nginx, /X-Personal-CFO-Preview-Key/);
   assert.match(get("Dockerfile"), /NGINX_ENVSUBST_FILTER/);
   assert.doesNotMatch(nginx, /fastcgi_pass|alias\s|autoindex on/);
+  // A registered Google redirect URI does NOT open a safe OAuth endpoint.
+  // The public synthetic preview must deny callback/start routes until G2.
+  assert.doesNotMatch(nginx, /location\s*=\s*\/api\/drive\/oauth\/callback/);
+  assert.doesNotMatch(nginx, /proxy_pass[^;]*\/api\/drive\//);
 });
