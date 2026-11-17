@@ -510,7 +510,7 @@ class OwnerPrivateRecoveryAudit(Base):
     """P1P: append-only authenticated recovery issuance/consumption chain."""
     __tablename__ = "owner_private_recovery_audit"
     __table_args__ = (
-        CheckConstraint("action IN ('ISSUED','REDEEMED')",
+        CheckConstraint("action IN ('ISSUED','REDEEMED','REENROLLED')",
                         name="ck_owner_private_recovery_audit_action"),
     )
     owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
