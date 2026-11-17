@@ -21,3 +21,7 @@ The current public/frontend `frontend/nginx.railway.conf` remains synthetic prev
 ## Verification
 
 CI and merge status are **PENDING at author time**. Exact-head full backend pytest, disposable PG18 one-time replay/hold and G1 backup/role parity must pass before any merge. Public GitHub contains no real password, Google secret, folder ID, owner email or financial data.
+
+## FINAL independently accepted P1P code-only proof
+
+[PR #129 merged](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/129), squash `d91f2f52f5eadd4b8b4a6a1448df94f7dcbbdd25`; [GitHub Actions 44147806594](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44147806594) **853 backend pytest (3 warnings) + disposable PostgreSQL18 one-time recovery/lockout, G1 backup and G2 restricted-role PASS**. No public reset. Redemption revokes all owner sessions and **holds** account: it cannot log in, silently reset TOTP or release the hold. Independent private verified device enrollment/real operator review remains required. [Combined #130](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/130) tests recovery hold with OAuth custody still disabled; genuine G2/finance G1/G3 gates remain BLOCKED.
