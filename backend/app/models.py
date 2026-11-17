@@ -487,3 +487,36 @@ class OwnerPrivateSession(Base):
     issued_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+
+class OwnerPrivateRecoveryState(Base):
+    """P1P: encrypted HMAC one-time recovery bundle and fail-closed hold."""
+    __tablename__ = "owner_private_recovery_states"
+    __table_args__ = (
+        CheckConstraint("revision > 0", name="ck_owner_private_recovery_revision"),
+        CheckConstraint("expires_epoch > issued_epoch",
+                        name="ck_owner_private_recovery_expiry"),
+    )
+    owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    issued_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    pending: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class OwnerPrivateRecoveryAudit(Base):
+    """P1P: append-only authenticated recovery issuance/consumption chain."""
+    __tablename__ = "owner_private_recovery_audit"
+    __table_args__ = (
+        CheckConstraint("action IN ('ISSUED','REDEEMED')",
+                        name="ck_owner_private_recovery_audit_action"),
+    )
+    owner_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action: Mapped[str] = mapped_column(String(12), nullable=False)
+    previous_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
