@@ -62,6 +62,24 @@ def _row(db: Session, folder_hmac: str) -> DriveScanLease | None:
     ).with_for_update())
 
 
+def _verified_receipt(row: DriveScanLease) -> None:
+    if row.last_success_epoch is None:
+        if (row.last_source_hmac is not None or row.last_receipt_hmac is not None
+            or row.last_scan_number != 0):
+            raise DriveInboxBlocked("Last-good scan proof not authenticated")
+        return
+    if (not isinstance(row.last_source_hmac, str)
+        or _HEX64.fullmatch(row.last_source_hmac) is None
+        or not isinstance(row.last_receipt_hmac, str)
+        or _HEX64.fullmatch(row.last_receipt_hmac) is None
+        or type(row.last_scan_number) is not int or row.last_scan_number < 1):
+        raise DriveInboxBlocked("Last-good scan proof not authenticated")
+    expected = _index("last-good-scan-receipt",
+        f"{row.folder_hmac}:{row.last_success_epoch}:{row.last_scan_number}:{row.last_source_hmac}")
+    if not hmac.compare_digest(row.last_receipt_hmac, expected):
+        raise DriveInboxBlocked("Last-good scan proof not authenticated")
+
+
 def acquire_fake_scan_lease(db: Session, *, folder_id: str,
                             now_epoch: int | None = None,
                             ttl_seconds: int = 300) -> str:
@@ -87,6 +105,7 @@ def acquire_fake_scan_lease(db: Session, *, folder_id: str,
             )
             db.add(row)
             db.flush()
+        _verified_receipt(row)
         if (row.permission_revoked
             or (row.lease_hmac is not None and row.lease_expires_epoch > now)
             or (row.last_attempt_epoch is not None and now < row.last_attempt_epoch)):
@@ -123,6 +142,8 @@ def finish_fake_scan_lease(db: Session, *, folder_id: str,
     try:
         _lock(db, folder)
         row = _row(db, folder)
+        if row is not None:
+            _verified_receipt(row)
         if (row is None or row.lease_hmac is None
             or not hmac.compare_digest(row.lease_hmac, _index("lease-token",lease_token))
             or not row.lease_expires_epoch > now
@@ -150,6 +171,8 @@ def finish_fake_scan_lease(db: Session, *, folder_id: str,
             row.last_success_epoch = now
             row.last_scan_number = checkpoint.scan_number
             row.last_source_hmac = checkpoint.source_snapshot_hmac
+            row.last_receipt_hmac = _index("last-good-scan-receipt",
+                f"{folder}:{now}:{checkpoint.scan_number}:{checkpoint.source_snapshot_hmac}")
             row.failure_count = 0
         else:
             if complete_receipt is not None:
@@ -181,6 +204,8 @@ def fake_scan_lease_status(db: Session, *, folder_id: str,
     now = _now(now_epoch)
     try:
         row = db.get(DriveScanLease, folder)
+        if row is not None:
+            _verified_receipt(row)
         if row is None:
             return {"synthetic_only":True,"last_success_epoch":None,
                     "last_scan_number":0,"permission_state":"NEVER_SCANNED",
