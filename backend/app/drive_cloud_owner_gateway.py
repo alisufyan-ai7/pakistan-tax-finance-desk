@@ -136,8 +136,11 @@ def _request_boundary(request: Request) -> None:
 
 
 def _owner(db: Session, request: Request, *, mutation: bool = False) -> str:
-    _guard_fake(db)
     _request_boundary(request)
+    try:
+        _guard_fake(db)
+    except OwnerCloudGatewayBlocked:
+        raise HTTPException(503, "Synthetic private OAuth gateway unavailable") from None
     cookie = request.cookies.get(COOKIE, "")
     if type(cookie) is not str or COOKIE_RE.fullmatch(cookie) is None:
         raise HTTPException(401, "Owner MFA session required")
