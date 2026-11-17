@@ -82,3 +82,22 @@ def test_public_preview_has_no_oauth_routes():
     assert "/api/drive/oauth/callback" not in route_paths
     assert "/api/drive/oauth/status" not in route_paths
     assert "/api/drive/oauth/disconnect" not in route_paths
+
+def test_cloud_mode_rejects_owner_retired_localhost_redirect(monkeypatch):
+    monkeypatch.setenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY", "1")
+    monkeypatch.setenv(
+        "P1B_GOOGLE_REDIRECT_URI",
+        "https://localhost:8443/api/drive/oauth/callback",
+    )
+    with pytest.raises(PrivateDriveOAuthBlocked):
+        private_google_configuration()
+
+
+def test_local_dev_contract_retained_only_when_cloud_flag_is_absent(monkeypatch):
+    monkeypatch.delenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY", raising=False)
+    monkeypatch.setenv(
+        "P1B_GOOGLE_REDIRECT_URI",
+        "https://localhost:8443/api/drive/oauth/callback",
+    )
+    assert private_google_configuration().redirect_uri.startswith("https://localhost:")
+
