@@ -82,7 +82,7 @@ class PendingGoogleConsent:
 def begin_google_metadata_consent(config: DriveOAuthConfig) -> PendingGoogleConsent:
     """One-time state/PKCE: only server-side encrypted pending storage allowed."""
     _guard()
-    if not isinstance(config, DriveOAuthConfig):
+    if not isinstance(config, DriveOAuthConfig) or config != private_google_configuration():
         raise PrivateDriveOAuthBlocked("Unverified private OAuth configuration")
     # Never accept caller-supplied state or code challenge.
     state = secrets.token_urlsafe(36)
