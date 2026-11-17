@@ -26,6 +26,14 @@ from .drive_inbox_planner import DRIVE_ID, DriveInboxBlocked, _index
 GOOGLE_METADATA_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
 GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+# The owner registered this EXACT public Railway frontend redirect for the
+# existing Personal CFO Web OAuth client. This is an allowed *contract*, not a
+# running/approved callback or a newly exposed API service. Only the single
+# fixed URL is permitted; arbitrary Railway and user-supplied hosts are denied.
+PERSONAL_CFO_RAILWAY_CALLBACK = (
+    "https://personal-cfo-frontend-preview-development.up.railway.app"
+    "/api/drive/oauth/callback"
+)
 _CLIENT_ID = re.compile(r"^[A-Za-z0-9._-]{12,220}\.apps\.googleusercontent\.com$")
 _CODE = re.compile(r"^[A-Za-z0-9._~\/-]{8,2048}$")
 _STATE = re.compile(r"^[A-Za-z0-9_-]{40,128}$")
@@ -59,11 +67,19 @@ def private_google_configuration() -> DriveOAuthConfig:
     if not _CLIENT_ID.fullmatch(client_id):
         raise PrivateDriveOAuthBlocked("Google app client registration missing")
     url = urlsplit(redirect_uri)
-    if (url.scheme != "https" or url.hostname not in ("localhost", "127.0.0.1")
-        or url.username or url.password or url.query or url.fragment
-        or url.path != "/api/drive/oauth/callback"
-        or url.port not in (443, 8443, 9443)):
-        raise PrivateDriveOAuthBlocked("Only isolated loopback HTTPS callback is allowed")
+    railway_contract = (redirect_uri == PERSONAL_CFO_RAILWAY_CALLBACK
+        and os.getenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY") == "1")
+    loopback_contract = (
+        url.scheme == "https" and url.hostname in ("localhost", "127.0.0.1")
+        and url.username is None and url.password is None
+        and not url.query and not url.fragment
+        and url.path == "/api/drive/oauth/callback"
+        and url.port in (443, 8443, 9443)
+    )
+    if not (railway_contract or loopback_contract):
+        raise PrivateDriveOAuthBlocked(
+            "Google callback must be the explicitly approved HTTPS origin"
+        )
     if (not isinstance(folder_id, str) or not DRIVE_ID.fullmatch(folder_id)
         or not re.fullmatch("[0-9a-f]{64}", folder_hmac)
         or not hmac.compare_digest(folder_hmac, _index("folder", folder_id))):
