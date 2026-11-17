@@ -336,3 +336,34 @@ class OwnerRecoveryAudit(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False)
 
+class DriveInboxCheckpoint(Base):
+    """P1: synthetic one-folder completeness and keyed inventory state anchor.
+
+    Only HMACs and a scan counter are SQL-visible. No Drive IDs, filenames,
+    bank accounts, document bytes, OAuth tokens or financial values.
+    """
+    __tablename__ = "drive_inbox_checkpoints"
+    folder_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_snapshot_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    state_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class DriveInboxItem(Base):
+    """P1 synthetic review row; all per-source state sealed as AES-GCM JSON."""
+    __tablename__ = "drive_inbox_items"
+    __table_args__ = (
+        UniqueConstraint("file_hmac", name="uq_drive_inbox_file_hmac"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    folder_hmac: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    file_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    revision_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(
+        EncryptedText("drive_inbox_items.payload_json"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
