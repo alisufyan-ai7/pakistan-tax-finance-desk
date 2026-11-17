@@ -1,6 +1,7 @@
 import { DEMO, MONTHS, formatPKR, transactionsForYear, summaryForYear,
   coverageSummary, monthlyMovement, hypotheticalBuffer, monthPulseSummary } from "./demo-data.mjs";
 import { renderFictionalDocumentInbox } from "./document-inbox.mjs";
+import { renderOwnerSetup } from "./owner-setup.mjs";
 
 const state = { view:"overview", year:2027, search:"", docFilter:"all", docHealth:"never",
   opening:180000, essential:85000, reserveMonths:6 };
@@ -14,6 +15,7 @@ const titles = {
   tax:["Evidence before tax numbers.","Year-specific Pakistan tax rules, withholding and wealth continuity will require verified source documents.","Tax & wealth"],
   planning:["Investments & plans.","See illustrative holdings, possible return dates and savings goals without guaranteed return claims.","Planning"],
   security:["Private by design.","Follow the security gates required before this workspace can work with genuine bank or FBR records.","Security & status"],
+  setup:["Your private account setup.","One owner login, authenticator recovery and a protected Google Drive connection—in the correct order.","Owner setup"],
 };
 function e(value) {
   return String(value ?? "").replace(/[&<>"']/g, ch =>
@@ -321,7 +323,7 @@ function render() {
     if(current)b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
-  const views={overview,accounts,transactions,accountant,tax,planning,security,documents:()=>renderFictionalDocumentInbox(state.docFilter,state.docHealth)};
+  const views={overview,accounts,transactions,accountant,tax,planning,security,setup:renderOwnerSetup,documents:()=>renderFictionalDocumentInbox(state.docFilter,state.docHealth)};
   root.innerHTML=views[state.view]();
 }
 function go(view) {
