@@ -21,6 +21,7 @@ def upgrade():
         sa.Column("lease_expires_epoch", sa.BigInteger(), nullable=False),
         sa.Column("last_success_epoch", sa.BigInteger(), nullable=True),
         sa.Column("last_source_hmac", sa.String(64), nullable=True),
+        sa.Column("last_receipt_hmac", sa.String(64), nullable=True),
         sa.Column("last_scan_number", sa.Integer(), nullable=False),
         sa.Column("last_attempt_epoch", sa.BigInteger(), nullable=True),
         sa.Column("last_outcome", sa.String(12), nullable=False),
