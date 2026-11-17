@@ -155,11 +155,7 @@ def remember_fake_cloud_attempt(
         db.query(DriveCloudOAuthAttempt).filter(
             DriveCloudOAuthAttempt.expires_epoch <= now
         ).delete(synchronize_session=False)
-        count = db.scalar(select(DriveCloudOAuthAttempt).where(
-            DriveCloudOAuthAttempt.folder_hmac == cfg.folder_hmac,
-            DriveCloudOAuthAttempt.status == "pending",
-        ).limit(_MAX_PENDING + 1))
-        # A bounded count query also protects against flooding in many workers.
+        # Serialized count prevents unbounded pending attempts across workers.
         count = db.query(DriveCloudOAuthAttempt).filter_by(
             folder_hmac=cfg.folder_hmac, status="pending"
         ).count()
