@@ -449,3 +449,41 @@ class OwnerGoogleMetadataGrant(Base):
     revoked: Mapped[bool] = mapped_column(Boolean, nullable=False)
     updated_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class OwnerPrivateIdentity(Base):
+    """P1N: single-owner private MFA credential record, not public login.
+
+    Salted scrypt password verifier, AES-GCM MFA seed and keyed row digest.
+    HMAC owner identity is distinct from the public synthetic owner record.
+    """
+    __tablename__ = "owner_private_identities"
+    __table_args__ = (
+        CheckConstraint("singleton_id = 1", name="ck_owner_private_singleton"),
+        CheckConstraint("failures >= 0 AND failures <= 100", name="ck_owner_private_failures"),
+        CheckConstraint("revision > 0", name="ck_owner_private_revision"),
+    )
+    singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    password_scrypt: Mapped[str] = mapped_column(Text, nullable=False)
+    totp_cipher: Mapped[str] = mapped_column(Text, nullable=False)
+    last_totp_step: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    failures: Mapped[int] = mapped_column(Integer, nullable=False)
+    window_started_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    locked_until_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class OwnerPrivateSession(Base):
+    """P1N: owner MFA cookie/CSRF are stored only as separate keyed HMACs."""
+    __tablename__ = "owner_private_sessions"
+    __table_args__ = (
+        CheckConstraint("expires_epoch > issued_epoch", name="ck_owner_private_session_ttl"),
+    )
+    token_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    csrf_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    issued_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, nullable=False)
