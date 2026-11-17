@@ -16,6 +16,22 @@ Before enrolling, retain **independent off-server copies** of (a) the encrypted 
 
 The encrypted offline signer is **not a second application user**. It is your separate lost-phone identity-proof key, stored on another trusted device.
 
+## First: verify the Railway credential schema without changing anything
+
+The backend includes `python -m app.private_owner_db_preflight`, an explicitly **read-only** private catalog check. Run it from your **own Mac's Terminal** through authenticated Railway SSH. This step does **not** create accounts, alter roles or disclose database passwords.
+
+```sh
+brew install railway
+railway login
+railway ssh --environment development --service personal-cfo-api-preview -- python -m app.private_owner_db_preflight
+```
+
+If you are not already linked to the Personal CFO project, run `railway link` in the existing clone first and select **personal-cfo-dev-sandbox**; alternatively use `--project <approved-project-UUID>` with Railway SSH to target it explicitly. Railway may prompt to register your own SSH public key. Do not paste SSH credentials into chat.
+
+The sanitized JSON contains only schema/revision/role booleans and the missing *table names*, not your identity, financial data or secret keys. Send the JSON result back to the project chat. **Do not attempt Alembic upgrades, SQL GRANTs, role activation or Google consent based on guesses**; choose the exact follow-on procedure based on the inspected live schema.
+
+The existing private service has no public domain, and PostgreSQL has no public TCP proxy. Authenticated Railway SSH is deliberately used instead of opening a new network ingress. This script requires the service to remain in `APP_DATA_MODE=synthetic`.
+
 ## What you must do on a trusted device at the owner-activation stage
 
 1. On your own trusted computer, check out the approved repo at the verified release commit. Within `backend/`, install the package and the cryptography dependency using your existing Python 3.11+ environment, then generate the off-server recovery signing key:
