@@ -2,7 +2,7 @@ import { DEMO, MONTHS, formatPKR, transactionsForYear, summaryForYear,
   coverageSummary, monthlyMovement, hypotheticalBuffer, monthPulseSummary } from "./demo-data.mjs";
 import { renderFictionalDocumentInbox } from "./document-inbox.mjs";
 
-const state = { view:"overview", year:2027, search:"", docFilter:"all",
+const state = { view:"overview", year:2027, search:"", docFilter:"all", docHealth:"never",
   opening:180000, essential:85000, reserveMonths:6 };
 const root = document.getElementById("app");
 const nav = Array.from(document.querySelectorAll("[data-view]"));
@@ -321,7 +321,7 @@ function render() {
     if(current)b.setAttribute("aria-current","page");
     else b.removeAttribute("aria-current");
   });
-  const views={overview,accounts,transactions,accountant,tax,planning,security,documents:()=>renderFictionalDocumentInbox(state.docFilter)};
+  const views={overview,accounts,transactions,accountant,tax,planning,security,documents:()=>renderFictionalDocumentInbox(state.docFilter,state.docHealth)};
   root.innerHTML=views[state.view]();
 }
 function go(view) {
@@ -332,6 +332,14 @@ function go(view) {
   window.scrollTo({top:0,behavior:"instant"});
 }
 document.addEventListener("click",event=>{
+  const docHealth=event.target.closest("[data-doc-health]");
+  if(docHealth){
+    const name=docHealth.dataset.docHealth;
+    if(["never","stale","revoked","changed","missing","duplicates"].includes(name)){
+      state.docHealth=name;render();
+    }
+    return;
+  }
   const docFilter=event.target.closest("[data-doc-filter]");
   if(docFilter){
     const name=docFilter.dataset.docFilter;
