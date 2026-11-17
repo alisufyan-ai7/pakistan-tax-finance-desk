@@ -1,0 +1,84 @@
+"""P1U: nondeployed Railway edge private gateway proof header rehearsal.
+
+The actual Railway edge, TLS, ingress logs, IP handling, CSRF, rate zones,
+secret substitution and production credential custody remain G2 blockers.
+"""
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).parents[2]
+CANDIDATE = ROOT / "ops/nginx.personal-cfo-oauth.candidate.conf"
+LIVE = ROOT / "frontend/nginx.railway.conf"
+DOCKERFILE = ROOT / "frontend/Dockerfile"
+
+EXACT = {
+    "/api/owner/login",
+    "/api/owner/session",
+    "/api/owner/logout",
+    "/api/drive/oauth/start",
+    "/api/drive/oauth/callback",
+    "/api/drive/oauth/status",
+    "/api/drive/oauth/disconnect",
+}
+
+
+def locations(source):
+    pattern = r"location = (?P<path>[^ ]+) \{(?P<body>.*?)\n    \}"
+    return {m["path"]: m["body"] for m in re.finditer(pattern, source, re.S)}
+
+
+def test_review_candidate_replaces_browser_auth_headers_and_scrubs_forwarded():
+    content = CANDIDATE.read_text()
+    assert content.startswith("# REVIEW CANDIDATE ONLY.")
+    blocks = locations(content)
+    assert EXACT <= set(blocks)
+    expected = ('proxy_set_header X-Personal-CFO-Private-Gateway '
+                '"${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";')
+    assert content.count(expected) == len(EXACT)
+    for route in EXACT:
+        body = blocks[route]
+        assert expected in body
+        assert 'proxy_set_header Forwarded "";' in body
+        assert 'proxy_set_header X-Forwarded-Host "";' in body
+        assert 'proxy_set_header X-Forwarded-For "";' in body
+        assert 'proxy_set_header X-Real-IP "";' in body
+        assert 'proxy_set_header X-Forwarded-Proto https;' in body
+        assert "access_log off;" in body
+        assert "error_log /dev/null crit;" in body
+        assert 'proxy_set_header X-Personal-CFO-Preview-Key "";' in body
+        # An incoming caller-supplied credential must NEVER be used.
+        assert "$http_x_personal_cfo_private_gateway" not in body
+        assert 'proxy_set_header X-Personal-CFO-Private-Gateway "";' not in body
+    assert "P1C_GOOGLE_CLIENT_SECRET" not in content
+
+
+def test_live_railway_dockerfile_does_not_enable_candidate_or_substitute_private_key():
+    live = LIVE.read_text()
+    docker = DOCKERFILE.read_text()
+    assert 'COPY nginx.railway.conf /etc/nginx/templates/default.conf.template' in docker
+    assert 'NGINX_ENVSUBST_FILTER="^PREVIEW_INTERNAL_TOKEN$"' in docker
+    assert "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN" not in docker
+    assert "nginx.personal-cfo-oauth.candidate.conf" not in docker
+    assert "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN" not in live
+    assert 'X-Personal-CFO-Private-Gateway' not in live
+    for route in EXACT:
+        assert f"location = {route}" not in live
+    assert "location /api/" not in live
+
+
+def test_exact_callback_remains_internal_with_no_rewrite_or_sensitive_referrer():
+    callback = locations(CANDIDATE.read_text())["/api/drive/oauth/callback"]
+    assert ("proxy_pass http://$private_oauth_upstream"
+            "/internal/drive/oauth/callback$is_args$args;") in callback
+    assert 'add_header Referrer-Policy "no-referrer" always;' in callback
+    assert 'add_header Cache-Control "no-store" always;' in callback
+    assert "rewrite" not in callback and "return 302" not in callback
+    assert "proxy_pass https://" not in callback
+    assert "limit_req zone" not in CANDIDATE.read_text()
+
+
+def test_private_gateway_not_mounted_by_public_preview():
+    from app.preview_api import create_preview_app
+    paths = {r.path for r in create_preview_app().routes}
+    assert not any(x.startswith("/internal/drive/auth/") for x in paths)
+    assert not any(x.startswith("/internal/drive/oauth/") for x in paths)
