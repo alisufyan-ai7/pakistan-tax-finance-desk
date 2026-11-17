@@ -62,7 +62,7 @@ def test_integrated_all_gates_fail_closed_in_real_data_mode(monkeypatch,tmp_path
 
 
 def test_all_known_sensitive_storage_registered_and_recovery_schema_additive():
-    assert SCHEMA_REVISION == "0018_owner_google_grants"
+    assert SCHEMA_REVISION == "0019_private_owner_auth"
     assert "canonical_journal_entries" in Base.metadata.tables
     assert "owner_recovery_states" in Base.metadata.tables
     assert "owner_recovery_audit" in Base.metadata.tables
