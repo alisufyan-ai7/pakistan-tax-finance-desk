@@ -1,6 +1,6 @@
 """P1M: isolated encrypted owner Google metadata grant custody (unmounted).
 
-Revision: 0018_owner_google_metadata_grants
+Revision: 0018_owner_google_grants
 Down: 0017_drive_scan_leases
 
 Additive schema only, no owner secrets or data migration. This is executed in
@@ -10,7 +10,7 @@ Independent backup, restricted DB role and G2 approval precede live use.
 from alembic import op
 import sqlalchemy as sa
 
-revision="0018_owner_google_metadata_grants"
+revision="0018_owner_google_grants"
 down_revision="0017_drive_scan_leases"
 branch_labels=None
 depends_on=None
