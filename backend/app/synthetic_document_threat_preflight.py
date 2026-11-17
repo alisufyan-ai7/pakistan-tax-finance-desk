@@ -77,6 +77,7 @@ _FORBIDDEN_XML = (
     b"<!doctype", b"<!entity", b"targetmode=\"external\"",
     b"targetmode='external'", b"webservice(", b"hyperlink(",
     b"dde(", b"cmd|", b"powershell", b"file://",
+    b"<externallinks", b"<externallink",
 )
 
 
