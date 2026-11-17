@@ -86,4 +86,4 @@ def test_no_live_authority_or_certification_http_route_created():
     ):
         assert forbidden not in paths
     from app.pg_recovery import SCHEMA_REVISION
-    assert SCHEMA_REVISION=="0021_private_reenrollment"
+    assert SCHEMA_REVISION=="0022_private_oauth_attempts"
