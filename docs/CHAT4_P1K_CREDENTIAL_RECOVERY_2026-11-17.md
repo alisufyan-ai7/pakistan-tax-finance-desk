@@ -1,0 +1,9 @@
+# Chat 04 — P1K synthetic credential key custody and MFA recovery gates
+
+**2026-11-17 · Priority 1 and cross-cutting G2 · standalone branch based on verified #119.**
+
+Independent offline keyring candidate `backend/app/fake_credential_keyring.py`, with explicit `APP_DATA_MODE=synthetic` and `P1K_FAKE_KEY_CUSTODY_ONLY=1`. Requires distinct 32-byte, version-labeled fictional keys, AES-256-GCM with owner+folder binding AAD, random nonces, authenticated decode, new-key rewrap and old-key refusal when the old generation is absent. Rewrapping returns **only ciphertext**; no real refresh grant, account, Google network or DB write. The module recognizes **ONLY** `SYNTHETIC_FAKE_REFRESH_...`; actual Google refresh tokens are refused.
+
+The existing `persisted_owner_recovery` already enforces atomic one-use recovery-code redemption, chained audit and session revocation, but no real MFA reset. This lane adds a strict redacted recovery preflight, requiring a correctly structured attestation while explicitly **denying actual MFA reset, login or owner-independent release** even if every simulated checkbox is true. Tests include wrong AAD/owner/folder, random envelope, retired key, incompatible restore key, corrupted ciphertext, real token denial and real-mode guard.
+
+**Still BLOCKED:** independently owned real encryption/HMAC key custody, KMS/HSM or private key storage/backup recovery, actual production rotation with DB grants, two-person restore rehearsals, real owner MFA enrollment/recovery/device policy, cross-worker operator controls, role isolation and G2 security signoff. No live Railway settings, token, Google consent or public callback is changed. No plaintext owner data in GitHub. Exact-head backend pytest/PostgreSQL18 CI mandatory before merge; source-only acceptance does not lift G1/G2/G3. 
