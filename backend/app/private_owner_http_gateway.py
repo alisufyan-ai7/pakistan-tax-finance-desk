@@ -36,11 +36,16 @@ _PATHS = frozenset({
     ("POST", "/internal/drive/auth/login"),
     ("GET", "/internal/drive/auth/session"),
     ("POST", "/internal/drive/auth/logout"),
+    # Only the separately instantiated P1T candidate mounts these.
+    ("POST", "/internal/drive/oauth/start"),
+    ("GET", "/internal/drive/oauth/callback"),
+    ("GET", "/internal/drive/oauth/status"),
 })
 _MAX_BODY = 2048
 
 
-def _boundary(request: Request, *, mutation: bool) -> str:
+def _boundary(request: Request, *, mutation: bool,
+              callback_query: bool = False) -> str:
     if (os.getenv("APP_DATA_MODE") != "synthetic"
         or os.getenv("P1Q_PRIVATE_HTTP_GATEWAY_ONLY") != "1"
         or os.getenv("P1Q_G2_PRIVATE_INGRESS_REVIEWED") != "1"):
@@ -61,7 +66,9 @@ def _boundary(request: Request, *, mutation: bool) -> str:
         or request.headers.get("x-forwarded-host") is not None
         or request.headers.get("x-forwarded-for") is not None
         or request.headers.get("x-real-ip") is not None
-        or request.url.query
+        or (request.url.query and not (
+            callback_query and request.method == "GET"
+            and request.url.path == "/internal/drive/oauth/callback"))
         or (request.method, request.url.path) not in _PATHS):
         raise HTTPException(status_code=403, detail="Untrusted private owner ingress")
 
