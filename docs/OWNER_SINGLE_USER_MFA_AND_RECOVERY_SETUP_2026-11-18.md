@@ -20,10 +20,28 @@ The encrypted offline signer is **not a second application user**. It is your se
 
 1. On your own trusted computer, check out the approved repo at the verified release commit. Within `backend/`, install the package and the cryptography dependency using your existing Python 3.11+ environment, then generate the off-server recovery signing key:
 
+   **macOS with Homebrew Python (PEP 668):** install in a virtual environment. From the already cloned repository's `backend/` directory, run these commands in an **interactive macOS Terminal**, not a noninteractive command runner:
+
    ```sh
+   python3 --version
+   python3 -m venv .venv
+   source .venv/bin/activate
    python -m pip install -e .
-   python -m app.private_owner_setup_cli keygen /absolute/private/path/personal-cfo-recovery.pem
    ```
+
+   Python 3.11 or newer is required. Do **not** use `sudo pip` or `--break-system-packages`. Before generating, check whether the private file already exists:
+
+   ```sh
+   test -e "$HOME/personal-cfo-recovery.pem" && echo "Key already exists: DO NOT overwrite" || echo "No key found"
+   ```
+
+   Only when no key exists, run:
+
+   ```sh
+   python -m app.private_owner_setup_cli keygen "$HOME/personal-cfo-recovery.pem"
+   ```
+
+   On other systems, use an equivalent isolated Python virtual environment and an absolute path **outside** the cloned repository. If the command reports that an attended private terminal is required, open the native interactive Terminal application before retrying.
 
    The private PEM is encrypted and saved locally with restrictive file permissions. The command prompts for a separate long passphrase and prints **only the public signing key**. Put the public value into private Railway `P1Q_OPERATOR_PUBLIC_KEY`; do **not** upload the private file into Railway/Google/GitHub/this chat. Store two separate encrypted backups of the file and passphrase safely.
 
