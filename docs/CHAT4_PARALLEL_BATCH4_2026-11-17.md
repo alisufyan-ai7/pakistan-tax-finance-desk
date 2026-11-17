@@ -1,0 +1,38 @@
+# Chat 04 / Parallel batch 4 — Security, format and accountant evidence
+
+**Date:** 17 November 2026. **Canonical repo:** `alisufyan-ai7/pakistan-tax-finance-desk`. **Direction:** owner requested engineering proceed with credential-key custody, MFA recovery and exact-route OAuth security, **concurrently** with independent document adapters and accountant/financial evidence. GitHub stays the durable complete-project source of truth; no other project's memory/infrastructure or private owner files.
+
+## Exact independent code acceptance
+
+| Workstream | PR merged and commit | Exact-head proof | Scope genuinely delivered |
+|---|---|---|---|
+| **Priority 1/G2 P1K — credential keys and MFA recovery** | [#120](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/120) squash `87d7c98bb61c61df1c8483b46639323889dceac3` | [CI 44097580786](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44097580786) **731 pytest, 3 warnings + PG18 PASS** | Isolated fake AES-256-GCM, versioned keyring and fictional refresh-grant owner+folder AAD binding, explicit key retirement/re-wrap; recovery audit **preflight only** with no real MFA reset/login |
+| **Priority 1/G2 P1L — exact-route OAuth ingress** | [#121](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/121) squash `d2be6a297862324c7e67b228a36901c5f0b4c915` | [CI 44097602285](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44097602285) **745 pytest, 3 warnings + PG18 PASS** | Offline redacted candidate allowlist for POST start/disconnect, GET callback/status, exact HTTPS authority, mutation Origin/CSRF, callback cookie+state shape and strict fake-code/query denial; audits **current** Nginx still preview-only |
+| **Priority 2/G3 — bank/FBR container negative triage** | [#122](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/122) squash `7f270632c9bdb97d2999fcacb16f016968d42d11` | [backend CI 44098237490](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44098237490) **789 pytest, 3 warnings + PG18 PASS**; [isolated sandbox 44098237501](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44098237501) **PASS** | Fake-only PDF/OOXML/CSV format profile triage and attack fixture quarantine; all apparently safe inputs still `QUARANTINE_PENDING_G3` |
+| **Priority 5/G4 — accountant evidence** | [#123](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/123) squash `de59ac8e0c185ec3b86df4aa46c2b542d0116adb` | [CI 44097622030](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44097622030) **729 pytest, 3 warnings + PG18 PASS** | Immutable fictional accountant DRAFT/review revisions and claimed IRIS original/wealth acknowledgments; no real filed-status, tax or wealth calculation |
+
+All four used independent additive **code-only** file domains (no new DB migrations, public API routes or live Railway settings); GitHub Actions could run concurrently. #122's first run failed 9 negative fixtures because PDF action tokens had no separator and leading-tab CSV was not rejected; this was corrected before the exact-head green backend + isolated Docker sandbox runs. Historical failed CI remains disclosed, not counted as acceptance.
+
+## Final combined integration acceptance
+
+This integration branch adds:
+- Cross-workstream test: all four fictional contracts coexist, each denies `APP_DATA_MODE=real`, public Nginx still has solely `GET /api/preview/status`, owner/login/OAuth/real FBR import routes remain absent.
+- Additional key-rotation hardening: a **renamed new key ID cannot reuse the retired key's underlying 256-bit material**. Hostile regression proves denial.
+- Exact-head full backend pytest, disposable PostgreSQL18 backup/restore/restricted-role checks and merge to `main` are **PENDING** at document author time. Append verified run ID, count, SHA, merge and Railway read-only outcomes only after actual confirmation.
+
+## Next G2 owner security acceptance checklist — NOT passed
+
+1. Independent private owner enrollment, TOTP MFA and auditable recovery with persistently throttled multiworker abuse/DoS defense, session/device revocation, no public bypass and authenticated deployment topology.
+2. Production secrets **not** in public GitHub/CI or browser: separate encrypted refresh-token and owner-key custody, restricted least-privilege DB role, strict key/restore/revocation/rotation procedures, independent encrypted offsite backup and key-loss practice.
+3. Trusted Railway TLS termination, one exact public registered callback route only; no wildcard `/api/*`, no public private API, exact Host/Origin/CSRF on mutations and verified SameSite=Lax one-time PKCE/session-bound Google top-level GET callback.
+4. Independently **inspect live frontend Nginx and upstream access/request-target logs** so code/state/query, cookies and secrets never log. Mock tests cannot certify actual Railway/logging.
+5. Document threat and privacy review + explicit owner-scoped approval before any real Google OAuth token, live Railway secret/role/network/schema migration, metadata-only scanner or actual file access. The owner has already registered a Railway HTTPS redirect and removed localhost; do **not** recreate it.
+6. For real finance: G1 encrypted canonical ledger + rollback/restore, G2 genuine owner security and G3 certified original formats all remain **BLOCKED**. The accountant's TY2025–26 workbook remains **DRAFT**, never FBR-filed unless authenticated acknowledgment/filing revisions are verified.
+
+## Parallelism, next tasks and project boundaries
+
+The six ranked owner priorities stay fixed: **1 Google Drive/metadata/PWA review, 2 Document understanding (G3), 3 Encrypted authoritative ledger (G1), 4 Owner security (G2) as prerequisite, 5 Tax/accountant evidence (G4), 6 Mobile financial pulse (G5)**. The independent synthetic G3 negative tests and G4 evidence work advanced without waiting for G2 real activation. Next parallel work could cover a private key lifecycle restore plan, exact-route log-redacted infrastructure test, synthetic bank/FBR source row/page certification protocol and accountant evidence source completeness alongside PWA unknowns, but only one schema/CI coordinator.
+
+**Actual current product before acceptance:** existing public static installable **fictional** PWA → one exact synthetic preview-status Nginx route → **private** `app.preview_api:app` → private PostgreSQL18. Registered OAuth callback **not publicly routed**. No real owner Google Drive app connection, operational metadata scanner, original bank/FBR/Excel financial parsing, or certified month expenses/recurring bill payment/investment returns. No additional provider/cost/Backblaze B2; owner private Google Drive folder remains unchanged and unsorted. No actual owner data in public repo. **G1/G2/G3 release gates BLOCKED**. Parent [#98](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/98) and owner security [#110](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/110) remain OPEN.
+
+Continue from [latest handoff](CURRENT_HANDOFF.md), [project status](PROJECT_STATUS.md), [six-priority roadmap](PRIORITIZED_PERSONAL_CFO_ROADMAP_2026-11-17.md), [release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md) and the historic [batch3 evidence](CHAT4_PARALLEL_BATCH3_2026-11-17.md); explicit verified CI/merge evidence supersedes older provisional statuses.
