@@ -138,3 +138,37 @@ def test_public_api_never_mounts_operator_first_run_or_recovery_routes(db):
     assert not any(path.startswith("/internal/drive/auth/") for path in paths)
     assert "/api/owner/enroll" not in paths
     assert "/api/owner/recovery" not in paths
+
+
+def test_only_valid_single_owner_mfa_can_access_limited_capabilities(db,monkeypatch):
+    from app.private_owner_roles import (
+        PrivateOwnerRoleBlocked, require_single_owner_capability, OWNER_CAPABILITIES)
+    engine,_=db
+    attempt(engine)
+    monkeypatch.setenv("P1W_OWNER_ROLE_POLICY_ONLY","1")
+    with Session(engine) as s:
+        proof=issue_private_owner_session(s,owner_ref=OWNER,
+            password=PW,totp_code=otp(T+31),now_epoch=T+31)
+    assert OWNER_CAPABILITIES=={
+        "owner:session","owner:recovery","drive:metadata","documents:review"
+    }
+    with Session(engine) as s:
+        result=require_single_owner_capability(s,owner_ref=OWNER,
+            token=proof.cookie_token,capability="documents:review",now_epoch=T+32)
+        assert result["role"]=="owner"
+        assert result["human_user_limit"]==1
+        assert not result["finance_authority_from_role_alone"]
+    with Session(engine) as s:
+        for capability in ("finance:write","admin:add_user","role:superuser"):
+            with pytest.raises(PrivateOwnerRoleBlocked):
+                require_single_owner_capability(s,owner_ref=OWNER,
+                    token=proof.cookie_token,capability=capability,now_epoch=T+32)
+    with Session(engine) as s:
+        with pytest.raises(PrivateOwnerRoleBlocked):
+            require_single_owner_capability(s,owner_ref=OWNER,
+                token=proof.cookie_token,capability="drive:metadata",
+                mutation=True,csrf="fake",now_epoch=T+32)
+    with Session(engine) as s:
+        assert require_single_owner_capability(s,owner_ref=OWNER,
+            token=proof.cookie_token,capability="drive:metadata",
+            mutation=True,csrf=proof.csrf_token,now_epoch=T+32)["role"]=="owner"
