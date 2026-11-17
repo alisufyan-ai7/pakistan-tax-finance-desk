@@ -12,7 +12,7 @@ test("one-folder mobile documents navigation is visible in desktop and phone",()
   const html=sibling("index.html"),main=sibling("ui.mjs"),css=sibling("ui.css"),pwa=sibling("pwa.css");
   assert.match(html,/data-view="documents"/);
   assert.match(html,/>Docs<\/button>/);
-  assert.match(main,/documents:\(\)=>renderFictionalDocumentInbox\(state\.docFilter\)/);
+  assert.match(main,/documents:\(\)=>renderFictionalDocumentInbox\(state\.docFilter,state\.docHealth\)/);
   assert.match(main,/data-doc-filter/);
   assert.match(css,/doc-inbox/);
   assert.match(pwa,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
