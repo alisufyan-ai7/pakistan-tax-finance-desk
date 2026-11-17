@@ -15,7 +15,7 @@ CSV=(b"PERSONAL_CFO_SYNTHETIC_BANK_CSV_V1\n"
 def fake_pdf(payload=b""):
     return (b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
             b"% PERSONAL_CFO_SYNTHETIC_FIXTURE\n"+payload+
-            b"trailer\n<< /Root 1 0 R >>\n%%EOF\n")
+            b"\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n")
 
 
 def fake_xlsx(payload=b"<workbook/>",extra=()):
