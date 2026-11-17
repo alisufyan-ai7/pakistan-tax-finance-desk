@@ -6,7 +6,7 @@
 
 Earlier `cloud_drive_oauth_vault`, `fake_credential_keyring` and `private_drive_google_http` deliberately accept only synthetic fixtures/loopback. This P1M milestone begins a **separate real-compatible server-only custody implementation**. It allows opaque refresh-token-shaped bytes under strict dedicated config, while **all GitHub and CI tests use invented tokens and key material only**. It does not depend on the actual Google client secret, does not call Google and is not imported by `app.preview_api`. It is not an already-deployed/release-accepted owner OAuth service.
 
-**New files:** `backend/app/private_metadata_grant_custody.py`, `backend/migrations/versions/0018_owner_google_metadata_grants.py`, `backend/tests/test_private_metadata_grant_custody.py`. Only one migration owner. Existing G1 source census, backup/recovery schema revision and disposable PostgreSQL18 CI acceptance updated to include the new table exactly.
+**New files:** `backend/app/private_metadata_grant_custody.py`, `backend/migrations/versions/0018_owner_google_grants.py`, `backend/tests/test_private_metadata_grant_custody.py`. Only one migration owner. Existing G1 source census, backup/recovery schema revision and disposable PostgreSQL18 CI acceptance updated to include the new table exactly.
 
 ## Actual implementation (code-only)
 
