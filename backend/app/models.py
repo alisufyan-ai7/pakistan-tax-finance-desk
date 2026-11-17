@@ -422,6 +422,7 @@ class DriveScanLease(Base):
     lease_expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     last_success_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_source_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_receipt_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
     last_attempt_epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_outcome: Mapped[str] = mapped_column(String(12), nullable=False)
