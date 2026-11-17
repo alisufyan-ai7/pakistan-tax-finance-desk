@@ -1,0 +1,44 @@
+# Personal CFO — One Google Drive upload folder, automatic virtual organization (owner decision 2026-11-17)
+
+**Binding product decision:** The owner will create/connect a **fresh Personal CFO Google Drive** and upload new and historical files into **ONE** folder forever. **The owner will NOT sort or rename documents.** Personal CFO must identify, virtually organize, deduplicate, reconcile, and surface ambiguities/follow-up requests. **Backblaze B2 is deferred**; do not create Backblaze or other storage/provider resources until separately approved.
+
+## Owner experience
+
+1. Create a new Google account / Drive dedicated to Personal CFO (owner action; no agent creates or guesses credentials). Enable strong two-step verification.
+2. Create exactly one top-level folder with a friendly label, e.g. `Personal CFO — Upload Here`. Keep it **private**. Upload old and new PDFs, CSVs, XLSX and screenshots into that folder **without renaming or sorting them**.
+3. In the application, select **Connect Google Drive**, authorize the exact account and select/approve the one folder. The ChatGPT Google Drive connector (if installed) is **separate** from the OAuth authorization Personal CFO will require; installing one does not automatically grant the other access. No owner Drive has been connected in this checkpoint.
+4. A separately approved restricted/private sync worker periodically inventories the selected folder, then handles revisions and duplicates idempotently. New files enter an **Inbox** review pipeline; uncertain or unsafe files enter **Needs Review / Quarantine**, not silently discarded.
+5. Originals are left in Drive unchanged; the application organizes them into **virtual collections** (bank statements, income/wealth tax, accountant working papers, investments, loans/cash, bills/receipts, screenshots/correspondence, unclassified). The owner can always still upload to the same one folder. No physical moving/renaming/trashing unless the owner later requests and approves a reversible archive policy.
+6. Only after G1 encrypted ledger, G2 private owner auth/recovery, and G3 genuine format/security validation are approved may the isolated processor download original bytes, handle transient PDF passwords, classify with source/page/row evidence, reconcile accounts and tax years, and present verified monthly finances. Every incomplete/uncertain finding must be shown as an owner follow-up, not guessed income/expense/filing status.
+
+## How monitoring will work (not yet active)
+
+- **Initial**: `files.list` with `'<selected-folder-id>' in parents and trashed = false`, explicit requested metadata, and complete pagination. The provider may return paginated or `incompleteSearch` results; never mark a partial scan as a complete index.
+- **Incremental**: Google Drive `changes.getStartPageToken`, `changes.list`, or periodic complete folder scans. Store a private sync cursor only after atomic processing succeeds. Detect additions, modifications, duplicate candidates, deletions/access loss, and retryable errors. Do not infer a deleted document's evidence is invalid solely because it disappeared from Drive; retain private immutable provenance.
+- **Dedup**: provider ID and revision HMAC ensure idempotent processing, not SHA256 proof. Google-provided MD5+size may produce a **possible duplicate** suggestion only; verify using SHA256 of original bytes in an approved encrypted vault and source-wise overlap/reversal checks before merging records. Never delete originals automatically.
+- **Filename hints**: untrusted names and MIME cannot prove a bank, amount, tax year, asset value or official FBR filing. A file named "FBR FINAL" remains an unverified tax-return *candidate* until genuine source and filing acknowledgment review.
+- **Private sync**: consistent OAuth token refresh/rotation, least-privilege data scope, credential encryption and per-account locking. Avoid logs of Drive IDs, names, account numbers, original bytes, passwords or tokens. No raw contents in GitHub Actions, public UI logs or Railway synthetic preview.
+- **Rate and size limits**: bounded metadata batches; quarantine unsupported/executable/macro files and excessive sizes; backoff/rate handling. Free Google storage is shared with Gmail and Photos. An always-running watcher requires an authorized running service; this assistant/chat on its own does not monitor continuously.
+
+## The permissions catch
+
+Google's `drive.file` scope only permits access to files created/opened or specifically shared with the app via the Picker; merely selecting a folder may **not** grant ongoing access to arbitrary new user-uploaded descendants. Thus a promise of automatic future ingestion based on a one-time Picker selection is unsound. A robust automatic drop-folder watcher could use a separately approved `drive.readonly` **restricted** scope against a fresh dedicated Drive account, with Google OAuth verification/security assessment as applicable; it still only *processes the pinned folder in application code*. Alternatively, the user may sync Drive onto a private machine and run a trusted isolated local watcher when the machine is online, avoiding broad Drive API permissions, at the cost of always-on processing. Choose after the user connects the fresh account and the OAuth/security plan is approved. Never ask user for Google password, API secrets or a public Drive sharing link.
+
+Official references: https://developers.google.com/workspace/drive/api/guides/api-specific-auth , https://developers.google.com/workspace/drive/api/guides/manage-changes , https://developers.google.com/workspace/drive/api/guides/search-files .
+
+## Implemented in this PR
+
+- `backend/app/drive_inbox_planner.py`: **synthetic-only metadata contract**; one pinned folder, virtual collection *hints*, unique keyed file+revision IDs, changed/unchanged version detection, weak duplicate warning, strict format/size quarantine, no financial assertions, no source move/read/write, no credentials, no live monitoring.
+- `backend/app/drive_folder_pages.py`: complete bounded Google Drive v3 metadata pagination through an **injected synthetic fake transport** with folder query and no partial commits. Real OAuth/HTTP not implemented or enabled.
+- `backend/tests/test_drive_inbox_planner.py` and `backend/tests/test_drive_folder_pages.py`: synthetic-only adversarial no-duplicate-deletion/unsupported-format/partial-list/error handling and strict absence of public finance/Drive endpoints.
+
+**Release state:** This is preparation for the user's single-folder direction, **NOT a connected Google Drive or a running scheduler**. No actual owner source documents have been uploaded, imported, sorted, read, reconciled or linked to the financial ledger. G1/G2/G3 remain blocked for genuine source intake. A connected ChatGPT Google Drive plugin would permit explicit user-authorized file work in conversation, but it does not activate the PWA's unattended sync.
+
+## Remaining implementation checkpoints
+
+1. Owner creates a fresh Google account and its ONE private folder; connect the account through explicit OAuth/plugin consent without sharing the Google password. Capture only the approved folder ID in the private project configuration, never in the public repository.
+2. Choose/safely configure the access model: (a) real background Drive OAuth watcher with scoped folder filtering and Google's required consent/verification, or (b) Google Drive desktop sync + local trusted private parser. Confirm private processing + backup and G2/G3 acceptance before any original bytes are downloaded.
+3. Implement authorized authenticated OAuth refresh token storage, Drive changes/checkpoint queue, retry/backoff, encrypted private source vault, exact SHA256 duplicate and legal-owner/year/source coverage reconciliation, and redacted owner-facing **Needs Review** dashboard. No real file parsing without the G1/G2/G3 private release gates.
+4. Keep Backblaze B2 explicitly **DEFERRED**, and do not procure paid/other storage services without approval.
+
+**Privacy boundaries:** The public GitHub CI fake-only metadata fixtures are fictitious; `APP_DATA_MODE=real` remains fail closed. No Dropbox/Cloudinary/Backblaze/Google Drive live credentials, endpoints or owner files are used by this change.
