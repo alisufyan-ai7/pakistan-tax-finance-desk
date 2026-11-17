@@ -56,13 +56,9 @@ def _non_mirror_tables() -> list[str]:
     expected = set(SOURCE_COLUMNS)
     if expected != set(Base.metadata.tables) or "canonical_source_mirrors" not in expected:
         raise G1CCandidateBlocked("Unknown source or mirror table inventory")
-    # OAuth custody is not financial source evidence: do not mirror token rows
-    # into a finance projection, even when they are only fake encrypted grants.
-    return sorted(expected - {
-        "canonical_source_mirrors",
-        "drive_cloud_oauth_attempts",
-        "drive_cloud_oauth_grants",
-    })
+    # Full restored-clone parity includes opaque ciphertext from the
+    # synthetic-only cloud vault. These are NOT financial authority/claims.
+    return sorted(expected - {"canonical_source_mirrors"})
 
 
 def _copy_all_as_sealed_candidate(dsn: str, expected_receipt: dict,
