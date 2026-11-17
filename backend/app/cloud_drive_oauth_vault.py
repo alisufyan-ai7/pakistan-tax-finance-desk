@@ -133,6 +133,7 @@ def _lock(db: Session, folder_hmac: str) -> None:
 
 def remember_fake_cloud_attempt(
     db: Session, *, pending: PendingGoogleConsent, now_epoch: int | None = None,
+    owner_session_digest: str | None = None,
 ) -> dict:
     cfg, key, mac = _config(db)
     now = _time(now_epoch)
@@ -143,6 +144,9 @@ def remember_fake_cloud_attempt(
         or not _VERIFIER_RE.fullmatch(pending.pkce_verifier)
         or not hmac.compare_digest(pending.folder_hmac, cfg.folder_hmac)):
         raise CloudOAuthCustodyBlocked("Untrusted fake cloud OAuth attempt")
+    if owner_session_digest is not None and (type(owner_session_digest) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", owner_session_digest) is None):
+        raise CloudOAuthCustodyBlocked("OAuth browser session binding invalid")
     state_hmac = _tag(mac, pending.state)
     value = {
         "pkce_verifier": pending.pkce_verifier,
@@ -150,6 +154,9 @@ def remember_fake_cloud_attempt(
         "redirect_uri": cfg.redirect_uri,
         "folder_hmac": cfg.folder_hmac,
     }
+    if owner_session_digest is not None:
+        # Only the digest, sealed alongside the PKCE verifier, never the cookie.
+        value["owner_session_digest"] = owner_session_digest
     try:
         _lock(db, cfg.folder_hmac)
         db.query(DriveCloudOAuthAttempt).filter(
@@ -178,11 +185,15 @@ def remember_fake_cloud_attempt(
 
 def claim_fake_cloud_attempt(
     db: Session, *, state: str, now_epoch: int | None = None,
+    owner_session_digest: str | None = None,
 ) -> CloudClaimedAttempt:
     cfg, key, mac = _config(db)
     now = _time(now_epoch)
     if not isinstance(state, str) or not _STATE_RE.fullmatch(state):
         raise CloudOAuthCustodyBlocked("Expired, invalid or replayed cloud consent")
+    if owner_session_digest is not None and (type(owner_session_digest) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", owner_session_digest) is None):
+        raise CloudOAuthCustodyBlocked("OAuth browser session binding invalid")
     state_hmac = _tag(mac, state)
     try:
         _lock(db, cfg.folder_hmac)
@@ -193,7 +204,12 @@ def claim_fake_cloud_attempt(
         if row is None or row.status != "pending" or now >= row.expires_epoch:
             raise CloudOAuthCustodyBlocked("Expired, invalid or replayed cloud consent")
         value = _unseal(key, "attempt:" + state_hmac, row.payload_cipher)
-        if (set(value) != {"pkce_verifier", "client_id", "redirect_uri", "folder_hmac"}
+        expected_fields = {"pkce_verifier", "client_id", "redirect_uri", "folder_hmac"}
+        if owner_session_digest is not None:
+            expected_fields.add("owner_session_digest")
+        if (set(value) != expected_fields
+            or (owner_session_digest is not None and not hmac.compare_digest(
+                value.get("owner_session_digest", ""), owner_session_digest))
             or value["client_id"] != cfg.client_id
             or value["redirect_uri"] != cfg.redirect_uri
             or value["folder_hmac"] != cfg.folder_hmac
