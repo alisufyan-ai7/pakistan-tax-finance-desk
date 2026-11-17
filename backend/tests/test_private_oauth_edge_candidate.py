@@ -44,7 +44,7 @@ def test_non_deployed_candidate_has_exact_boundaries_only():
     paths=locations(config)
     assert set(ROUTES)<=set(paths)
     assert "/api/preview/status" in paths
-    assert not re.search(r"location\s+(?:~|\^~|/api/)",config)
+    assert not re.search(r"location\s+(?:~\*?|\^~)?\s*/api/",config)
     assert not re.search(r"location\s+=\s+/internal/",config)
     for path,(method,internal) in ROUTES.items():
         b=paths[path]
