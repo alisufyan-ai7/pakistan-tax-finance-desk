@@ -15,13 +15,14 @@ depends_on = None
 
 
 def upgrade():
-    op.drop_constraint(
-        "ck_owner_private_recovery_audit_action",
-        "owner_private_recovery_audit", type_="check")
-    op.create_check_constraint(
-        "ck_owner_private_recovery_audit_action",
-        "owner_private_recovery_audit",
-        "action IN ('ISSUED','REDEEMED','REENROLLED')")
+    # SQLite cannot ALTER CHECK constraints in place. Alembic batch mode
+    # rebuilds only this audit table on SQLite; PostgreSQL uses direct ALTER.
+    with op.batch_alter_table("owner_private_recovery_audit") as batch:
+        batch.drop_constraint(
+            "ck_owner_private_recovery_audit_action", type_="check")
+        batch.create_check_constraint(
+            "ck_owner_private_recovery_audit_action",
+            "action IN ('ISSUED','REDEEMED','REENROLLED')")
 
 
 def downgrade():
