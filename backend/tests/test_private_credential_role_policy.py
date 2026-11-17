@@ -26,13 +26,13 @@ class Result:
 class FakePostgres:
     dialect = SimpleNamespace(name="postgresql")
     def __init__(self, *, role=None, db_create=False, schema=(True, False),
-                 table_rights=None, seq_access=0, missing=None):
+                 table_rights=None, seq_access=0, missing=None, isolated=False):
         self.role = (False, False, False, False, False, False, 0) if role is None else role
         self.db_create = db_create
         self.schema = schema
         self.seq_access = seq_access
         self.calls = []
-        names = set(Base.metadata.tables) - set(missing or [])
+        names = (set(PRIVATE_TABLES) if isolated else set(Base.metadata.tables)) - set(missing or [])
         if not PRIVATE_TABLES <= set(Base.metadata.tables):
             raise AssertionError("Private tables must be registered in metadata")
         safe_private = (True, True, True, False, False, False,
@@ -119,3 +119,25 @@ def test_sql_error_does_not_disclose_sensitive_exception_text():
     with pytest.raises(PrivateCredentialRoleBlocked) as exc:
         attest_private_credential_role(conn)
     assert "some-private-railway-value" not in str(exc.value)
+
+
+def test_dedicated_six_table_credential_database_is_supported():
+    conn = FakePostgres(isolated=True)
+    result = attest_private_credential_role(conn)
+    assert result["candidate_credential_tables_attested"] == len(PRIVATE_TABLES) == 6
+    assert result["unexpected_table_privileges"] is False
+    assert not result["production_g2_accepted"]
+
+
+def test_isolated_database_still_denies_sneaky_other_table_or_missing_owner_table():
+    extra = ("owner_auth_schema_version",) + (False,) * 11
+    conn = FakePostgres(isolated=True)
+    conn.tables.append(extra)
+    assert attest_private_credential_role(conn)["unexpected_table_privileges"] is False
+    unsafe = FakePostgres(isolated=True)
+    unsafe.tables.append(("owner_auth_schema_version", True, *(False,)*10))
+    with pytest.raises(PrivateCredentialRoleBlocked):
+        attest_private_credential_role(unsafe)
+    with pytest.raises(PrivateCredentialRoleBlocked):
+        attest_private_credential_role(
+            FakePostgres(isolated=True, missing={"owner_private_recovery_audit"}))
