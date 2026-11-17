@@ -1,6 +1,6 @@
 """P1S: independent read-only PostgreSQL credential-role privilege attestation.
 
-The candidate runtime role may operate ONLY the five private owner/metadata
+The candidate runtime role may operate ONLY the six private owner/metadata
 tables. It MUST NOT read/write economic tables, create objects, inherit more
 powerful roles, use PUBLIC TEMP privileges, or use SQL DELETE/TRUNCATE.
 
