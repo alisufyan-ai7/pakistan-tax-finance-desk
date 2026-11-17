@@ -140,7 +140,7 @@ def _verify(db: Session,row: OwnerPrivateRecoveryState,
     last="0"*64
     for index,event in enumerate(records,1):
         if (event.revision!=index or event.previous_hmac!=last
-            or event.action not in ("ISSUED","REDEEMED")
+            or event.action not in ("ISSUED","REDEEMED","REENROLLED")
             or type(event.row_hmac) is not str
             or type(event.event_hmac) is not str
             or not hmac.compare_digest(event.event_hmac,
