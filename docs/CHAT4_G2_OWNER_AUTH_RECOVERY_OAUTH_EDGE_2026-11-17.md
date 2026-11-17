@@ -1,0 +1,35 @@
+# Chat 04 — G2 owner MFA, one-time recovery, and exact OAuth edge candidate
+
+**Owner direction, 17 November 2026:** proceed with Issue [#126](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/126), after P1M encrypted real-compatible Google metadata grant storage [#125](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/125), while maintaining the canonical complete project handoff. Owner Google Cloud setup (Drive API enabled, External/Testing test owner, restricted metadata scope and exact registered Railway redirect) was previously confirmed. The only real client secret is sealed and **STAGED, not deployed** on the existing private Railway API.
+
+## Independent code slices and evidence
+
+| Lane | PR/merge | Exact-head CI proof | Actual scope |
+|---|---|---|---|
+| **P1N private owner MFA/session** | [#127](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/127) squash `5e75b86b8ca0fb8f31b052834c72e85b3671425c` | [44145242542](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44145242542): **832 backend pytest + PG18 PASS** | Real-compatible but **unmounted** single-owner private scrypt verifier, AES-GCM encrypted TOTP seed, HMAC owner reference, persistent 5-failure throttling/15-min cooldown and serial one-use TOTP step; separately keyed short-lived 15-minute session+CSRF; additive `0019_private_owner_auth` for two private SQL tables |
+| **P1O exact route / log candidate** | [#128](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/128) squash `315fb1fcc84d1d3529d7ae46e321a38ac080bfba` | [44146234043](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44146234043): **837 backend pytest + PG18 PASS** | **Nondeployed** `ops/nginx.personal-cfo-oauth.candidate.conf` exact-route owner authentication/OAuth callback with fixed private upstream, method and Host checks, source-level access/error log suppression and no wildcard `/api/*`; actual public Nginx unchanged. First CI test incorrectly rejected harmless static asset regex locations; narrowed to API wildcard and reran green |
+| **P1P private MFA recovery hold** | [#129](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/129) squash `d91f2f52f5eadd4b8b4a6a1448df94f7dcbbdd25` | [44147806594](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44147806594): **853 backend pytest + PG18 PASS** | Separate encrypted/HMAC one-time recovery code issuance following actual private MFA session+CSRF+password, offline identity-confirmation contract on redemption, authenticated append-only revision audit, atomic used-code lock and **all-session revocation plus permanent recovery-pending hold**; NO automatic login/TOTP reset/recovery hold release. Additive `0020_private_recovery` with two private SQL tables |
+
+## Combined integration (subject to exact-head CI acceptance)
+
+- Cross-lane test recreates a fictional owner MFA enrollment/login → reverified encrypted recovery issue → one-time redemption → session revoked and blocked, and asserts that **P1M Google credential custody stays independently disabled** and empty.
+- Verifies the **public** `frontend/nginx.railway.conf` has no Google callback or owner login while a separate `ops/` candidate exists and only synthetic preview GET is deployed.
+- All actual owner identity/password/TOTP/codes/cookies/client secret/folder ID and financial records remain absent from public GitHub. New migrations `0019` and `0020` were applied in **disposable** PostgreSQL18 CI only; applying them to existing Railway database is a **separate independently reviewed change**.
+- An owner account that redeems a code is deliberately **locked**: future genuine secure re-enrollment with offline independent identity review and approved TOTP rotation/hold-clear/backup recovery remains necessary. This prevents treating a password plus one offline code as a self-service MFA bypass.
+
+## Production G2 acceptance still BLOCKED
+
+1. Independently verified real owner account enrollment and **recoverable new TOTP device** bootstrap/release from pending hold, separate owner-proof evidence and limited administrator permissions. The current `verified_offline_bootstrap` and `independently_verified_offline_owner` flags are **caller contracts, not reliable proof alone**, and NO public owner login/recovery routes are mounted.
+2. Separate P1M refresh-token, P1N owner MFA/session and P1P recovery encryption/HMAC keys, least-privilege private database role, operational key backup/recovery and offsite encrypted restoration drill. Owner sealed client secret remains staged; do NOT apply or retrieve it into chat/GitHub/CI.
+3. Actual Railway TLS trusted-proxy/header sanitization, login abuse rate-limit/DoS for untrusted callers and **verified edge/upstream request-target logs**. Candidate `access_log off` in Nginx source is **not** proof that Railway edge or backend ASGI logs strip Google authorization code/state/queries.
+4. One-time server-side encrypted OAuth state/PKCE bound to the **actual** authenticated SameSite=Lax owner session, exact already-registered GET callback, CSRF+Origin for POST, safe clean redirect, restricted `drive.metadata.readonly` scope, private folder owner metadata verification, tenant/owner isolation and complete paginated scan. Existing public Nginx proxy still has ONLY `GET /api/preview/status`—the candidate must NOT be copied live before independent review.
+5. Actual owner browser consent (owner-approved) only after the above, then explicit staged Railway secret deployment under scoped review. Google External/Testing grants typically expire after 7 days; evaluate restricted-scope publishing/verification before claiming reliable unattended sync.
+6. Independently tested G1 authoritative encrypted finance/restore and G3 genuine bank/FBR/Excel document format parsers remain **BLOCKED** regardless of metadata-only Google OAuth. Owner's accountant FY2025–26 sheet remains a DRAFT.
+
+## GitHub continuity and exact next steps
+
+Open [#126](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/126) remains overall G2 acceptance; [#110](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/110) and [#98](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/98) stay open. **Next code:** independently verified recovery enrollment/reset and actual private owner login HTTP adapter with session/pkce/rate limits, real callback handler and trusted sanitized edge log test, key/DB role restore runbook. **Not** owner client secret reentry, new Google client, or live bank data.
+
+See [current handoff](CURRENT_HANDOFF.md), [G2 release gates](DELIVERY_GATES_AND_RELEASE_READINESS.md), [prior P1M custody](CHAT4_P1M_PRIVATE_METADATA_GRANT_CUSTODY_2026-11-17.md), [P1N focused](CHAT4_P1N_OWNER_IDENTITY_MFA_2026-11-17.md), [P1O focused](CHAT4_P1O_OAUTH_EDGE_CANDIDATE_2026-11-17.md), [P1P focused](CHAT4_P1P_PRIVATE_OWNER_RECOVERY_2026-11-17.md).
+
+**Integration PR, CI, live deployment read-only status:** PENDING at author time. Append accurate exact-head test and Railway observations only when proven.
