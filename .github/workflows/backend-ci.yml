@@ -285,6 +285,45 @@ jobs:
               assert claimed[0]=='claimed' and challenge.pkce_verifier not in str(claimed)
           print('POSTGRES_18_P1E_FAKE_CLOUD_OAUTH_ATOMIC_CUSTODY=PASS')
 
+          # P1F: real disposable PostgreSQL18 enforces exact authenticated
+          # browser-session binding; wrong browser must NOT consume the state.
+          from hashlib import sha256 as p1f_sha256
+          bound_attempt=begin_google_metadata_consent(private_google_configuration())
+          bound_cookie_digest=p1f_sha256(b'SYNTHETIC_ONLY_BROWSER_COOKIE_NOT_REAL').hexdigest()
+          other_cookie_digest=p1f_sha256(b'DIFFERENT_SYNTHETIC_BROWSER_COOKIE').hexdigest()
+          with Session(engine) as scoped:
+              remember_fake_cloud_attempt(
+                  scoped,pending=bound_attempt,now_epoch=1800000010,
+                  owner_session_digest=bound_cookie_digest)
+          with Session(engine) as scoped:
+              try:
+                  claim_fake_cloud_attempt(
+                      scoped,state=bound_attempt.state,now_epoch=1800000011,
+                      owner_session_digest=other_cookie_digest)
+                  raise AssertionError('Wrong browser consumed fake OAuth state')
+              except CloudOAuthCustodyBlocked:
+                  pass
+          with Session(engine) as scoped:
+              valid=claim_fake_cloud_attempt(
+                  scoped,state=bound_attempt.state,now_epoch=1800000012,
+                  owner_session_digest=bound_cookie_digest)
+              assert valid.pkce_verifier==bound_attempt.pkce_verifier
+          with Session(engine) as scoped:
+              try:
+                  claim_fake_cloud_attempt(
+                      scoped,state=bound_attempt.state,now_epoch=1800000013,
+                      owner_session_digest=bound_cookie_digest)
+                  raise AssertionError('Replayed bound state was accepted')
+              except CloudOAuthCustodyBlocked:
+                  pass
+          with engine.connect() as scoped:
+              sealed=scoped.execute(text(
+                  'SELECT payload_cipher FROM drive_cloud_oauth_attempts WHERE status=\'claimed\' '
+                  'ORDER BY expires_epoch DESC LIMIT 1')).scalar_one()
+              assert bound_cookie_digest not in sealed and bound_attempt.pkce_verifier not in sealed
+          print('POSTGRES_18_P1F_SESSION_BOUND_OAUTH_REPLAY=PASS')
+
+
 
 
 
