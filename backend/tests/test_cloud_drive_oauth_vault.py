@@ -131,7 +131,10 @@ def test_fake_grant_encrypted_recoverable_and_revocable(isolated):
         assert FOLDER not in str(row)
     with Session(isolated) as db:
         assert read_fake_cloud_grant(db) == FAKE_GRANT
+    # SQLite's BEGIN IMMEDIATE must begin a fresh write transaction.
+    with Session(isolated) as db:
         disconnect_fake_cloud_grant(db)
+    with Session(isolated) as db:
         with pytest.raises(CloudOAuthCustodyBlocked):
             read_fake_cloud_grant(db)
 
