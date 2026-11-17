@@ -251,6 +251,12 @@ def create_app(database_url: str | None = None):
             media_type="text/javascript", headers={"Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
 
+    @app.get("/document-inbox.mjs", include_in_schema=False)
+    def document_inbox_module(_: Auth):
+        return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "document-inbox.mjs",
+            media_type="text/javascript", headers={"Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"})
+
     @app.get("/demo-data.mjs", include_in_schema=False)
     def fictional_data_module(_: Auth):
         return FileResponse(Path(__file__).resolve().parents[2] / "frontend" / "demo-data.mjs",
