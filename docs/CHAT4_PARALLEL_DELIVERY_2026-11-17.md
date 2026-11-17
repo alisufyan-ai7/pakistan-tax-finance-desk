@@ -30,7 +30,7 @@ Both PRs were independently tested and merged in sequence, starting from verifie
 - **Lane C / G3-plus-PWA:** static synthetic document-review mobile UI and malformed file fixtures, keeping original bytes and real amounts inaccessible.
 - **Lane D / accountant/G4:** pure DRAFT-vs-filed evidence-completeness checks, never a real FBR assessment.
 
-Do not have two lanes alter `models.py`, Alembic head, `g1c_preflight.py` or backend CI simultaneously; serialize common-schema changes under an integration owner. Limit GitHub Actions usage to necessary exact-head checks plus **one combined-main acceptance run**; no new paid runners, cloud providers, credentials or Rails servers.
+Do not have two lanes alter `models.py`, Alembic head, `g1c_preflight.py` or backend CI simultaneously; serialize common-schema changes under an integration owner. Limit GitHub Actions usage to necessary exact-head checks plus **one combined-main acceptance run**; no new paid runners, cloud providers, credentials or Railway services.
 
 ## Non-negotiable dependency gates
 
