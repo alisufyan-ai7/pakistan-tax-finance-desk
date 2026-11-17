@@ -508,6 +508,76 @@ jobs:
                   pass
           print('POSTGRES_18_P1M_ENCRYPTED_OWNER_METADATA_GRANTS=PASS')
 
+          # P1N: invented one-owner MFA on disposable PostgreSQL18, no live identity.
+          import hashlib,hmac
+          from app.private_owner_identity import (
+              enroll_private_owner,issue_private_owner_session,
+              verify_private_owner_session,revoke_private_owner_session,
+              PrivateOwnerIdentityBlocked,
+          )
+          os.environ.update({
+              'P1N_PRIVATE_OWNER_AUTH_ONLY':'1',
+              'P1N_G2_OWNER_IDENTITY_REVIEWED':'1',
+              'P1N_OWNER_ENCRYPTION_KEY':base64.urlsafe_b64encode(b'D'*32).decode(),
+              'P1N_OWNER_IDENTITY_HMAC_KEY':base64.urlsafe_b64encode(b'E'*32).decode(),
+              'P1N_OWNER_SESSION_HMAC_KEY':base64.urlsafe_b64encode(b'F'*32).decode(),
+          })
+          p1n_owner='SYNTHETIC_OWNER_MFA_POSTGRES_2026'
+          p1n_pwd='SYNTHETIC_private_owner_password_2026'
+          p1n_mfa=base64.b32encode(b'K'*20).decode('ascii')
+          p1n_now=1800021000
+          def p1n_pin(now):
+              step=now//30
+              digest=hmac.new(b'K'*20,step.to_bytes(8,'big'),hashlib.sha1).digest()
+              off=digest[-1]&15
+              return f"{(int.from_bytes(digest[off:off+4],'big')&0x7fffffff)%1000000:06d}"
+          with Session(engine) as scoped:
+              enrolled=enroll_private_owner(scoped,owner_ref=p1n_owner,
+                  password=p1n_pwd,totp_secret_base32=p1n_mfa,
+                  now_epoch=p1n_now,verified_offline_bootstrap=True)
+              assert enrolled['private_metadata_owner_enrolled']
+              assert not enrolled['recovery_independently_accepted']
+          from concurrent.futures import ThreadPoolExecutor
+          from threading import Barrier
+          gate=Barrier(2)
+          def p1n_concurrent(_):
+              gate.wait(timeout=10)
+              try:
+                  with Session(engine) as scoped:
+                      return issue_private_owner_session(
+                          scoped,owner_ref=p1n_owner,password=p1n_pwd,
+                          totp_code=p1n_pin(p1n_now),now_epoch=p1n_now)
+              except PrivateOwnerIdentityBlocked:
+                  return None
+          with ThreadPoolExecutor(max_workers=2) as pool:
+              outcomes=list(pool.map(p1n_concurrent,(1,2)))
+          assert sum(x is not None for x in outcomes)==1
+          proof=next(x for x in outcomes if x is not None)
+          with Session(engine) as scoped:
+              assert verify_private_owner_session(
+                  scoped,owner_ref=p1n_owner,token=proof.cookie_token,
+                  csrf=proof.csrf_token,mutation=True,
+                  now_epoch=p1n_now)['private_owner_mfa_session_valid']
+          with engine.connect() as conn:
+              raw=conn.execute(text('SELECT * FROM owner_private_identities')).one()
+              session=conn.execute(text('SELECT * FROM owner_private_sessions')).one()
+              assert all(v not in str(raw)+str(session) for v in (
+                  p1n_owner,p1n_pwd,p1n_mfa,proof.cookie_token,proof.csrf_token))
+          with Session(engine) as scoped:
+              assert revoke_private_owner_session(
+                  scoped,owner_ref=p1n_owner,token=proof.cookie_token,
+                  csrf=proof.csrf_token,now_epoch=p1n_now)['owner_session_revoked']
+          with Session(engine) as scoped:
+              try:
+                  verify_private_owner_session(
+                      scoped,owner_ref=p1n_owner,token=proof.cookie_token,
+                      now_epoch=p1n_now)
+                  raise AssertionError('Revoked owner session accepted')
+              except PrivateOwnerIdentityBlocked:
+                  pass
+          print('POSTGRES_18_P1N_OWNER_MFA_SESSION_THROTTLE=PASS')
+
+
 
 
 
