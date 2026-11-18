@@ -82,7 +82,7 @@ def _reviewed_google_http() -> None:
 def create_review_only_private_google_http_gateway(
     session_factory: Callable[[], Session], *,
     transport: Callable = _http_google,
-    lifespan=None,
+    lifespan=None, metadata_preview: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -213,5 +213,39 @@ def create_review_only_private_google_http_gateway(
             "original_content_import_enabled": False,
             "financial_data_enabled": False,
         }
+
+
+    if metadata_preview:
+        # P1AP remains separately gated; no media/download/finance endpoint.
+        from .private_owner_drive_metadata_preview import (
+            PrivateMetadataSnapshotBlocked, scan_one_owner_folder_metadata,
+        )
+
+        @app.get("/internal/drive/documents/queue")
+        def documents_queue(request: Request):
+            owner = _boundary(request, mutation=False)
+            try:
+                _reviewed_google_http()
+                with session_factory() as db:
+                    verify_private_owner_session(
+                        db, owner_ref=owner,
+                        token=request.cookies.get(_COOKIE, ""),
+                    )
+                report = scan_one_owner_folder_metadata(
+                    session_factory=session_factory, owner_ref=owner,
+                    transport=transport,
+                )
+                return JSONResponse(report, headers={
+                    "Cache-Control": "no-store",
+                    "Referrer-Policy": "no-referrer",
+                })
+            except PrivateOwnerIdentityBlocked:
+                raise HTTPException(
+                    401, "Owner MFA session required"
+                ) from None
+            except Exception:
+                raise HTTPException(
+                    503, "Private metadata review unavailable"
+                ) from None
 
     return app
