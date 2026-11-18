@@ -98,3 +98,20 @@ def test_payload_wrong_key_size_or_duplicate_domains_denied():
     v[custody._SECRET_NAMES[0]]=v[custody._SECRET_NAMES[1]]
     with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
         custody._validate(v)
+
+
+def test_password_is_only_prompted_and_url_escapes_metacharacters(monkeypatch):
+    monkeypatch.setattr(custody.getpass,"getpass",
+                        lambda prompt="":"SYNTHETIC strong password 2026 @:/?&=long")
+    url=custody.build_isolated_credential_dsn()
+    assert url.startswith(
+        "postgresql+psycopg://personal_cfo_owner_credentials:")
+    assert "SYNTHETIC%20strong%20password%202026%20%40%3A%2F%3F%26%3Dlong" in url
+    assert url.endswith(
+        "@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=require")
+
+
+def test_restricted_dsn_refuses_short_db_password(monkeypatch):
+    monkeypatch.setattr(custody.getpass,"getpass",lambda prompt="":"short")
+    with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
+        custody.build_isolated_credential_dsn()
