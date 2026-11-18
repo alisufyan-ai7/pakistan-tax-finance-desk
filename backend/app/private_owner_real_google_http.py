@@ -12,7 +12,9 @@ Google client-secret custody, and owner browser consent are accepted.
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 import os
+import re
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -47,6 +49,8 @@ from .private_owner_identity import (
 _MAX_QUERY = 3072
 _CALLBACK = "/internal/drive/oauth/callback"
 _FINISH = "/owner-login"
+_CALLBACK_KEYS = frozenset({"code", "state", "scope", "authuser", "prompt"})
+_LOG = logging.getLogger("personal_cfo.oauth_callback")
 
 
 class PrivateOwnerGoogleHttpBlocked(ValueError):
@@ -132,17 +136,31 @@ def create_review_only_private_google_http_gateway(
         # ALWAYS return the same fixed 303, including for forged, malformed,
         # expired or replayed requests. Never echo code/state/verifier/token,
         # provider error, owner identity, folder ID or personal filenames.
+        stage = "ingress_or_callback_parameters"
         try:
             owner = _boundary(request, mutation=False, callback_query=True)
             _reviewed_google_http()
             params = request.query_params
+            names = set(params.keys())
+            # Real Google redirects may include optional scope/authuser/prompt
+            # in addition to code and state. Validate each, never accept
+            # duplicated keys or any unrecognized redirect parameters.
             if (len(request.url.query) > _MAX_QUERY
-                or set(params.keys()) != {"state", "code"}
-                or len(params.getlist("state")) != 1
-                or len(params.getlist("code")) != 1):
+                or not {"state", "code"} <= names
+                or not names <= _CALLBACK_KEYS
+                or any(len(params.getlist(name)) != 1 for name in names)
+                or ("scope" in names
+                    and params["scope"] != GOOGLE_METADATA_SCOPE)
+                or ("authuser" in names
+                    and re.fullmatch(r"[0-9]{1,3}", params["authuser"]) is None)
+                or ("prompt" in names and params["prompt"] not in (
+                    "consent", "select_account", "consent select_account",
+                    "select_account consent",
+                ))):
                 raise PrivateOwnerGoogleHttpBlocked(
                     "Unapproved callback parameters"
                 )
+            stage = "session_bound_one_use_pkce"
             with session_factory() as db:
                 # Atomic one-use state claim + commit happens BEFORE network.
                 claim = consume_private_session_google_oauth(
@@ -153,25 +171,28 @@ def create_review_only_private_google_http_gateway(
             if (claim.metadata_only is not True
                 or claim.state_consumed_before_external_exchange is not True):
                 raise PrivateOwnerGoogleHttpBlocked("PKCE claim was not accepted")
+            stage = "google_code_exchange"
             config = private_google_configuration()
             access, refresh = exchange_google_code(
                 code=params["code"], verifier=claim.verifier,
                 config=config, transport=transport,
             )
+            stage = "owner_private_folder_verification"
             verify_owner_private_folder(
                 access_token=access, config=config, transport=transport,
             )
             # Never store refresh token until the folder's identity/visibility
             # and exact metadata scope have been independently authenticated.
+            stage = "encrypted_metadata_grant_storage"
             with session_factory() as db:
                 store_private_metadata_grant(
                     db, owner_ref=owner, folder_id=config.folder_id,
                     client_id=config.client_id, refresh_token=refresh,
                 )
         except Exception:
-            # Safe uniform response. No access/error log of provider URL
-            # may be enabled on ANY edge, ASGI proxy or Google callback.
-            pass
+            # Only an enumerated stage, never exception strings or secrets.
+            # Response is identical for success and failure.
+            _LOG.warning("owner_google_consent_failed stage=%s", stage)
         return RedirectResponse(
             _FINISH, status_code=303,
             headers={"Cache-Control": "no-store", "Pragma": "no-cache",
