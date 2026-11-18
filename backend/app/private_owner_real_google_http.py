@@ -96,7 +96,10 @@ def create_review_only_private_google_http_gateway(
     @app.post("/internal/drive/oauth/start")
     async def start(request: Request):
         owner = _boundary(request, mutation=True)
-        _reviewed_google_http()
+        try:
+            _reviewed_google_http()
+        except PrivateOwnerGoogleHttpBlocked:
+            raise HTTPException(503, "Private Google metadata HTTP disabled") from None
         # No JSON/form body; strict session/csrf and rate gates in P1R.
         if (request.headers.get("content-length", "0") not in ("", "0")
             or request.headers.get("transfer-encoding") is not None
@@ -175,7 +178,10 @@ def create_review_only_private_google_http_gateway(
     @app.get("/internal/drive/oauth/status")
     def status(request: Request):
         owner = _boundary(request, mutation=False)
-        _reviewed_google_http()
+        try:
+            _reviewed_google_http()
+        except PrivateOwnerGoogleHttpBlocked:
+            raise HTTPException(503, "Private Google metadata HTTP disabled") from None
         try:
             with session_factory() as db:
                 verify_private_owner_session(
