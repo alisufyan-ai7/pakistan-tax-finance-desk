@@ -75,7 +75,9 @@ def _boundary(request: Request, *, mutation: bool,
     if mutation and request.headers.get("origin") != _PUBLIC:
         raise HTTPException(status_code=403, detail="Invalid owner request origin")
 
-    owner = os.getenv("P1Q_PRIVATE_OWNER_REF", "")
+    # Reuse the exact owner reference from the private enrollment/key escrow.
+    # No second owner identity or duplicate public gateway owner variable.
+    owner = os.getenv("P1W_OWNER_REF", "")
     if not _OWNER_RE.fullmatch(owner):
         raise HTTPException(status_code=503, detail="Private owner identity not configured")
     return owner
