@@ -41,6 +41,7 @@ _PATHS = frozenset({
     ("POST", "/internal/drive/oauth/start"),
     ("GET", "/internal/drive/oauth/callback"),
     ("GET", "/internal/drive/oauth/status"),
+    ("POST", "/internal/drive/metadata/refresh"),
 })
 _MAX_BODY = 2048
 
