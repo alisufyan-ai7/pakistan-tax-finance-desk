@@ -9,6 +9,12 @@ const feedback = document.getElementById("owner-feedback");
 const logout = document.getElementById("owner-logout");
 const googleStatus = document.getElementById("owner-google-status");
 const googleConnect = document.getElementById("owner-google-connect");
+const documentsPanel = document.getElementById("owner-documents");
+const documentsStatus = document.getElementById("owner-document-status");
+const documentsList = document.getElementById("owner-document-list");
+const documentsRefresh = document.getElementById("owner-documents-refresh");
+const documentsMore = document.getElementById("owner-documents-more");
+let nextDocumentsPage = null;
 
 let csrfToken = null;
 
@@ -80,6 +86,9 @@ logout.addEventListener("click", async () => {
     form.hidden = false;
     show("Signed out.");
     googleStatus.textContent = "Not connected";
+    documentsPanel.hidden = true;
+    documentsList.replaceChildren();
+    nextDocumentsPage = null;
   } catch {
     show("Sign-out confirmation unavailable. Close the tab and let the 15-minute session expire.");
   } finally {
@@ -117,6 +126,8 @@ async function refreshGoogleStatus() {
       : "Not connected. You may authorize your approved Drive folder.";
     googleConnect.textContent = connected ? "Reconnect Google Drive" : "Connect Google Drive";
     googleConnect.disabled = !csrfToken;
+    documentsPanel.hidden = !connected;
+    if (connected && csrfToken) await loadDocumentsPage(false);
   } catch {
     googleStatus.textContent = "Google Drive connection is not activated yet.";
     googleConnect.disabled = true;
@@ -197,3 +208,62 @@ async function resumePrivateOwnerSession() {
   }
 }
 void resumePrivateOwnerSession();
+
+
+async function loadDocumentsPage(next) {
+  if (!validCsrf(csrfToken) || (next && !nextDocumentsPage)) return;
+  const pageToken = next ? nextDocumentsPage : null;
+  documentsRefresh.disabled = true;
+  documentsMore.disabled = true;
+  documentsStatus.textContent = "Reading approved folder metadata…";
+  try {
+    const response = await request(
+      "/api/drive/metadata/page", JSON.stringify({ page_token: pageToken }),
+      csrfToken,
+    );
+    if (!response.ok) throw new Error("Private folder not available");
+    const data = await response.json();
+    if (data?.contract !== "personal_cfo_private_live_folder_metadata_v1" ||
+        data.metadata_only !== true ||
+        data.one_pinned_folder_only !== true ||
+        data.original_file_bytes_imported !== false ||
+        data.financial_data_enabled !== false ||
+        data.background_sync_active !== false ||
+        !Array.isArray(data.files) || data.files.length > 100 ||
+        (data.next_page_token !== null &&
+         (typeof data.next_page_token !== "string" ||
+          data.next_page_token.length > 1024))) {
+      throw new Error("Untrusted Drive metadata response");
+    }
+    if (!next) documentsList.replaceChildren();
+    for (const file of data.files) {
+      if (typeof file?.name !== "string" || file.name.length > 512 ||
+          typeof file?.mime_type !== "string") {
+        throw new Error("Invalid folder metadata entry");
+      }
+      const li = document.createElement("li");
+      const name = document.createElement("strong");
+      name.textContent = file.name; // No HTML interpretation of filenames.
+      const meta = document.createElement("span");
+      const type = file.mime_type.split("/").pop() || "file";
+      const date = typeof file.modified_time === "string"
+        ? " · " + file.modified_time.slice(0, 10) : "";
+      meta.textContent = type + date;
+      li.append(name, meta);
+      documentsList.appendChild(li);
+    }
+    nextDocumentsPage = data.next_page_token;
+    documentsStatus.textContent = documentsList.children.length +
+      " document names shown. No file content has been downloaded.";
+    documentsMore.hidden = !nextDocumentsPage;
+  } catch {
+    nextDocumentsPage = null;
+    documentsMore.hidden = true;
+    documentsStatus.textContent = "Drive filenames are not available yet. Please try refreshing.";
+  } finally {
+    documentsRefresh.disabled = false;
+    documentsMore.disabled = false;
+  }
+}
+documentsRefresh.addEventListener("click", () => void loadDocumentsPage(false));
+documentsMore.addEventListener("click", () => void loadDocumentsPage(true));
