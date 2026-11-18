@@ -1,0 +1,22 @@
+# P1AI — Source-only single-owner private login ASGI runtime (Chat06)
+
+**Scope:** after [merged P1AH #162](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/162) and its [exact-head CI 44319243531](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44319243531) (1,056 synthetic tests + disposable PG18 PASS), prepare a **separately launched, private-only owner login service**. This is NOT a live Railway/public deployment, not browser login acceptance, and not an OAuth exchange.
+
+## Source change
+
+- `backend/app/private_owner_login_service.py` exposes **a factory**, `create_review_only_private_owner_login_service()`. It does not define a module-global ASGI app or alter `app.preview_api` or either live Dockerfile/Nginx config.
+- The factory configures the existing P1Q **three routes only** (`POST /internal/drive/auth/login`, `GET /internal/drive/auth/session`, `POST /internal/drive/auth/logout`). No `/api/` route, signup, recovery operator endpoint, Google callback/grant, financial table or original file import.
+- Actual app startup is gated by explicit, reviewed `P1AI_PRIVATE_OWNER_SERVICE_ONLY=1` and `P1AI_G2_RUNTIME_INDEPENDENTLY_REVIEWED=1`, *plus* earlier private G2/P1N/P1Q/P1S flags, exact already approved Railway project/environment/service, `APP_DATA_MODE=synthetic`, restricted `P1W_OWNER_REF`, distinct five keys, offline public recovery signer and independent server-provided gateway token. Merely merging code does not set any flag.
+- Before a request can run, the startup makes a bounded connection using the preexisting **owner-auth-only TLS DSN** (never financial `DATABASE_URL`, public DB or superuser), checks actual PostgreSQL TLS/TCP and restricted role, runs the P1S least-privilege attestation, and in a READ ONLY transaction confirms exactly one enrolled owner, exactly one recovery state and a nonempty recovery audit. Only aggregate counts are read; no plaintext TOTP/password/recovery row is returned. Startup failures suppress SQL/DSN/secret details and dispose the connection pool.
+- Existing private MFA request guards, CSRF/cookies, sessions and persistent throttling are reused unchanged. This source-only assembly does not bypass the baseline security review.
+- Synthetic adversarial tests require failure before DB creation when approval gates are missing; reject wrong Railway target, `real` mode, invalid gateway key, missing owner, missing/wrong recovery, multiple owners and non-TLS; check successful synthetic factory has exactly three internal auth paths and no Google/finance path; assert preview runtime still has no private auth routes.
+
+## What is NOT done, and why
+
+**No extra operator steps are required for this source milestone.** This new factory is deliberately not launched by `backend/Dockerfile.preview` (nor by public frontend Dockerfile), and there is no reviewed public login/OAuth gateway. Running Uvicorn with its default access logs is **not approved**, since request-target/cookie/code/state logging must be independently controlled. No additional Railway Variables, project/service or Google Cloud resources were created. The source code does not itself establish authentication or privacy of the Railway edge, acceptance of real owner recovery, or original financial-data security.
+
+**Critical live acceptance remains:** approved single-owner login process/safe log startup, private-only bind and authenticated gateway route, shared-token custody and rotation, TLS/Host/Origin/CSRF/rate and edge/upstream access/error logs, exact callback and session-bound real Google token exchange, owner browser consent, one-folder metadata heartbeat and authenticated Documents queue. G1/G3 original-byte/financial authority still blocked.
+
+**Owner preference carried forward:** three existing encrypted owner-recovery files are independently copied to two locations (owner-reported). Do not repeat copy instructions or demand the offline restore exercise during independent source engineering. A real local credential restore remains untested and is a separately tracked G2 acceptance requirement at release time—not evidence that can be invented by synthetic CI.
+
+Next potential independent code slice: attach the reviewed private login runtime to an exact-route private ingress acceptance candidate and build no-sensitive-request-target process/log tests with synthetic callback query fixtures before any live public access or staged Google client-secret application.
