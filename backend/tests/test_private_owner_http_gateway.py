@@ -45,7 +45,7 @@ def client(monkeypatch,tmp_path):
         "P1Q_PRIVATE_HTTP_GATEWAY_ONLY": "1",
         "P1Q_G2_PRIVATE_INGRESS_REVIEWED": "1",
         "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN": SECRET,
-        "P1Q_PRIVATE_OWNER_REF": OWNER,
+        "P1W_OWNER_REF": OWNER,
     }
     for name, value in env.items():
         monkeypatch.setenv(name,value)
@@ -162,9 +162,9 @@ def test_default_off_real_finance_missing_owner_and_wrong_gateway_secret_block(c
     monkeypatch.setenv("APP_DATA_MODE","real")
     assert login(c).status_code == 503
     monkeypatch.setenv("APP_DATA_MODE","synthetic")
-    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF","")
+    monkeypatch.setenv("P1W_OWNER_REF","")
     assert login(c).status_code == 503
-    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF",OWNER)
+    monkeypatch.setenv("P1W_OWNER_REF",OWNER)
     monkeypatch.setenv("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN","bad")
     assert login(c).status_code == 403
 
