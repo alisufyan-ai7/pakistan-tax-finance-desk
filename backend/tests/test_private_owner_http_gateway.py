@@ -167,3 +167,27 @@ def test_default_off_real_finance_missing_owner_and_wrong_gateway_secret_block(c
     monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF",OWNER)
     monkeypatch.setenv("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN","bad")
     assert login(c).status_code == 403
+
+
+
+def test_duplicate_valid_login_members_and_transfer_encoding_denied(client):
+    c, _, _ = client
+    # All individual values are otherwise valid. A parser that silently
+    # accepts the last repeated member can create credential ambiguity.
+    for duplicated in (
+        ('{"password":"' + PASSWORD + '","password":"' + PASSWORD
+         + '","totp_code":"' + otp() + '"}'),
+        ('{"password":"' + PASSWORD + '","totp_code":"' + otp()
+         + '","totp_code":"' + otp() + '"}'),
+    ):
+        response = c.post(
+            "/internal/drive/auth/login",
+            headers={**headers(), "content-type": "application/json"},
+            content=duplicated.encode("ascii"),
+        )
+        assert response.status_code == 400
+        assert PASSWORD not in response.text
+        assert SEED not in response.text
+
+    # No replay counter should have been consumed by malformed JSON.
+    assert login(c).status_code == 200
