@@ -9,6 +9,10 @@ const feedback = document.getElementById("owner-feedback");
 const logout = document.getElementById("owner-logout");
 const googleStatus = document.getElementById("owner-google-status");
 const googleConnect = document.getElementById("owner-google-connect");
+const documentsPanel = document.getElementById("owner-documents");
+const documentsStatus = document.getElementById("owner-document-status");
+const documentsList = document.getElementById("owner-document-list");
+const documentsRefresh = document.getElementById("owner-documents-refresh");
 
 let csrfToken = null;
 
@@ -80,6 +84,8 @@ logout.addEventListener("click", async () => {
     form.hidden = false;
     show("Signed out.");
     googleStatus.textContent = "Not connected";
+    documentsPanel.hidden = true;
+    documentsList.replaceChildren();
   } catch {
     show("Sign-out confirmation unavailable. Close the tab and let the 15-minute session expire.");
   } finally {
@@ -117,6 +123,8 @@ async function refreshGoogleStatus() {
       : "Not connected. You may authorize your approved Drive folder.";
     googleConnect.textContent = connected ? "Reconnect Google Drive" : "Connect Google Drive";
     googleConnect.disabled = !csrfToken;
+    documentsPanel.hidden = !connected;
+    if (connected && csrfToken) await refreshDocuments();
   } catch {
     googleStatus.textContent = "Google Drive connection is not activated yet.";
     googleConnect.disabled = true;
@@ -197,3 +205,55 @@ async function resumePrivateOwnerSession() {
   }
 }
 void resumePrivateOwnerSession();
+
+
+async function refreshDocuments() {
+  if (!validCsrf(csrfToken)) return;
+  documentsRefresh.disabled = true;
+  documentsStatus.textContent = "Checking your approved Drive folder…";
+  try {
+    const response = await request("/api/drive/metadata/refresh", "", csrfToken);
+    if (!response.ok) throw new Error("Approved folder metadata unavailable");
+    const data = await response.json();
+    if (data?.contract !== "personal_cfo_owner_metadata_review_preview_v1" ||
+        data.connection !== "APPROVED_METADATA_GRANT_USED" ||
+        data.folder !== "ONE_OWNER_APPROVED_FOLDER" ||
+        data.snapshot_complete !== true ||
+        data.snapshot_persisted !== false ||
+        data.background_sync_active !== false ||
+        data.source_bytes_downloaded !== false ||
+        data.real_financial_data_enabled !== false ||
+        !Array.isArray(data.items) || data.items.length > 1000 ||
+        data.total !== data.items.length) {
+      throw new Error("Untrusted owner metadata snapshot");
+    }
+    documentsList.replaceChildren();
+    for (const item of data.items) {
+      if (typeof item?.display_name !== "string" ||
+          item.display_name.length > 512 ||
+          typeof item.virtual_collection !== "string" ||
+          item.financial_claims_verified !== false ||
+          item.original_content_imported !== false) {
+        throw new Error("Untrusted metadata item");
+      }
+      const li = document.createElement("li");
+      const title = document.createElement("strong");
+      title.textContent = item.display_name;
+      const info = document.createElement("span");
+      info.textContent = item.virtual_collection.replaceAll("_", " ") +
+        (typeof item.modified_time === "string"
+          ? " · " + item.modified_time.slice(0, 10) : "");
+      li.append(title, info);
+      documentsList.appendChild(li);
+    }
+    documentsStatus.textContent = data.items.length +
+      " document names verified in the approved folder. No files downloaded.";
+  } catch {
+    documentsList.replaceChildren();
+    documentsStatus.textContent =
+      "Document metadata is not available yet. Please try again later.";
+  } finally {
+    documentsRefresh.disabled = false;
+  }
+}
+documentsRefresh.addEventListener("click", () => void refreshDocuments());
