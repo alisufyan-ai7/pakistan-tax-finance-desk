@@ -194,7 +194,7 @@ def _private_export(recipient: str) -> dict:
     )
     try:
         with engine.connect() as conn:
-            conn.execute(text("SET TRANSACTION READ ONLY"))
+            conn.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"))
             row = conn.execute(text(
                 "SELECT current_database(), current_user, "
                 "(SELECT ssl FROM pg_catalog.pg_stat_ssl WHERE pid=pg_backend_pid()), "
@@ -209,7 +209,7 @@ def _private_export(recipient: str) -> dict:
                 # Names are source-constant whitelist, not user-controlled SQL.
                 values[name] = [
                     dict(row) for row in conn.execute(
-                        text(f"SELECT * FROM public.{name}")
+                        text(f"SELECT * FROM public.{name} LIMIT 101")
                     ).mappings().all()
                 ]
             payload = _validate_snapshot({
