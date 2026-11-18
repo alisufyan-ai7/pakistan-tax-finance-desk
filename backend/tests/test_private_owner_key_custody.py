@@ -115,3 +115,50 @@ def test_restricted_dsn_refuses_short_db_password(monkeypatch):
     monkeypatch.setattr(custody.getpass,"getpass",lambda prompt="":"short")
     with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
         custody.build_isolated_credential_dsn()
+
+
+def test_private_railway_upload_uses_stdin_and_never_deploys_or_touches_google(tmp_path,monkeypatch):
+    path=tmp_path/"escrow.enc"
+    custody.create(str(path))
+    received=[]
+    monkeypatch.setattr(custody.shutil,"which",lambda name:"/usr/bin/railway")
+    monkeypatch.setattr("builtins.input",lambda prompt="":"CONFIGURE PRIVATE API WITHOUT DEPLOY")
+    def fake_run(argv,**kwargs):
+        received.append((argv,kwargs))
+        return SimpleNamespace(returncode=0,stdout="secret-name only",stderr="")
+    monkeypatch.setattr(custody.subprocess,"run",fake_run)
+    report=custody.configure_private_railway_without_deploy(
+        str(path),backed_up_independently=True)
+    assert report["private_railway_variables_written"]==7
+    assert report["redeployment_triggered_by_this_command"] is False
+    assert not report["google_secret_touched"]
+    assert len(received)==7
+    names={args[3] for args,_ in received}
+    assert names==set(custody._SECRET_NAMES)|{
+        custody._OWNER_NAME,"P1W_OWNER_CREDENTIAL_DATABASE_URL"}
+    for args,kwargs in received:
+        assert args[:3]==["railway","variable","set"]
+        assert "--stdin" in args
+        assert "--skip-deploys" in args
+        assert args[args.index("--service")+1]=="personal-cfo-api-preview"
+        assert args[args.index("--environment")+1]=="development"
+        assert "--project" in args
+        assert kwargs["input"] and isinstance(kwargs["input"],str)
+        assert kwargs["capture_output"] is True
+        assert kwargs["check"] is False
+        assert kwargs["input"] not in " ".join(args)
+        assert "P1C_GOOGLE_CLIENT_SECRET" not in " ".join(args)
+
+
+def test_upload_refuses_without_backup_or_final_operator_confirmation(tmp_path,monkeypatch):
+    path=tmp_path/"escrow.enc"
+    custody.create(str(path))
+    monkeypatch.setattr(custody.shutil,"which",lambda name:"/usr/bin/railway")
+    monkeypatch.setattr("builtins.input",lambda prompt="":"No")
+    monkeypatch.setattr(custody.subprocess,"run",
+        lambda *a,**k:pytest.fail("Railway must not be called"))
+    with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
+        custody.configure_private_railway_without_deploy(str(path))
+    with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
+        custody.configure_private_railway_without_deploy(
+            str(path),backed_up_independently=True)
