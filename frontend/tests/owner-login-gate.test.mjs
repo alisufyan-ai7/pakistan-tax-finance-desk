@@ -22,7 +22,7 @@ test("exact three public login routes are disabled unless independently enabled"
   assert.ok(conf.includes('set $p1ak_owner_ingress "${P1AK_OWNER_INGRESS_ENABLED}";'));
   assert.ok(conf.includes('set $p1ak_gateway_token "${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";'));
   assert.ok(!conf.includes('location /api/'));
-  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 7);
+  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 8);
   for (const [path, [method, internal]] of publicRoutes) {
     const b = blocks.get(path);
     assert.ok(b, path);
@@ -170,5 +170,36 @@ test("post-redirect session resumes Google status with memory-only CSRF", () => 
   for (const forbidden of ["localStorage.setItem","sessionStorage.setItem",
                            "document.cookie =", "console.log"]) {
     assert.ok(!js.includes(forbidden), forbidden);
+  }
+});
+
+
+test("one-folder metadata snapshot route is default-off, body/query clean and private", () => {
+  const conf = read("nginx.railway.conf"), blocks = locations(conf);
+  const route = blocks.get("/api/drive/metadata/refresh");
+  assert.ok(route);
+  for (const required of [
+    'if ($p1ao_google_ingress != "1") { return 404; }',
+    'if ($p1ak_owner_ingress != "1") { return 404; }',
+    'if ($p1ak_gateway_token = "") { return 503; }',
+    'if ($request_method != "POST") { return 405; }',
+    'if ($args != "") { return 400; }',
+    'proxy_pass http://$private_google_upstream/internal/drive/metadata/refresh;',
+    'proxy_set_header Forwarded "";',
+    'proxy_set_header X-Forwarded-Proto https;',
+    'access_log off;', 'error_log /dev/null crit;',
+  ]) assert.ok(route.includes(required),required);
+  assert.ok(!conf.includes("location /api/"));
+  const html = read("owner-login.html"), js=read("owner-login.mjs");
+  assert.ok(html.includes('id="owner-document-list"'));
+  assert.ok(html.includes('id="owner-documents-refresh"'));
+  assert.ok(js.includes('"/api/drive/metadata/refresh"'));
+  assert.ok(js.includes('data.snapshot_complete !== true'));
+  assert.ok(js.includes('data.source_bytes_downloaded !== false'));
+  assert.ok(js.includes('title.textContent = item.display_name'));
+  assert.ok(js.includes('documentsList.appendChild(li)'));
+  for (const disallowed of ["localStorage.setItem","sessionStorage.setItem",
+                           "innerHTML", "document.cookie ="]) {
+    assert.ok(!js.includes(disallowed),disallowed);
   }
 });

@@ -29,6 +29,9 @@ from .private_metadata_grant_custody import (
     PrivateMetadataCustodyBlocked, read_private_metadata_grant,
     store_private_metadata_grant,
 )
+from .private_owner_drive_metadata_preview import (
+    scan_one_owner_folder_metadata, PrivateMetadataSnapshotBlocked,
+)
 from .private_owner_google_oauth_state import (
     PrivateOAuthStateBlocked, begin_private_session_google_oauth,
     consume_private_session_google_oauth,
@@ -213,5 +216,39 @@ def create_review_only_private_google_http_gateway(
             "original_content_import_enabled": False,
             "financial_data_enabled": False,
         }
+
+    @app.post("/internal/drive/metadata/refresh")
+    async def metadata_refresh(request: Request):
+        """One complete approved-folder snapshot, no media or raw Drive IDs."""
+        owner = _boundary(request, mutation=True)
+        try:
+            _reviewed_google_http()
+        except PrivateOwnerGoogleHttpBlocked:
+            raise HTTPException(503, "Private Documents unavailable") from None
+        if (request.headers.get("content-length", "0") not in ("0", "")
+            or request.headers.get("transfer-encoding") is not None
+            or await request.body()):
+            raise HTTPException(400, "Private Documents requires empty POST")
+        try:
+            with session_factory() as db:
+                verify_private_owner_session(
+                    db, owner_ref=owner,
+                    token=request.cookies.get(_COOKIE, ""),
+                    csrf=request.headers.get(_CSRF_HEADER, ""),
+                    mutation=True,
+                )
+        except PrivateOwnerIdentityBlocked:
+            raise HTTPException(401, "Owner MFA/CSRF required") from None
+        try:
+            # Reuse the independently accepted P1AP bounded, all-or-nothing,
+            # private owner-only snapshot. No user-supplied folder/cursor.
+            data = scan_one_owner_folder_metadata(
+                session_factory=session_factory,
+                owner_ref=owner, transport=transport,
+            )
+        except PrivateMetadataSnapshotBlocked:
+            raise HTTPException(503, "Private Documents unavailable") from None
+        return JSONResponse(data)
+
 
     return app

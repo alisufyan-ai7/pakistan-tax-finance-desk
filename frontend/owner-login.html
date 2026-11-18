@@ -29,6 +29,13 @@
         <p id="owner-google-status">Checking your private connection…</p>
         <button id="owner-google-connect" type="button">Connect Google Drive</button>
       </section>
+      <section id="owner-documents" class="google-panel" aria-labelledby="owner-documents-title" hidden>
+        <h3 id="owner-documents-title">Your Drive Documents</h3>
+        <p>Live metadata from your approved folder only. Nothing has been imported into the financial ledger.</p>
+        <p id="owner-document-status" role="status" aria-live="polite"></p>
+        <ul id="owner-document-list" class="document-list"></ul>
+        <button id="owner-documents-refresh" type="button" class="secondary">Refresh document list</button>
+      </section>
       <button id="owner-logout" type="button" class="secondary">Sign out</button>
     </section>
     <p class="feedback" id="owner-feedback" role="status" aria-live="polite"></p>
