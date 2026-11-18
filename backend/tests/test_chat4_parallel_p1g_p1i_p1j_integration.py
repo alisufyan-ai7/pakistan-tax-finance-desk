@@ -54,7 +54,8 @@ def test_combined_private_and_public_route_firewalls_hold():
     assert "location = /api/preview/status" in nginx
     assert "location /api/" not in nginx
     assert "location = /api/drive/oauth/callback" not in nginx
-    assert "location = /api/owner/login" not in nginx
+    assert "location = /api/owner/login" in nginx
+    assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in nginx
     app=(Path(__file__).parents[1]/"app/preview_api.py").read_text()
     assert "owner_login_http_candidate" not in app
     assert "drive_scan_lease" not in app
