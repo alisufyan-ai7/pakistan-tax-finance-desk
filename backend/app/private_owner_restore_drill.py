@@ -18,6 +18,7 @@ import getpass
 import hmac
 import io
 import json
+import os
 from pathlib import Path
 import secrets
 import shutil
@@ -203,9 +204,24 @@ def _inside(container: str, *, database: str, sql: str) -> str:
 
 def _docker_rehearsal(payload: dict) -> dict:
     """No live DB contact: one-use RAM disk, isolated Docker network only."""
-    if not shutil.which("docker"):
+    if sys.platform != "darwin" or not shutil.which("docker"):
         raise PrivateOwnerRestoreDrillBlocked(
-            "Local Docker required for disposable PostgreSQL restore drill"
+            "Trusted local Mac Docker required for disposable restore drill"
+        )
+    # Never export recovered owner credentials to a remote Docker daemon.
+    # Even a context on the Mac can be overridden by DOCKER_HOST.
+    docker_host = os.environ.get("DOCKER_HOST", "")
+    if docker_host and not docker_host.startswith("unix://"):
+        raise PrivateOwnerRestoreDrillBlocked(
+            "Remote Docker credential recovery is forbidden"
+        )
+    endpoint = _run([
+        "docker", "context", "inspect", "--format",
+        "{{.Endpoints.docker.Host}}",
+    ], timeout=15).stdout.strip()
+    if not endpoint.startswith("unix://"):
+        raise PrivateOwnerRestoreDrillBlocked(
+            "Remote Docker credential recovery is forbidden"
         )
     container = "personal-cfo-owner-drill-" + secrets.token_hex(6)
     created = False
