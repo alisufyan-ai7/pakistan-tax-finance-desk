@@ -29,6 +29,8 @@ import os
 from pathlib import Path
 import re
 import secrets
+import shutil
+import subprocess
 import sys
 from urllib.parse import quote
 
@@ -218,6 +220,61 @@ def build_isolated_credential_dsn() -> str:
     )
 
 
+def configure_private_railway_without_deploy(
+    value: str, *, backed_up_independently: bool = False,
+) -> dict:
+    """Owner-authenticated Railway CLI only; never put secrets in argv/logs.
+
+    This writes only the seven private owner variables (five distinct keys,
+    opaque owner ref and restricted role URL) to the existing development API.
+    It does not set any G2 review switches, start MFA enrollment, redeploy
+    the API, apply the staged Google secret or import a financial document.
+    """
+    _tty()
+    if backed_up_independently is not True:
+        raise LocalOwnerKeyCustodyBlocked(
+            "Independently backed-up escrow must be confirmed first")
+    if not shutil.which("railway"):
+        raise LocalOwnerKeyCustodyBlocked("Railway CLI is not installed")
+    payload = _open(value)
+    dsn = build_isolated_credential_dsn()
+    approved = input(
+        "Type CONFIGURE PRIVATE API WITHOUT DEPLOY to proceed: ").strip()
+    if approved != "CONFIGURE PRIVATE API WITHOUT DEPLOY":
+        raise LocalOwnerKeyCustodyBlocked("Owner did not authorize upload")
+    variables = {name: payload[name] for name in (*_SECRET_NAMES, _OWNER_NAME)}
+    variables["P1W_OWNER_CREDENTIAL_DATABASE_URL"] = dsn
+    configured = 0
+    for name, secret in variables.items():
+        command = [
+            "railway", "variable", "set", name, "--stdin",
+            "--project", "7021b227-f704-43d6-bcff-debdb7255b81",
+            "--environment", "development",
+            "--service", "personal-cfo-api-preview",
+            "--skip-deploys",
+        ]
+        try:
+            result = subprocess.run(
+                command, input=secret, capture_output=True,
+                text=True, timeout=45, check=False,
+            )
+            if result.returncode != 0:
+                raise RuntimeError()
+        except Exception:
+            raise LocalOwnerKeyCustodyBlocked(
+                "Private Railway configuration stopped; check variables by NAME only, "
+                "do not paste CLI output into chat") from None
+        configured += 1
+    return {
+        "private_railway_variables_written": configured,
+        "redeployment_triggered_by_this_command": False,
+        "google_secret_touched": False,
+        "owner_enrollment_activated": False,
+        "g2_approved_by_this_command": False,
+        "restricted_database_url_value_printed": False,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Owner-side encrypted runtime key escrow, never run in CI or Railway")
@@ -228,9 +285,18 @@ def main(argv: list[str] | None = None) -> int:
         if command == "reveal":
             entry.add_argument("variable_name", choices=sorted(_ALL))
     sub.add_parser("dsn", help="Build a restricted private Railway URL from a hidden password prompt")
+    upload = sub.add_parser("configure-private-railway", help="Write escrowed secrets only to the reviewed private API without redeployment")
+    upload.add_argument("absolute_encrypted_file")
+    upload.add_argument("--confirmed-independent-backup", action="store_true", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "dsn":
+        if args.command == "configure-private-railway":
+            print(json.dumps(
+                configure_private_railway_without_deploy(
+                    args.absolute_encrypted_file,
+                    backed_up_independently=args.confirmed_independent_backup),
+                sort_keys=True))
+        elif args.command == "dsn":
             print("SECRET — copy only into the private Railway variable P1W_OWNER_CREDENTIAL_DATABASE_URL; never into chat:", file=sys.stderr)
             print(build_isolated_credential_dsn())
         elif args.command == "create":
