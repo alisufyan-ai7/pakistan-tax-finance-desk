@@ -9,6 +9,11 @@ const feedback = document.getElementById("owner-feedback");
 const logout = document.getElementById("owner-logout");
 const googleStatus = document.getElementById("owner-google-status");
 const googleConnect = document.getElementById("owner-google-connect");
+const documentsPanel = document.getElementById("owner-documents");
+const documentsRefresh = document.getElementById("owner-documents-refresh");
+const documentsStatus = document.getElementById("owner-documents-status");
+const documentsList = document.getElementById("owner-documents-list");
+
 
 let csrfToken = null;
 
@@ -80,6 +85,10 @@ logout.addEventListener("click", async () => {
     form.hidden = false;
     show("Signed out.");
     googleStatus.textContent = "Not connected";
+    documentsPanel.hidden = true;
+    documentsList.replaceChildren();
+    documentsStatus.textContent = "";
+
   } catch {
     show("Sign-out confirmation unavailable. Close the tab and let the 15-minute session expire.");
   } finally {
@@ -117,9 +126,16 @@ async function refreshGoogleStatus() {
       : "Not connected. You may authorize your approved Drive folder.";
     googleConnect.textContent = connected ? "Reconnect Google Drive" : "Connect Google Drive";
     googleConnect.disabled = !csrfToken;
+    documentsPanel.hidden = !connected;
+    if (!connected) {
+      documentsList.replaceChildren();
+      documentsStatus.textContent = "";
+    }
   } catch {
     googleStatus.textContent = "Google Drive connection is not activated yet.";
     googleConnect.disabled = true;
+    documentsPanel.hidden = true;
+    documentsList.replaceChildren();
   }
 }
 
@@ -169,6 +185,68 @@ googleConnect.addEventListener("click", async () => {
     googleConnect.disabled = !csrfToken;
   }
 });
+
+
+async function refreshPrivateDocuments() {
+  if (!validCsrf(csrfToken) || documentsPanel.hidden) return;
+  documentsRefresh.disabled = true;
+  documentsStatus.textContent = "Checking the approved folder metadata…";
+  documentsList.replaceChildren();
+  try {
+    const response = await fetch("/api/drive/documents/queue", {
+      credentials: "same-origin",
+      mode: "same-origin",
+      cache: "no-store",
+      redirect: "error",
+      referrerPolicy: "no-referrer",
+    });
+    if (!response.ok) throw Error("Private Documents check unavailable");
+    const data = await response.json();
+    if (data?.contract !== "personal_cfo_owner_metadata_review_preview_v1" ||
+        data.folder !== "ONE_OWNER_APPROVED_FOLDER" ||
+        data.snapshot_complete !== true ||
+        data.snapshot_persisted !== false ||
+        data.background_sync_active !== false ||
+        data.source_bytes_downloaded !== false ||
+        data.financial_claims_verified !== false ||
+        data.real_financial_data_enabled !== false ||
+        !Number.isInteger(data.total) || data.total < 0 || data.total > 1000 ||
+        !Array.isArray(data.items) || data.items.length !== data.total) {
+      throw Error("Incomplete or untrusted owner review data");
+    }
+    for (const item of data.items.slice(0, 150)) {
+      if (typeof item?.display_name !== "string" ||
+          !item.display_name.trim() || item.display_name.length > 255 ||
+          typeof item.virtual_collection !== "string" ||
+          !/^[a-z_]{3,48}$/.test(item.virtual_collection) ||
+          typeof item.review_status !== "string" ||
+          !/^[a-z_]{3,64}$/.test(item.review_status) ||
+          item.original_content_imported !== false ||
+          item.financial_claims_verified !== false) {
+        throw Error("Unverified file metadata");
+      }
+      const entry = document.createElement("li");
+      const title = document.createElement("strong");
+      title.textContent = item.display_name;
+      const category = document.createElement("small");
+      category.textContent = item.virtual_collection.replaceAll("_", " ") +
+        " · " + item.review_status.replaceAll("_", " ");
+      entry.append(title, category);
+      documentsList.append(entry);
+    }
+    documentsStatus.textContent = data.total === 0
+      ? "No files found in your approved folder."
+      : data.total + " file metadata entries checked" +
+        (data.total > 150 ? " (first 150 shown)" : "") +
+        ". No contents downloaded. This is an on-demand review, not background sync.";
+  } catch {
+    documentsList.replaceChildren();
+    documentsStatus.textContent = "Document metadata check is not activated or is unavailable.";
+  } finally {
+    documentsRefresh.disabled = false;
+  }
+}
+documentsRefresh.addEventListener("click", refreshPrivateDocuments);
 
 // Google's same-tab callback retains only the Secure HttpOnly session cookie.
 // Retrieve a freshly authenticated CSRF proof after the full-page redirect;
