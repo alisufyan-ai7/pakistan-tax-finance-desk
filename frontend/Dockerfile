@@ -7,7 +7,7 @@ FROM nginxinc/nginx-unprivileged:stable-alpine
 ENV NGINX_ENVSUBST_FILTER="^(PREVIEW_INTERNAL_TOKEN|P1AK_OWNER_INGRESS_ENABLED|P1Q_PRIVATE_GATEWAY_SHARED_TOKEN)$"
 COPY nginx.railway.conf /etc/nginx/templates/default.conf.template
 COPY nginx.owner-rate-zones.conf /etc/nginx/conf.d/00-personal-cfo-rates.conf
-COPY owner-login.html owner-login.mjs /usr/share/nginx/html/
+COPY owner-login.html owner-login.mjs owner-login.css /usr/share/nginx/html/
 COPY index.html ui.css ui.mjs demo-data.mjs document-inbox.mjs owner-setup.mjs /usr/share/nginx/html/
 COPY manifest.webmanifest sw.js pwa.mjs pwa.css /usr/share/nginx/html/
 COPY icons/ /usr/share/nginx/html/icons/
