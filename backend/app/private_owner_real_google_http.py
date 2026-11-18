@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import os
+import json
+import re
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -24,6 +26,7 @@ from .drive_google_oauth import (
 )
 from .private_drive_google_http import (
     _http_google, exchange_google_code, verify_owner_private_folder,
+    refresh_google_access_token, list_private_owner_folder_page,
 )
 from .private_metadata_grant_custody import (
     PrivateMetadataCustodyBlocked, read_private_metadata_grant,
@@ -34,7 +37,7 @@ from .private_owner_google_oauth_state import (
     consume_private_session_google_oauth,
 )
 from .private_owner_http_gateway import (
-    _boundary, _COOKIE, _CSRF_HEADER,
+    _boundary, _COOKIE, _CSRF_HEADER, _unique_json_pairs,
     create_private_owner_http_gateway,
 )
 from .private_owner_identity import (
@@ -211,6 +214,114 @@ def create_review_only_private_google_http_gateway(
             "google_drive_app_connected": connected,
             "last_successful_app_sync": None,
             "original_content_import_enabled": False,
+            "financial_data_enabled": False,
+        }
+
+
+    @app.post("/internal/drive/metadata/page")
+    async def metadata_page(request: Request):
+        """Live owner-only folder direct-children metadata, NO file bytes.
+
+        A POST keeps provider pagination tokens OUT of request-target logs.
+        Source filenames are returned only in the authenticated owner's
+        no-store JSON body, never persisted in the app or added to a URL.
+        """
+        owner = _boundary(request, mutation=True)
+        try:
+            _reviewed_google_http()
+        except PrivateOwnerGoogleHttpBlocked:
+            raise HTTPException(503, "Private metadata page not enabled") from None
+        try:
+            length = request.headers.get("content-length")
+            if (request.headers.get("content-type") != "application/json"
+                or request.headers.get("transfer-encoding") is not None
+                or length is not None
+                and (not length.isdecimal() or int(length) > 1200)):
+                raise ValueError()
+            raw = await request.body()
+            if not 1 <= len(raw) <= 1200:
+                raise ValueError()
+            data = json.loads(raw, object_pairs_hook=_unique_json_pairs)
+            if type(data) is not dict or set(data) != {"page_token"}:
+                raise ValueError()
+            page_token = data["page_token"]
+            if (page_token is not None
+                and (type(page_token) is not str
+                     or re.fullmatch(r"[A-Za-z0-9._~+/=-]{1,1024}",
+                                     page_token) is None)):
+                raise ValueError()
+        except Exception:
+            raise HTTPException(400, "Private metadata request rejected") from None
+        try:
+            config = private_google_configuration()
+            with session_factory() as db:
+                verify_private_owner_session(
+                    db, owner_ref=owner,
+                    token=request.cookies.get(_COOKIE, ""),
+                    csrf=request.headers.get(_CSRF_HEADER, ""),
+                    mutation=True,
+                )
+                refresh = read_private_metadata_grant(
+                    db, owner_ref=owner, folder_id=config.folder_id,
+                    client_id=config.client_id,
+                )
+            access, rotated = refresh_google_access_token(
+                refresh_token=refresh, config=config, transport=transport,
+            )
+            # Reverify private ownership/sharing on every metadata request.
+            verify_owner_private_folder(
+                access_token=access, config=config, transport=transport,
+            )
+            page = list_private_owner_folder_page(
+                access_token=access, config=config, page_token=page_token,
+                transport=transport,
+            )
+            if rotated is not None:
+                with session_factory() as db:
+                    store_private_metadata_grant(
+                        db, owner_ref=owner, folder_id=config.folder_id,
+                        client_id=config.client_id, refresh_token=rotated,
+                    )
+            next_token = page.get("nextPageToken")
+            if (next_token is not None and (
+                type(next_token) is not str
+                or re.fullmatch(r"[A-Za-z0-9._~+/=-]{1,1024}",
+                                next_token) is None)):
+                raise ValueError()
+            items = []
+            for file in page["files"]:
+                name = file.get("name")
+                mime = file.get("mimeType")
+                modified = file.get("modifiedTime")
+                size = file.get("size")
+                if (type(name) is not str or not 1 <= len(name) <= 512
+                    or type(mime) is not str or not 1 <= len(mime) <= 128
+                    or (modified is not None
+                        and (type(modified) is not str
+                             or len(modified) > 80))
+                    or (size is not None
+                        and (type(size) is not str or not size.isdecimal()
+                             or len(size) > 20))):
+                    raise ValueError()
+                items.append({
+                    "id": file["id"], "name": name,
+                    "mime_type": mime, "modified_time": modified,
+                    "size_bytes": int(size) if size is not None else None,
+                })
+        except (PrivateOwnerIdentityBlocked, PrivateMetadataCustodyBlocked):
+            # 401 only for missing owner session; missing/revoked grant
+            # yields an opaque unavailable response, never its credentials.
+            raise HTTPException(401, "Owner session or Google grant required") from None
+        except Exception:
+            raise HTTPException(503, "Private folder metadata unavailable") from None
+        return {
+            "contract": "personal_cfo_private_live_folder_metadata_v1",
+            "metadata_only": True,
+            "files": items,
+            "next_page_token": next_token,
+            "one_pinned_folder_only": True,
+            "background_sync_active": False,
+            "original_file_bytes_imported": False,
             "financial_data_enabled": False,
         }
 
