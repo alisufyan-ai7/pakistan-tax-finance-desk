@@ -102,8 +102,13 @@ def _independent_connector_keys() -> None:
             "P1N_OWNER_SESSION_HMAC_KEY",
             "P1P_OWNER_RECOVERY_ENCRYPTION_KEY",
             "P1P_OWNER_RECOVERY_HMAC_KEY",
+            "P1Q_OPERATOR_PUBLIC_KEY",
         )
     }
+    if len(existing) != 6:
+        raise PrivatePostEnrollmentReadinessBlocked(
+            "Existing owner/offline operator key domains overlap"
+        )
     if (
         not _GATEWAY_RE.fullmatch(
             os.getenv("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN", "")
