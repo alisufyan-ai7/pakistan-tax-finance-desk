@@ -288,6 +288,7 @@ def test_public_railway_preview_still_has_no_google_auth_routes(isolated):
     from pathlib import Path
     nginx = (Path(__file__).parents[2] / "frontend" / "nginx.railway.conf").read_text()
     assert "location = /api/preview/status" in nginx
-    assert "location = /api/drive/oauth/callback" not in nginx
+    assert "location = /api/drive/oauth/callback" in nginx
+    assert 'if ($p1ao_google_ingress != "1") { return 404; }' in nginx
     assert "location /api/" not in nginx
-    assert "location = /api/drive/oauth/start" not in nginx
+    assert "location = /api/drive/oauth/start" in nginx
