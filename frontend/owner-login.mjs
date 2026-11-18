@@ -58,8 +58,8 @@ form.addEventListener("submit", async (event) => {
     csrfToken = data.csrf_token; // Memory only, never persisted or placed in URL.
     form.hidden = true;
     session.hidden = false;
-    show("Signed in securely. Your account session is active.");
-    await refreshGoogleStatus();
+    show("Signed in securely. Opening your Personal CFO dashboard.");
+    window.location.assign("/app");
   } catch {
     csrfToken = null;
     form.hidden = false;
