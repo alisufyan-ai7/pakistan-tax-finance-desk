@@ -134,7 +134,7 @@ def test_copy_sql_only_six_allowlisted_owner_tables_and_escaped_rows():
     script = drill._copy_sql(records)
     assert script.startswith("SET log_min_error_statement = 'panic';")
     assert "BEGIN;" in script and "COMMIT;" in script
-    assert "COPY" in script
+    assert "\\copy public." in script
     assert "owner_private_identities" in script
     assert "owner_private_recovery_states" in script
     assert "owner_private_recovery_audit" in script
@@ -214,7 +214,7 @@ def test_failed_restore_still_cleans_up_without_exposing_secret(monkeypatch):
             return SimpleNamespace(returncode=0,stdout="unix:///var/run/docker.sock\n",stderr="")
         if "pg_isready" in cmd:
             return SimpleNamespace(returncode=0,stdout="",stderr="")
-        if "\\copy" in kwargs.get("input",""):
+        if "\\copy" in (kwargs.get("input") or ""):
             return SimpleNamespace(
                 returncode=1, stdout="SECRET_INTERNAL_CIPHER",
                 stderr="ERROR private token SECRET_INTERNAL_CIPHER",
