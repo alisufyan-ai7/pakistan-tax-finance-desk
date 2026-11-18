@@ -113,7 +113,11 @@ def _validate_snapshot(payload: dict) -> dict:
     if (len(table["owner_private_identities"]) != 1
         or table["owner_private_identities"][0].get("singleton_id") != 1
         or len(table["owner_private_recovery_states"]) != 1
-        or len(table["owner_private_recovery_audit"]) < 1
+        or len(table["owner_private_recovery_audit"]) != 1
+        or table["owner_private_identities"][0].get("revision") != 1
+        or table["owner_private_recovery_states"][0].get("revision") != 1
+        or table["owner_private_recovery_audit"][0].get("revision") != 1
+        or table["owner_private_recovery_audit"][0].get("action") != "ISSUED"
         or any(table[name] for name in (
             "owner_private_sessions", "owner_google_metadata_grants",
             "owner_private_oauth_attempts",
