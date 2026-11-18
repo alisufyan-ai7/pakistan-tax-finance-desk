@@ -81,6 +81,16 @@ def _boundary(request: Request, *, mutation: bool,
     return owner
 
 
+def _unique_json_pairs(pairs: list[tuple[str, object]]) -> dict:
+    """Deny duplicate JSON members rather than silently choosing a password."""
+    values = {}
+    for key, value in pairs:
+        if key in values:
+            raise ValueError()
+        values[key] = value
+    return values
+
+
 async def _login_input(request: Request) -> tuple[str, str]:
     if request.headers.get("content-type") != "application/json":
         raise HTTPException(status_code=415, detail="Strict JSON owner login required")
@@ -88,10 +98,12 @@ async def _login_input(request: Request) -> tuple[str, str]:
         header = request.headers.get("content-length")
         if header and (not header.isdecimal() or int(header) > _MAX_BODY):
             raise ValueError()
+        if request.headers.get("transfer-encoding") is not None:
+            raise ValueError()
         raw = await request.body()
         if len(raw) > _MAX_BODY:
             raise ValueError()
-        data = json.loads(raw)
+        data = json.loads(raw, object_pairs_hook=_unique_json_pairs)
         if type(data) is not dict or set(data) != {"password", "totp_code"}:
             raise ValueError()
         password, code = data["password"], data["totp_code"]
