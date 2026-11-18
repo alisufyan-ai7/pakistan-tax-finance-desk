@@ -175,4 +175,6 @@ def test_no_public_auth_proxy_or_live_financial_access(fixture):
     nginx=(Path(__file__).parents[2]/"frontend/nginx.railway.conf").read_text()
     assert "location /api/" not in nginx
     assert "location = /api/drive/oauth/callback" not in nginx
-    assert "location = /api/owner/login" not in nginx
+    assert "location = /api/owner/login" in nginx
+    assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in nginx
+    assert "location = /api/drive/oauth/start" not in nginx

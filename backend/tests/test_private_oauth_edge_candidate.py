@@ -29,7 +29,20 @@ def locations(config):
 def test_live_frontend_did_not_gain_auth_login_or_google_callback():
     current=LIVE.read_text()
     paths=set(locations(current))
-    assert paths & ROUTES.keys()==set()
+    assert paths & ROUTES.keys() == {
+        "/api/owner/login", "/api/owner/session", "/api/owner/logout"
+    }
+    for path in ("/api/drive/oauth/start", "/api/drive/oauth/callback",
+                 "/api/drive/oauth/status"):
+        assert path not in paths
+    # Public-facing MFA paths remain explicitly default-off until G2.
+    for path in ("/api/owner/login", "/api/owner/session",
+                 "/api/owner/logout"):
+        body = locations(current)[path]
+        assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in body
+        assert 'if ($p1ak_gateway_token = "") { return 503; }' in body
+        assert "access_log off;" in body
+        assert "error_log /dev/null crit;" in body
     assert "/api/preview/status" in paths
     assert "location /api/" not in current
     assert "proxy_pass http://$private_preview_upstream/internal/preview/status" in current

@@ -40,6 +40,7 @@ test("owner setup visible in desktop and mobile PWA without public secret fields
   assert.match(docker,/owner-setup\.mjs \/usr\/share\/nginx\/html\//);
   assert.match(source("pwa.css"),/grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
   assert.match(html,/Development preview, not your financial account/);
-  assert.doesNotMatch(source("nginx.railway.conf"),/location\s*=\s*\/api\/owner\/login/);
+  assert.match(source("nginx.railway.conf"),/location\s*=\s*\/api\/owner\/login/);
+  assert.match(source("nginx.railway.conf"),/if \(\$p1ak_owner_ingress != "1"\) \{ return 404; \}/);
   assert.doesNotMatch(source("nginx.railway.conf"),/location\s*=\s*\/api\/drive\/oauth\/callback/);
 });

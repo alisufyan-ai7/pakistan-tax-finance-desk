@@ -16,13 +16,15 @@ test("merged Documents views remain fictional after security and scan lease bran
   assert.doesNotMatch(html,/background job started|Google Drive connected/i);
 });
 
-test("combined frontend still has no public OAuth, owner-login or sync path",()=>{
+test("combined frontend keeps OAuth blocked and owner login independently gated",()=>{
   const nginx=source("nginx.railway.conf");
   const ui=source("ui.mjs"),sw=source("sw.js");
   assert.match(nginx,/location = \/api\/preview\/status/);
   assert.doesNotMatch(nginx,/location = \/api\/drive\/oauth\/callback/);
   assert.doesNotMatch(nginx,/location \/api\//);
-  assert.doesNotMatch(nginx,/location = \/api\/owner\/login/);
+  assert.match(nginx,/location = \/api\/owner\/login/);
+  assert.match(nginx,/if \(\$p1ak_owner_ingress != "1"\) \{ return 404; \}/);
+  assert.doesNotMatch(nginx,/location = \/api\/drive\/oauth\/start/);
   assert.doesNotMatch(ui,/fetch\(["']https?:/);
   assert.match(sw,/NO fetch handler/);
 });

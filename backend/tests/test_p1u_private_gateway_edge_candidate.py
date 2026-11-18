@@ -55,17 +55,29 @@ def test_review_candidate_replaces_browser_auth_headers_and_scrubs_forwarded():
     assert "P1C_GOOGLE_CLIENT_SECRET" not in content
 
 
-def test_live_railway_dockerfile_does_not_enable_candidate_or_substitute_private_key():
+def test_live_frontend_does_not_enable_google_or_unapproved_owner_login():
     live = LIVE.read_text()
     docker = DOCKERFILE.read_text()
     assert 'COPY nginx.railway.conf /etc/nginx/templates/default.conf.template' in docker
-    assert 'NGINX_ENVSUBST_FILTER="^PREVIEW_INTERNAL_TOKEN$"' in docker
-    assert "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN" not in docker
     assert "nginx.personal-cfo-oauth.candidate.conf" not in docker
-    assert "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN" not in live
-    assert 'X-Personal-CFO-Private-Gateway' not in live
+    assert 'P1AK_OWNER_INGRESS_ENABLED' in docker
+    assert 'ENV P1AK_OWNER_INGRESS_ENABLED=1' not in docker
+    assert "P1AK_OWNER_INGRESS_ENABLED" in live
+    blocks = locations(live)
+    assert set(blocks) & EXACT == {
+        "/api/owner/login", "/api/owner/session", "/api/owner/logout"
+    }
     for route in EXACT:
-        assert f"location = {route}" not in live
+        if route.startswith("/api/drive/"):
+            assert route not in blocks
+    for route in set(blocks) & EXACT:
+        body = blocks[route]
+        assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in body
+        assert 'if ($p1ak_gateway_token = "") { return 503; }' in body
+        assert 'proxy_set_header X-Personal-CFO-Private-Gateway $p1ak_gateway_token;' in body
+        assert 'proxy_set_header Forwarded "";' in body
+        assert "access_log off;" in body
+        assert "error_log /dev/null crit;" in body
     assert "location /api/" not in live
 
 

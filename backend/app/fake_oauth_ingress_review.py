@@ -106,21 +106,54 @@ def plan_fake_exact_oauth_ingress(req: FakeIngressRequest) -> dict:
 
 
 def audit_current_public_nginx(*, nginx_source: str) -> dict:
-    """Pin only the *currently absent* public OAuth routes.
+    """Source-only review: OAuth remains unmounted; owner routes default OFF.
 
-    This is not a parser/security acceptance of a proposed production file.
+    This cannot attest actual live Railway variables, TLS, platform request
+    logging, or human G2 acceptance. An attacker-controlled or duplicate
+    owner route must never pass this source firewall.
     """
-    if type(nginx_source) is not str or len(nginx_source)>100_000:
+    if type(nginx_source) is not str or len(nginx_source) > 100_000:
         raise FakeOAuthIngressBlocked("Unsupported proxy configuration")
     if ("location = /api/preview/status" not in nginx_source
         or "location /api/" in nginx_source
         or "location = /api/drive/oauth" in nginx_source
-        or "location = /api/owner/login" in nginx_source):
+        or "location = /api/finance" in nginx_source):
         raise FakeOAuthIngressBlocked("Public ingress unexpectedly broadened")
+    approved = {
+        "/api/owner/login": ("POST", "/internal/drive/auth/login"),
+        "/api/owner/session": ("GET", "/internal/drive/auth/session"),
+        "/api/owner/logout": ("POST", "/internal/drive/auth/logout"),
+    }
+    for path, (method, internal) in approved.items():
+        if nginx_source.count("location = " + path + " {") != 1:
+            raise FakeOAuthIngressBlocked("Owner ingress count unsafe")
+        match = re.search(
+            r"location = " + re.escape(path) + r" \{(.*?)\n    \}",
+            nginx_source, re.S,
+        )
+        if match is None:
+            raise FakeOAuthIngressBlocked("Owner ingress config incomplete")
+        body = match.group(1)
+        requirements = (
+            'if ($p1ak_owner_ingress != "1") { return 404; }',
+            'if ($p1ak_gateway_token = "") { return 503; }',
+            'if ($request_method != "' + method + '") { return 405; }',
+            'if ($args != "") { return 400; }',
+            'proxy_pass http://$private_auth_upstream' + internal + ';',
+            'proxy_set_header X-Personal-CFO-Private-Gateway $p1ak_gateway_token;',
+            'proxy_set_header Forwarded "";',
+            'access_log off;',
+            'error_log /dev/null crit;',
+        )
+        if any(term not in body for term in requirements):
+            raise FakeOAuthIngressBlocked("Owner ingress fail-closed controls absent")
+    # Static verifier does not claim an actively deployed user-facing auth
+    # route, because the trusted Railway environment was not interrogated.
     return {
-        "synthetic_only":True,
-        "public_google_oauth_route_active":False,
-        "public_owner_login_active":False,
-        "current_preview_route_only":True,
-        "g2_exact_proxy_release_accepted":False,
+        "synthetic_only": True,
+        "public_google_oauth_route_active": False,
+        "owner_login_routes_default_off_in_source": True,
+        "current_preview_route_only": False,
+        "actual_owner_login_activation_independently_verified": False,
+        "g2_exact_proxy_release_accepted": False,
     }

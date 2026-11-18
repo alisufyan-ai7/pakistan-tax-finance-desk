@@ -81,7 +81,9 @@ def test_exact_private_mutations_and_status_only(method,path):
 def test_exact_deployed_nginx_still_has_no_google_callback():
     nginx=(Path(__file__).parents[2]/"frontend/nginx.railway.conf").read_text()
     result=audit_current_public_nginx(nginx_source=nginx)
-    assert result["current_preview_route_only"]
+    assert result["current_preview_route_only"] is False
+    assert result["owner_login_routes_default_off_in_source"] is True
+    assert result["actual_owner_login_activation_independently_verified"] is False
     assert result["public_google_oauth_route_active"] is False
     assert result["g2_exact_proxy_release_accepted"] is False
     for variant in ("location /api/ {","location = /api/drive/oauth/callback {",

@@ -126,9 +126,9 @@ def test_private_runtime_source_never_enables_public_proxy_or_google():
         assert flag in docker
     assert "P1AJ_OWNER_LOGIN_RUNTIME" not in docker
     assert "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN" not in docker
-    for route in (
-        "/api/owner/login", "/api/owner/session", "/api/owner/logout",
-        "/api/drive/oauth/callback", "/api/drive/oauth/start",
-    ):
+    for route in ("/api/owner/login", "/api/owner/session", "/api/owner/logout"):
+        assert f"location = {route}" in frontend
+    assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in frontend
+    for route in ("/api/drive/oauth/callback", "/api/drive/oauth/start"):
         assert f"location = {route}" not in frontend
     assert "location /api/" not in frontend
