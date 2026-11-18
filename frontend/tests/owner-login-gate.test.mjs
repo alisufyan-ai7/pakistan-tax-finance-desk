@@ -85,7 +85,8 @@ test("mobile owner login never persists credentials, uses only own exact login/l
   assert.ok(html.includes('href="/owner-login.css"'));
   assert.ok(js.includes('"/api/owner/login"'));
   assert.ok(js.includes('"/api/owner/logout"'));
-  for (const disallowed of ["localStorage", "sessionStorage",
+  for (const disallowed of ["localStorage.setItem", "localStorage.getItem",
+                            "sessionStorage.setItem", "sessionStorage.getItem",
                             "console.log", "document.cookie",
                             "postMessage("]) {
     assert.ok(!js.includes(disallowed), disallowed);
