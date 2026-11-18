@@ -171,7 +171,7 @@ def test_default_off_real_finance_missing_owner_and_wrong_gateway_secret_block(c
 
 
 def test_duplicate_valid_login_members_and_transfer_encoding_denied(client):
-    c, _, _ = client
+    c, _, engine = client
     # All individual values are otherwise valid. A parser that silently
     # accepts the last repeated member can create credential ambiguity.
     for duplicated in (
@@ -189,7 +189,11 @@ def test_duplicate_valid_login_members_and_transfer_encoding_denied(client):
         assert PASSWORD not in response.text
         assert SEED not in response.text
 
-    # No replay counter should have been consumed by malformed JSON.
+    # No owner session or replay counter should result from malformed JSON.
+    with engine.connect() as db:
+        assert db.execute(text(
+            "SELECT COUNT(*) FROM owner_private_sessions"
+        )).scalar_one() == 0
     assert login(c).status_code == 200
 
 
