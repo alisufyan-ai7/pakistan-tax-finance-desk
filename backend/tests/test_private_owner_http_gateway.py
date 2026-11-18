@@ -45,7 +45,7 @@ def client(monkeypatch,tmp_path):
         "P1Q_PRIVATE_HTTP_GATEWAY_ONLY": "1",
         "P1Q_G2_PRIVATE_INGRESS_REVIEWED": "1",
         "P1Q_PRIVATE_GATEWAY_SHARED_TOKEN": SECRET,
-        "P1Q_PRIVATE_OWNER_REF": OWNER,
+        "P1W_OWNER_REF": OWNER,
     }
     for name, value in env.items():
         monkeypatch.setenv(name,value)
@@ -162,8 +162,46 @@ def test_default_off_real_finance_missing_owner_and_wrong_gateway_secret_block(c
     monkeypatch.setenv("APP_DATA_MODE","real")
     assert login(c).status_code == 503
     monkeypatch.setenv("APP_DATA_MODE","synthetic")
-    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF","")
+    monkeypatch.setenv("P1W_OWNER_REF","")
     assert login(c).status_code == 503
-    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF",OWNER)
+    monkeypatch.setenv("P1W_OWNER_REF",OWNER)
     monkeypatch.setenv("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN","bad")
     assert login(c).status_code == 403
+
+
+
+def test_duplicate_valid_login_members_and_transfer_encoding_denied(client):
+    c, _, engine = client
+    # All individual values are otherwise valid. A parser that silently
+    # accepts the last repeated member can create credential ambiguity.
+    for duplicated in (
+        ('{"password":"' + PASSWORD + '","password":"' + PASSWORD
+         + '","totp_code":"' + otp() + '"}'),
+        ('{"password":"' + PASSWORD + '","totp_code":"' + otp()
+         + '","totp_code":"' + otp() + '"}'),
+    ):
+        response = c.post(
+            "/internal/drive/auth/login",
+            headers={**headers(), "content-type": "application/json"},
+            content=duplicated.encode("ascii"),
+        )
+        assert response.status_code == 400
+        assert PASSWORD not in response.text
+        assert SEED not in response.text
+
+    # No owner session or replay counter should result from malformed JSON.
+    with engine.connect() as db:
+        assert db.execute(text(
+            "SELECT COUNT(*) FROM owner_private_sessions"
+        )).scalar_one() == 0
+    assert login(c).status_code == 200
+
+
+
+def test_legacy_duplicate_owner_reference_cannot_replace_escrowed_one(client):
+    c, monkeypatch, _ = client
+    monkeypatch.delenv("P1W_OWNER_REF")
+    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF", OWNER)
+    assert login(c).status_code == 503
+    monkeypatch.setenv("P1W_OWNER_REF", OWNER)
+    assert login(c).status_code == 200

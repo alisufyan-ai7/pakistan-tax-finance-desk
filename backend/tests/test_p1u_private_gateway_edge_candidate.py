@@ -18,7 +18,6 @@ EXACT = {
     "/api/drive/oauth/start",
     "/api/drive/oauth/callback",
     "/api/drive/oauth/status",
-    "/api/drive/oauth/disconnect",
 }
 
 
@@ -39,6 +38,9 @@ def test_review_candidate_replaces_browser_auth_headers_and_scrubs_forwarded():
         body = blocks[route]
         assert expected in body
         assert 'proxy_set_header Forwarded "";' in body
+        for header in ("X-Original-URI", "X-Original-URL",
+                       "X-Rewrite-URL", "X-Forwarded-Prefix"):
+            assert f'proxy_set_header {header} "";' in body
         assert 'proxy_set_header X-Forwarded-Host "";' in body
         assert 'proxy_set_header X-Forwarded-For "";' in body
         assert 'proxy_set_header X-Real-IP "";' in body
@@ -49,6 +51,7 @@ def test_review_candidate_replaces_browser_auth_headers_and_scrubs_forwarded():
         # An incoming caller-supplied credential must NEVER be used.
         assert "$http_x_personal_cfo_private_gateway" not in body
         assert 'proxy_set_header X-Personal-CFO-Private-Gateway "";' not in body
+    assert "/api/drive/oauth/disconnect" not in blocks
     assert "P1C_GOOGLE_CLIENT_SECRET" not in content
 
 
