@@ -161,9 +161,13 @@ def test_unexpected_sql_column_or_injection_rejected():
 def test_restore_uses_local_no_network_tmpfs_and_always_cleans_up(monkeypatch):
     records = sample()
     calls = []
+    monkeypatch.setattr(drill.sys, "platform", "darwin")
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
     monkeypatch.setattr(drill.shutil, "which", lambda binary: "/usr/bin/docker")
     def fake_run(cmd, **kwargs):
         calls.append((cmd, kwargs))
+        if cmd[:3] == ["docker", "context", "inspect"]:
+            return SimpleNamespace(returncode=0, stdout="unix:///var/run/docker.sock\n", stderr="")
         if cmd[:2] == ["docker", "run"]:
             return SimpleNamespace(returncode=0, stdout="synthetic_container\n", stderr="")
         if "pg_isready" in cmd:
@@ -201,9 +205,13 @@ def test_restore_uses_local_no_network_tmpfs_and_always_cleans_up(monkeypatch):
 def test_failed_restore_still_cleans_up_without_exposing_secret(monkeypatch):
     records = sample()
     calls = []
+    monkeypatch.setattr(drill.sys, "platform", "darwin")
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
     monkeypatch.setattr(drill.shutil,"which",lambda binary: "/usr/bin/docker")
     def fake_run(cmd,**kwargs):
         calls.append(cmd)
+        if cmd[:3] == ["docker","context","inspect"]:
+            return SimpleNamespace(returncode=0,stdout="unix:///var/run/docker.sock\n",stderr="")
         if "pg_isready" in cmd:
             return SimpleNamespace(returncode=0,stdout="",stderr="")
         if "\\copy" in kwargs.get("input",""):
@@ -260,3 +268,37 @@ def test_main_fails_closed_without_reading_or_printing_owner_secret(
     captured = capsys.readouterr()
     assert "SECRET" not in captured.out + captured.err
     assert "TOTP" not in captured.out + captured.err
+
+
+def test_remote_docker_host_rejected_before_container_creation(monkeypatch):
+    monkeypatch.setattr(drill.sys,"platform","darwin")
+    monkeypatch.setattr(drill.shutil,"which",lambda binary:"/usr/bin/docker")
+    monkeypatch.setenv("DOCKER_HOST","tcp://remote-server:2376")
+    monkeypatch.setattr(drill.subprocess,"run",
+                        lambda *a,**kw:pytest.fail("No remote Docker calls"))
+    with pytest.raises(drill.PrivateOwnerRestoreDrillBlocked):
+        drill._docker_rehearsal(sample())
+
+
+def test_remote_docker_context_rejected_before_plaintext_transfer(monkeypatch):
+    monkeypatch.setattr(drill.sys,"platform","darwin")
+    monkeypatch.delenv("DOCKER_HOST",raising=False)
+    monkeypatch.setattr(drill.shutil,"which",lambda binary:"/usr/bin/docker")
+    calls=[]
+    def fake(cmd,**kwargs):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0, stdout="ssh://remote-docker-host\n",stderr="")
+    monkeypatch.setattr(drill.subprocess,"run",fake)
+    with pytest.raises(drill.PrivateOwnerRestoreDrillBlocked):
+        drill._docker_rehearsal(sample())
+    assert len(calls)==1
+    assert calls[0][:3]==["docker","context","inspect"]
+
+
+def test_mac_only_for_private_local_restore(monkeypatch):
+    monkeypatch.setattr(drill.sys,"platform","linux")
+    monkeypatch.setattr(drill.shutil,"which",lambda binary:"/usr/bin/docker")
+    monkeypatch.setattr(drill.subprocess,"run",
+                        lambda *a,**kw:pytest.fail("No Docker for non-Mac"))
+    with pytest.raises(drill.PrivateOwnerRestoreDrillBlocked):
+        drill._docker_rehearsal(sample())
