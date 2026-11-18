@@ -22,7 +22,7 @@ test("exact three public login routes are disabled unless independently enabled"
   assert.ok(conf.includes('set $p1ak_owner_ingress "${P1AK_OWNER_INGRESS_ENABLED}";'));
   assert.ok(conf.includes('set $p1ak_gateway_token "${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";'));
   assert.ok(!conf.includes('location /api/'));
-  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 7);
+  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 8);
   for (const [path, [method, internal]] of publicRoutes) {
     const b = blocks.get(path);
     assert.ok(b, path);
@@ -101,7 +101,7 @@ test("mobile owner login never persists credentials, uses only own exact login/l
   assert.ok(!docker.includes("ENV P1AK_OWNER_INGRESS_ENABLED=1"));
   // Without defined defaults envsubst leaves a literal dollar variable
   // expression and Nginx refuses to start. Keep runtime safe defaults.
-  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1AO_GOOGLE_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
+  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1AO_GOOGLE_INGRESS_ENABLED=0 P1AP_DOCUMENTS_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
   assert.ok(!docker.includes('P1AK_OWNER_INGRESS_ENABLED=1'));
 
   assert.ok(docker.includes("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN"));
