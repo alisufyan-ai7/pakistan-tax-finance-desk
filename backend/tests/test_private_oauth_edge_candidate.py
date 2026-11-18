@@ -16,7 +16,6 @@ ROUTES={
     "/api/drive/oauth/start":("POST","/internal/drive/oauth/start"),
     "/api/drive/oauth/callback":("GET","/internal/drive/oauth/callback"),
     "/api/drive/oauth/status":("GET","/internal/drive/oauth/status"),
-    "/api/drive/oauth/disconnect":("POST","/internal/drive/oauth/disconnect"),
 }
 HOST="personal-cfo-frontend-preview-development.up.railway.app"
 UPSTREAM="personal-cfo-api-preview.railway.internal:8000"
@@ -96,3 +95,33 @@ def test_no_gateway_activated_through_current_private_api():
     assert not paths & ROUTES.keys()
     assert not any(path.startswith("/internal/drive/oauth/") for path in paths)
     assert not any(path.startswith("/internal/drive/auth/") for path in paths)
+
+
+
+def test_exact_public_candidate_route_parity_with_actual_private_asgi():
+    """Never publish an endpoint the private ASGI candidate cannot serve."""
+    from app.private_owner_oauth_http_gateway import (
+        create_synthetic_private_owner_oauth_gateway,
+    )
+    candidate = locations(CANDIDATE.read_text())
+    api_paths = {path for path in candidate if path.startswith("/api/")}
+    assert api_paths == set(ROUTES) | {"/api/preview/status"}
+    assert "/api/drive/oauth/disconnect" not in candidate
+
+    private = create_synthetic_private_owner_oauth_gateway(lambda: None)
+    actual = {
+        (method, route.path)
+        for route in private.routes
+        if route.path.startswith("/internal/drive/")
+        for method in route.methods
+    }
+    expected = {(method, path) for method, path in ROUTES.values()}
+    assert actual == expected
+    for public, (method, path) in ROUTES.items():
+        assert f'if ($request_method != "{method}")' in candidate[public]
+        assert f"proxy_pass http://$private_oauth_upstream{path}" in candidate[public]
+    # No actual owner or Google credentials and no public runtime wiring.
+    assert not any(p.startswith("/internal/drive/") for p in
+                   (r.path for r in __import__("app.preview_api",
+                                                fromlist=["create_preview_app"])
+                    .create_preview_app().routes))
