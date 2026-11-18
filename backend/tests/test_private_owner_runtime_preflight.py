@@ -77,7 +77,7 @@ def test_private_owner_credentials_verified_without_leaking_or_mutating(monkeypa
     assert not any("INSERT " in x.upper() or "UPDATE " in x.upper()
                    or "DELETE " in x.upper() or "CREATE " in x.upper()
                    for x in conn.sql)
-    assert len(pf._inventory()["runtime_key_count"].__str__())==1
+    assert pf._inventory()["runtime_key_count"] == 5
 
 
 @pytest.mark.parametrize("db,role,tcp,ssl,readonly",[
