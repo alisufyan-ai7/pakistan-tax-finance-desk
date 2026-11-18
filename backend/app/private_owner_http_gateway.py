@@ -118,7 +118,7 @@ async def _login_input(request: Request) -> tuple[str, str]:
 
 
 def create_private_owner_http_gateway(
-    session_factory: Callable[[], Session],
+    session_factory: Callable[[], Session], *, lifespan=None,
 ) -> FastAPI:
     """Unexposed private ASGI factory, tested with fake keys/owner only.
 
@@ -127,6 +127,7 @@ def create_private_owner_http_gateway(
     app = FastAPI(
         title="Personal CFO private owner-only security boundary",
         docs_url=None, redoc_url=None, openapi_url=None,
+        lifespan=lifespan,
     )
 
     @app.middleware("http")
