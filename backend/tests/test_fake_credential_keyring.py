@@ -35,8 +35,14 @@ def test_envelope_random_aad_authenticated_and_never_plaintext():
         open_fake_grant(ring=initial,owner_hmac="c"*64,folder_hmac=FOLDER,sealed=a)
     with pytest.raises(FakeKeyCustodyBlocked):
         open_fake_grant(ring=initial,owner_hmac=OWNER,folder_hmac="c"*64,sealed=a)
+    # Flip an authenticated ciphertext byte, not the final Base64 character:
+    # trailing Base64 bits may be non-significant and yield identical bytes.
+    header, encoded = a.rsplit(":", 1)
+    blob = bytearray(base64.urlsafe_b64decode(encoded))
+    blob[-17] ^= 0x01
+    tampered = header + ":" + base64.urlsafe_b64encode(bytes(blob)).decode("ascii")
     with pytest.raises(FakeKeyCustodyBlocked):
-        open_fake_grant(ring=initial,owner_hmac=OWNER,folder_hmac=FOLDER,sealed=a[:-1]+"A")
+        open_fake_grant(ring=initial,owner_hmac=OWNER,folder_hmac=FOLDER,sealed=tampered)
 
 
 def test_rotation_rewrap_and_restore_without_old_key():
