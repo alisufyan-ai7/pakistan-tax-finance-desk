@@ -33,6 +33,7 @@ from cryptography.hazmat.primitives.serialization import (
     BestAvailableEncryption, Encoding, PrivateFormat, PublicFormat,
 )
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from .private_owner_bootstrap import (
@@ -103,14 +104,26 @@ def create_offline_recovery_signing_key(path: str) -> str:
 
 
 def _operator_database_url() -> str:
-    url = os.getenv("P1W_OWNER_CREDENTIAL_DATABASE_URL", "")
-    if (not (url.startswith("postgresql://")
-             or url.startswith("postgresql+psycopg://"))
-        or not 24 <= len(url) <= 2048
-        or url == os.getenv("DATABASE_URL", "")):
+    """Never use the app's financial DB, superuser, or a plaintext connection."""
+    raw = os.getenv("P1W_OWNER_CREDENTIAL_DATABASE_URL", "")
+    try:
+        parsed = make_url(raw)
+        if (not 24 <= len(raw) <= 2048
+            or raw == os.getenv("DATABASE_URL", "")
+            or parsed.drivername != "postgresql+psycopg"
+            or parsed.username != "personal_cfo_owner_credentials"
+            or not parsed.password
+            or parsed.database != "personal_cfo_owner_auth"
+            or not parsed.host
+            or not parsed.host.endswith(".railway.internal")
+            or parsed.port not in (None, 5432)
+            or parsed.query.get("sslmode") not in ("require", "verify-full")
+            or any(key not in ("sslmode",) for key in parsed.query)):
+            raise ValueError()
+    except Exception:
         raise PrivateOwnerSetupBlocked(
-            "An independent restricted PostgreSQL credential role is required")
-    return url
+            "An independent TLS-protected owner credential database role is required") from None
+    return raw
 
 
 def bootstrap_with_private_terminal() -> dict:

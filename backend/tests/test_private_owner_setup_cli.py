@@ -67,3 +67,27 @@ def test_no_public_setup_or_oauth_route_mounting():
     assert "/api/owner/enroll" not in paths
     assert "/internal/drive/auth/enroll" not in paths
     assert "/api/drive/oauth/callback" not in paths
+
+
+def test_operator_url_requires_isolated_restricted_tls_role(monkeypatch):
+    url = ("postgresql+psycopg://personal_cfo_owner_credentials:"
+           "SYNTHETIC_ONLY_fake_encoded_password%402026"
+           "@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=require")
+    monkeypatch.setenv("P1W_OWNER_CREDENTIAL_DATABASE_URL", url)
+    monkeypatch.setenv("DATABASE_URL","postgresql+psycopg://finance:fake@other.railway.internal/finance")
+    assert cli._operator_database_url() == url
+
+
+@pytest.mark.parametrize("wrong", [
+    "postgresql+psycopg://postgres:fake@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=require",
+    "postgresql+psycopg://personal_cfo_owner_credentials:fake@postgres.railway.internal:5432/finance?sslmode=require",
+    "postgresql+psycopg://personal_cfo_owner_credentials:fake@localhost:5432/personal_cfo_owner_auth?sslmode=require",
+    "postgresql+psycopg://personal_cfo_owner_credentials:fake@postgres.railway.internal:5432/personal_cfo_owner_auth",
+    "postgresql+psycopg://personal_cfo_owner_credentials:fake@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=disable",
+    "postgresql+psycopg://personal_cfo_owner_credentials:fake@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=require&options=-c",
+])
+def test_operator_url_refuses_admin_finance_public_hosts_or_cleartext(monkeypatch,wrong):
+    monkeypatch.setenv("P1W_OWNER_CREDENTIAL_DATABASE_URL",wrong)
+    monkeypatch.setenv("DATABASE_URL","postgresql://synthetic:fake@other.railway.internal/finance")
+    with pytest.raises(cli.PrivateOwnerSetupBlocked):
+        cli._operator_database_url()
