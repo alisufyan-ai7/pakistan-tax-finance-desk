@@ -108,6 +108,7 @@ def test_entire_private_railway_connector_prepared_without_deploy_or_key_output(
                    backend["DRIVE_INDEX_HMAC_KEY"]):
         assert secret not in stdout
     assert "Secret value must not be printed" not in stdout
+    assert "Approval phrase: " + prep.APPROVAL in stdout
 
 
 @pytest.mark.parametrize("case",[
