@@ -41,6 +41,8 @@ _PATHS = frozenset({
     ("POST", "/internal/drive/oauth/start"),
     ("GET", "/internal/drive/oauth/callback"),
     ("GET", "/internal/drive/oauth/status"),
+    # Only the P1AP separately instantiated Google controller mounts this.
+    ("POST", "/internal/drive/metadata/page"),
 })
 _MAX_BODY = 2048
 
