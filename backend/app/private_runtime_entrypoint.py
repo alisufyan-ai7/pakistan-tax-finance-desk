@@ -27,6 +27,7 @@ _GOOGLE_ROUTES = frozenset({
     "/internal/drive/oauth/start",
     "/internal/drive/oauth/callback",
     "/internal/drive/oauth/status",
+    "/internal/drive/metadata/page",
 })
 
 
