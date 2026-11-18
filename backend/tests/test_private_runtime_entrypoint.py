@@ -191,8 +191,8 @@ def test_only_approved_exact_google_paths_are_routed(monkeypatch):
     def oauth_status(): return {"fake": True}
     monkeypatch.setattr(runtime, "create_preview_app", lambda: preview)
     calls = []
-    def fake_owner_factory(*, google_metadata=False):
-        calls.append(google_metadata)
+    def fake_owner_factory(*, google_metadata=False, metadata_preview=False):
+        calls.append((google_metadata, metadata_preview))
         return owner
     monkeypatch.setattr(
         private_owner_login_service,
@@ -200,7 +200,7 @@ def test_only_approved_exact_google_paths_are_routed(monkeypatch):
         fake_owner_factory,
     )
     app = runtime.create_private_runtime_entrypoint()
-    assert calls == [True]
+    assert calls == [(True, False)]
     assert app.owner_routes == runtime._OWNER_ROUTES | runtime._GOOGLE_ROUTES
     with TestClient(app) as client:
         assert client.get("/healthz").status_code == 200
@@ -226,3 +226,65 @@ def test_google_network_without_google_controller_fails_closed(monkeypatch):
     monkeypatch.setenv("P1C_GOOGLE_NETWORK_ENABLED", "1")
     with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
         runtime.create_private_runtime_entrypoint()
+
+
+
+def test_documents_queue_fails_closed_without_distinct_g2_and_dispatches_only_exact_path(
+    monkeypatch,
+):
+    from app import private_owner_real_google_http
+    for key, val in {
+        "P1AJ_OWNER_LOGIN_RUNTIME": "1",
+        "P1AJ_G2_EXACT_INGRESS_REVIEWED": "1",
+        "P1AJ_NO_SENSITIVE_ACCESS_LOG_ACCEPTED": "1",
+        "APP_DATA_MODE": "synthetic",
+        "P1AN_GOOGLE_METADATA_RUNTIME": "1",
+        "P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED": "1",
+        "P1AN_METADATA_ONLY_HTTP_ACCEPTED": "1",
+        "P1C_GOOGLE_NETWORK_ENABLED": "1",
+        "P1AP_OWNER_FOLDER_METADATA_REVIEW_ONLY": "1",
+    }.items():
+        monkeypatch.setenv(key, val)
+    monkeypatch.delenv("P1AP_G2_AUTHENTICATED_METADATA_UI_REVIEWED", raising=False)
+    monkeypatch.setattr(
+        private_owner_login_service, "_reviewed_private_configuration",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        private_owner_real_google_http, "_reviewed_google_http",
+        lambda: None,
+    )
+    with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
+        runtime.create_private_runtime_entrypoint()
+    monkeypatch.setenv("P1AP_G2_AUTHENTICATED_METADATA_UI_REVIEWED", "1")
+    preview, owner = FastAPI(), FastAPI()
+    @preview.get("/healthz")
+    def health(): return {"synthetic_only": True}
+    @owner.get("/internal/drive/documents/queue")
+    def docs(): return {"fictional": True}
+    monkeypatch.setattr(runtime, "create_preview_app", lambda: preview)
+    seen = []
+    def make_owner(*, google_metadata=False, metadata_preview=False):
+        seen.append((google_metadata, metadata_preview))
+        return owner
+    monkeypatch.setattr(
+        private_owner_login_service,
+        "create_review_only_private_owner_login_service", make_owner,
+    )
+    app = runtime.create_private_runtime_entrypoint()
+    assert seen == [(True, True)]
+    assert app.owner_routes == (
+        runtime._OWNER_ROUTES | runtime._GOOGLE_ROUTES | runtime._DOCUMENT_ROUTES
+    )
+    with TestClient(app) as client:
+        assert client.get("/healthz").json() == {"synthetic_only": True}
+        assert client.get("/internal/drive/documents/queue").json() == {
+            "fictional": True
+        }
+        for path in (
+            "/api/drive/documents/queue",
+            "/internal/drive/documents/queue/bypass",
+            "/internal/drive/documents/content",
+            "/internal/finance",
+        ):
+            assert client.get(path).status_code == 404
