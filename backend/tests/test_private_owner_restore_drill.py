@@ -302,3 +302,29 @@ def test_mac_only_for_private_local_restore(monkeypatch):
                         lambda *a,**kw:pytest.fail("No Docker for non-Mac"))
     with pytest.raises(drill.PrivateOwnerRestoreDrillBlocked):
         drill._docker_rehearsal(sample())
+
+
+def test_synthetic_owner_real_isolated_postgresql18_restore_if_docker_present(
+    monkeypatch
+):
+    # Fabricated credentials only. This exercises actual psql COPY + schema
+    # receipt in a one-use Docker container; no real owner rows are used.
+    import shutil
+    import subprocess
+    if shutil.which("docker") is None:
+        pytest.skip("Local Docker not available in this test runtime")
+    status = subprocess.run(
+        ["docker", "info", "--format", "{{.ServerVersion}}"],
+        text=True, capture_output=True, timeout=12, check=False,
+    )
+    if status.returncode != 0:
+        pytest.skip("No local Docker daemon in synthetic test runtime")
+    monkeypatch.setattr(drill.sys, "platform", "darwin")
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
+    result = drill._docker_rehearsal(sample())
+    assert result["disposable_postgresql18_schema_recreated"]
+    assert result["six_owner_security_tables_restored_and_verified"]
+    assert result["disposable_container_removed"]
+    assert result["owner_identity_count"] == 1
+    assert result["recovery_state_count"] == 1
+    assert result["recovery_audit_count"] == 1
