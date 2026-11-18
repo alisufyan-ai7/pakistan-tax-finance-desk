@@ -50,7 +50,18 @@ def _guard_network() -> DriveOAuthConfig:
     if (os.getenv("APP_DATA_MODE", "synthetic") != "synthetic"
         or os.getenv("P1C_GOOGLE_NETWORK_ENABLED") != "1"
         or os.getenv("P1C_PRIVATE_OWNER_MFA_ACCEPTED") != "1"
-        or os.getenv("P1C_LOCAL_OAUTH_VAULT_ENABLED") != "1"):
+        or (
+            os.getenv("P1C_LOCAL_OAUTH_VAULT_ENABLED") != "1"
+            and not (
+                os.getenv("P1AL_CLOUD_METADATA_NETWORK_ONLY") == "1"
+                and os.getenv("P1AL_G2_EXACT_OAUTH_REVIEWED") == "1"
+                and os.getenv("P1M_PRIVATE_METADATA_CUSTODY_ONLY") == "1"
+                and os.getenv("P1M_G2_REAL_CREDENTIAL_RELEASE_REVIEWED") == "1"
+                and os.getenv("P1R_PRIVATE_OAUTH_STATE_ONLY") == "1"
+                and os.getenv("P1R_G2_SESSION_OAUTH_REVIEWED") == "1"
+                and os.getenv("P1D_RAILWAY_CALLBACK_CONTRACT_ONLY") == "1"
+            )
+        )):
         raise PrivateGoogleNetworkBlocked("Private Google metadata network not approved")
     try:
         return private_google_configuration()
