@@ -122,17 +122,23 @@ def owner_client(monkeypatch, tmp_path):
     def transport(method, url, form, bearer):
         seen.append((method, url, form is not None, bearer is not None))
         if method == "POST" and url == "https://oauth2.googleapis.com/token":
-            assert form["grant_type"] == "authorization_code"
-            assert form["code"] == CODE
-            assert form["redirect_uri"] == PERSONAL_CFO_RAILWAY_CALLBACK
             assert bearer is None
-            return {
-                "access_token": ACCESS,
-                "refresh_token": REFRESH,
-                "scope": GOOGLE_METADATA_SCOPE,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-            }
+            if form["grant_type"] == "authorization_code":
+                assert form["code"] == CODE
+                assert form["redirect_uri"] == PERSONAL_CFO_RAILWAY_CALLBACK
+                return {
+                    "access_token": ACCESS, "refresh_token": REFRESH,
+                    "scope": GOOGLE_METADATA_SCOPE, "token_type": "Bearer",
+                    "expires_in": 3600,
+                }
+            if form["grant_type"] == "refresh_token":
+                assert form["refresh_token"] == REFRESH
+                return {
+                    "access_token": ACCESS,
+                    "scope": GOOGLE_METADATA_SCOPE,
+                    "token_type": "Bearer", "expires_in": 3600,
+                }
+            raise AssertionError("Unexpected Google grant type")
         if method == "GET" and url.startswith(
             "https://www.googleapis.com/drive/v3/files/" + FOLDER
         ):
@@ -143,6 +149,25 @@ def owner_client(monkeypatch, tmp_path):
                 "trashed": False,
                 "shared": False,
                 "owners": [{"me": True}],
+            }
+        if method == "GET" and url.startswith(
+            "https://www.googleapis.com/drive/v3/files?"
+        ):
+            assert form is None and bearer == ACCESS
+            assert "q=" in url and "pageSize=100" in url
+            assert "alt=media" not in url
+            return {
+                "incompleteSearch": False,
+                "nextPageToken": None,
+                "files": [{
+                    "id": "SYNTHETIC_DOCUMENT_2026_ALPHA",
+                    "name": "FAKE_STATEMENT_2026.pdf",
+                    "mimeType": "application/pdf",
+                    "parents": [FOLDER],
+                    "size": "123",
+                    "modifiedTime": "2026-11-18T00:00:00Z",
+                    "trashed": False,
+                }],
             }
         raise AssertionError("Forbidden external request in fake transport")
 
@@ -304,3 +329,71 @@ def test_owner_session_can_resume_after_google_callback_without_new_totp(
         headers=headers(csrf=refreshed["csrf_token"]),
     ).status_code == 200
     assert len(seen) == 2  # No new Google network request on OAuth start.
+
+
+
+def test_one_folder_metadata_page_uses_refresh_and_never_imports_bytes(
+    owner_client,
+):
+    c, engine, seen, _ = owner_client
+    csrf = login(c)
+    state = state_from(c, csrf)
+    assert_scrubbed(callback(c, state), state)
+    updated = c.get(
+        "/internal/drive/auth/session", headers=headers(origin=None)
+    ).json()["csrf_token"]
+    assert c.post(
+        "/internal/drive/metadata/page",
+        headers=headers(csrf=csrf), json={"page_token": None},
+    ).status_code == 401
+    response = c.post(
+        "/internal/drive/metadata/page",
+        headers=headers(csrf=updated), json={"page_token": None},
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["contract"] == "personal_cfo_private_live_folder_metadata_v1"
+    assert data["metadata_only"] is True
+    assert data["one_pinned_folder_only"] is True
+    assert data["background_sync_active"] is False
+    assert data["original_file_bytes_imported"] is False
+    assert data["financial_data_enabled"] is False
+    assert data["next_page_token"] is None
+    assert data["files"] == [{
+        "id": "SYNTHETIC_DOCUMENT_2026_ALPHA",
+        "name": "FAKE_STATEMENT_2026.pdf",
+        "mime_type": "application/pdf",
+        "modified_time": "2026-11-18T00:00:00Z",
+        "size_bytes": 123,
+    }]
+    assert [m for m,_,_,_ in seen] == ["POST","GET","POST","GET","GET"]
+    assert not any("alt=media" in url for _,url,_,_ in seen)
+    with engine.connect() as db:
+        raw = str(db.execute(
+            text("SELECT * FROM owner_google_metadata_grants")
+        ).one())
+    for plain in (REFRESH, ACCESS, "FAKE_STATEMENT_2026.pdf"):
+        assert plain not in raw
+
+
+def test_private_metadata_page_requires_owner_csrf_and_safe_json(owner_client):
+    c, _, seen, _ = owner_client
+    csrf = login(c)
+    for body in (
+        '{"page_token":null,"page_token":null}',
+        '{"page_token":"bad\\nline"}',
+        '{"unexpected":null}',
+    ):
+        r = c.post(
+            "/internal/drive/metadata/page",
+            headers={**headers(csrf=csrf), "content-type": "application/json"},
+            content=body.encode("ascii"),
+        )
+        assert r.status_code == 400
+    denied = c.post(
+        "/internal/drive/metadata/page",
+        headers=headers(csrf=csrf, origin="https://attacker.invalid"),
+        json={"page_token": None},
+    )
+    assert denied.status_code == 403
+    assert seen == []
