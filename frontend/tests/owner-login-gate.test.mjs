@@ -66,7 +66,7 @@ test("exact three public login routes are disabled unless independently enabled"
 
 test("owner page is only available through gated URL, not its direct filename", () => {
   const conf = read("nginx.railway.conf"), blocks = locations(conf);
-  assert.ok(conf.includes("location = /owner-login.html { return 404; }"));
+  assert.ok(blocks.get("/owner-login.html").includes("return 404;"));
   const guarded = blocks.get("/owner-login");
   assert.ok(guarded.includes('if ($p1ak_owner_ingress != "1") { return 404; }'));
   assert.ok(guarded.includes("try_files /owner-login.html =404;"));
