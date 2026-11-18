@@ -137,6 +137,7 @@ def prepare() -> dict:
         )
     print("Prepare private Personal CFO Google metadata + owner gateway keys.")
     print("Nothing will be deployed or publicly enabled. No secrets are displayed.")
+    print("Approval phrase: " + APPROVAL)
     if input("Type the exact approval phrase: ").strip() != APPROVAL:
         raise PrivateGoogleKeyPreparationBlocked(
             "Owner has not approved connector preparation"
