@@ -30,6 +30,7 @@ from pathlib import Path
 import re
 import secrets
 import sys
+from urllib.parse import quote
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -199,6 +200,24 @@ def reveal(value: str, name: str) -> str:
     return _open(value)[name]
 
 
+def build_isolated_credential_dsn() -> str:
+    """Use an attended prompt to construct a TLS internal restricted-role URL.
+
+    Caller must copy this directly into a PRIVATE Railway variable. The
+    password is not saved to the local escrow or command-line arguments.
+    """
+    _tty()
+    password = getpass.getpass("Existing restricted PostgreSQL role password: ")
+    if not 24 <= len(password) <= 256:
+        raise LocalOwnerKeyCustodyBlocked("Restricted role password length rejected")
+    return (
+        "postgresql+psycopg://personal_cfo_owner_credentials:"
+        + quote(password, safe="")
+        + "@postgres.railway.internal:5432/personal_cfo_owner_auth"
+        + "?sslmode=require"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Owner-side encrypted runtime key escrow, never run in CI or Railway")
@@ -208,9 +227,13 @@ def main(argv: list[str] | None = None) -> int:
         entry.add_argument("absolute_encrypted_file")
         if command == "reveal":
             entry.add_argument("variable_name", choices=sorted(_ALL))
+    sub.add_parser("dsn", help="Build a restricted private Railway URL from a hidden password prompt")
     args = parser.parse_args(argv)
     try:
-        if args.command == "create":
+        if args.command == "dsn":
+            print("SECRET — copy only into the private Railway variable P1W_OWNER_CREDENTIAL_DATABASE_URL; never into chat:", file=sys.stderr)
+            print(build_isolated_credential_dsn())
+        elif args.command == "create":
             print(json.dumps(create(args.absolute_encrypted_file), sort_keys=True))
         elif args.command == "verify":
             print(json.dumps(verify(args.absolute_encrypted_file), sort_keys=True))
