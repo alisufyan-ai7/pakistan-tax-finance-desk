@@ -304,3 +304,59 @@ def test_owner_session_can_resume_after_google_callback_without_new_totp(
         headers=headers(csrf=refreshed["csrf_token"]),
     ).status_code == 200
     assert len(seen) == 2  # No new Google network request on OAuth start.
+
+
+
+def test_optional_private_documents_endpoint_has_owner_mfa_and_no_provider_ids(
+    owner_client, monkeypatch,
+):
+    from app import private_owner_drive_metadata_preview as preview
+    c, engine, _seen, _ = owner_client
+    report = {
+        "contract": "personal_cfo_owner_metadata_review_preview_v1",
+        "connection": "APPROVED_METADATA_GRANT_USED",
+        "folder": "ONE_OWNER_APPROVED_FOLDER",
+        "snapshot_complete": True,
+        "metadata_checked_at_epoch": T,
+        "total": 1,
+        "items": [{"display_name": "SYNTHETIC_statement.pdf",
+                   "virtual_collection": "bank_statements",
+                   "review_status": "awaiting_private_document_verification",
+                   "size_bytes": 12345,
+                   "modified_time": "2026-11-18T11:07:31+00:00",
+                   "original_content_imported": False,
+                   "financial_claims_verified": False}],
+        "snapshot_persisted": False,
+        "background_sync_active": False,
+        "source_bytes_downloaded": False,
+        "financial_claims_verified": False,
+        "real_financial_data_enabled": False,
+    }
+    monkeypatch.setattr(
+        preview, "scan_one_owner_folder_metadata",
+        lambda **kwargs: report,
+    )
+    app = create_review_only_private_google_http_gateway(
+        lambda: Session(engine), metadata_preview=True,
+    )
+    with TestClient(app, base_url="https://" + HOST) as session:
+        assert session.get("/internal/drive/documents/queue",
+                           headers=headers(origin=None)).status_code == 401
+        assert session.get("/api/drive/documents/queue",
+                           headers=headers(origin=None)).status_code == 404
+        login(session)
+        response = session.get("/internal/drive/documents/queue",
+                               headers=headers(origin=None))
+        assert response.status_code == 200
+        assert response.json() == report
+        assert response.headers["cache-control"] == "no-store"
+        assert FOLDER not in response.text and REFRESH not in response.text
+        assert CODE not in response.text
+    assert "/internal/drive/documents/queue" not in {
+        route.path for route in create_preview_app().routes
+    }
+    assert "/internal/drive/documents/queue" not in {
+        route.path for route in create_review_only_private_google_http_gateway(
+            lambda: Session(engine),
+        ).routes
+    }
