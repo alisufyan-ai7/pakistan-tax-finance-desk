@@ -132,3 +132,96 @@ def test_private_runtime_source_never_enables_public_proxy_or_google():
     for route in ("/api/drive/oauth/callback", "/api/drive/oauth/start"):
         assert f"location = {route}" not in frontend
     assert "location /api/" not in frontend
+
+
+
+def test_google_controller_requires_separate_reviewed_runtime_and_edge(monkeypatch):
+    monkeypatch.setenv("P1AJ_OWNER_LOGIN_RUNTIME", "1")
+    monkeypatch.setenv("P1AJ_G2_EXACT_INGRESS_REVIEWED", "1")
+    monkeypatch.setenv("P1AJ_NO_SENSITIVE_ACCESS_LOG_ACCEPTED", "1")
+    monkeypatch.setenv("APP_DATA_MODE", "synthetic")
+    monkeypatch.setenv("P1AN_GOOGLE_METADATA_RUNTIME", "1")
+    monkeypatch.setenv("P1C_GOOGLE_NETWORK_ENABLED", "1")
+    monkeypatch.delenv("P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED", raising=False)
+    with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
+        runtime.create_private_runtime_entrypoint()
+    monkeypatch.setenv("P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED", "1")
+    with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
+        runtime.create_private_runtime_entrypoint()
+    monkeypatch.setenv("P1AN_METADATA_ONLY_HTTP_ACCEPTED", "1")
+    monkeypatch.setattr(
+        private_owner_login_service, "_reviewed_private_configuration",
+        lambda: None,
+    )
+    # Even the fully toggled runtime must separately pass real Google config.
+    with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
+        runtime.create_private_runtime_entrypoint()
+
+
+def test_only_approved_exact_google_paths_are_routed(monkeypatch):
+    from app import private_owner_real_google_http
+    monkeypatch.setenv("P1AJ_OWNER_LOGIN_RUNTIME", "1")
+    monkeypatch.setenv("P1AJ_G2_EXACT_INGRESS_REVIEWED", "1")
+    monkeypatch.setenv("P1AJ_NO_SENSITIVE_ACCESS_LOG_ACCEPTED", "1")
+    monkeypatch.setenv("APP_DATA_MODE", "synthetic")
+    monkeypatch.setenv("P1AN_GOOGLE_METADATA_RUNTIME", "1")
+    monkeypatch.setenv("P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED", "1")
+    monkeypatch.setenv("P1AN_METADATA_ONLY_HTTP_ACCEPTED", "1")
+    monkeypatch.setenv("P1C_GOOGLE_NETWORK_ENABLED", "1")
+    monkeypatch.setattr(
+        private_owner_login_service, "_reviewed_private_configuration",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        private_owner_real_google_http, "_reviewed_google_http",
+        lambda: None,
+    )
+    preview = FastAPI()
+    owner = FastAPI()
+    @preview.get("/healthz")
+    def health(): return {"ok": True}
+    @owner.post("/internal/drive/auth/login")
+    def owner_login(): return {"fake": True}
+    @owner.get("/internal/drive/oauth/callback")
+    def oauth_callback(): return {"fake": True}
+    @owner.post("/internal/drive/oauth/start")
+    def oauth_start(): return {"fake": True}
+    @owner.get("/internal/drive/oauth/status")
+    def oauth_status(): return {"fake": True}
+    monkeypatch.setattr(runtime, "create_preview_app", lambda: preview)
+    calls = []
+    def fake_owner_factory(*, google_metadata=False):
+        calls.append(google_metadata)
+        return owner
+    monkeypatch.setattr(
+        private_owner_login_service,
+        "create_review_only_private_owner_login_service",
+        fake_owner_factory,
+    )
+    app = runtime.create_private_runtime_entrypoint()
+    assert calls == [True]
+    assert app.owner_routes == runtime._OWNER_ROUTES | runtime._GOOGLE_ROUTES
+    with TestClient(app) as client:
+        assert client.get("/healthz").status_code == 200
+        assert client.post("/internal/drive/auth/login").status_code == 200
+        assert client.get("/internal/drive/oauth/callback?state=fake").status_code == 200
+        assert client.post("/internal/drive/oauth/start").status_code == 200
+        assert client.get("/internal/drive/oauth/status").status_code == 200
+        for path in (
+            "/api/drive/oauth/callback", "/api/drive/oauth/status",
+            "/internal/drive/oauth/disconnect",
+            "/internal/drive/oauth/start/bypass",
+            "/internal/finance/upload", "/internal/drive/auth/recovery",
+        ):
+            assert client.get(path).status_code == 404
+
+
+def test_google_network_without_google_controller_fails_closed(monkeypatch):
+    monkeypatch.setenv("P1AJ_OWNER_LOGIN_RUNTIME", "1")
+    monkeypatch.setenv("P1AJ_G2_EXACT_INGRESS_REVIEWED", "1")
+    monkeypatch.setenv("P1AJ_NO_SENSITIVE_ACCESS_LOG_ACCEPTED", "1")
+    monkeypatch.setenv("APP_DATA_MODE", "synthetic")
+    monkeypatch.setenv("P1AN_GOOGLE_METADATA_RUNTIME", "0")
+    monkeypatch.setenv("P1C_GOOGLE_NETWORK_ENABLED", "1")
+    with pytest.raises(runtime.PrivateRuntimeSwitchBlocked):
+        runtime.create_private_runtime_entrypoint()

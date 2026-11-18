@@ -23,6 +23,11 @@ _OWNER_ROUTES = frozenset({
     "/internal/drive/auth/session",
     "/internal/drive/auth/logout",
 })
+_GOOGLE_ROUTES = frozenset({
+    "/internal/drive/oauth/start",
+    "/internal/drive/oauth/callback",
+    "/internal/drive/oauth/status",
+})
 
 
 class PrivateRuntimeSwitchBlocked(ValueError):
@@ -32,9 +37,10 @@ class PrivateRuntimeSwitchBlocked(ValueError):
 class _PrivatePreviewComposite:
     """Route by exact canonical path, never wildcard-prefix proxy."""
 
-    def __init__(self, preview: FastAPI, owner: FastAPI):
+    def __init__(self, preview: FastAPI, owner: FastAPI, *, google_metadata: bool = False):
         self.preview = preview
         self.owner = owner
+        self.owner_routes = _OWNER_ROUTES | (_GOOGLE_ROUTES if google_metadata else frozenset())
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -52,7 +58,7 @@ class _PrivatePreviewComposite:
         kind = scope.get("type")
         if kind == "lifespan":
             await self._lifecycle(scope, receive, send)
-        elif kind == "http" and scope.get("path") in _OWNER_ROUTES:
+        elif kind == "http" and scope.get("path") in self.owner_routes:
             # Method mismatch reaches FastAPI to return 405. The P1Q
             # boundary separately requires a trusted gateway proof.
             await self.owner(scope, receive, send)
@@ -79,18 +85,41 @@ def create_private_runtime_entrypoint():
     if (
         os.getenv("P1AJ_G2_EXACT_INGRESS_REVIEWED") != "1"
         or os.getenv("P1AJ_NO_SENSITIVE_ACCESS_LOG_ACCEPTED") != "1"
-        or os.getenv("P1C_GOOGLE_NETWORK_ENABLED") == "1"
         or os.getenv("APP_DATA_MODE") != "synthetic"
     ):
         raise PrivateRuntimeSwitchBlocked("Private runtime ingress not approved")
+    google_mode = os.getenv("P1AN_GOOGLE_METADATA_RUNTIME", "")
+    if google_mode not in ("", "0", "1"):
+        raise PrivateRuntimeSwitchBlocked("Private Google mode invalid")
+    google_on = google_mode == "1"
+    if google_on:
+        if (
+            os.getenv("P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED") != "1"
+            or os.getenv("P1AN_METADATA_ONLY_HTTP_ACCEPTED") != "1"
+            or os.getenv("P1C_GOOGLE_NETWORK_ENABLED") != "1"
+        ):
+            raise PrivateRuntimeSwitchBlocked(
+                "Private real Google ingress acceptance absent"
+            )
+    elif os.getenv("P1C_GOOGLE_NETWORK_ENABLED") == "1":
+        # Never enable an outbound Google network mode without also
+        # mounting its separately approved session-bound controller.
+        raise PrivateRuntimeSwitchBlocked("Unbound Google network denied")
     try:
         _reviewed_private_configuration()
+        if google_on:
+            from .private_owner_real_google_http import _reviewed_google_http
+            _reviewed_google_http()
     except Exception:
         raise PrivateRuntimeSwitchBlocked(
-            "Private runtime credential authority not accepted"
+            "Private runtime credential/metadata authority not accepted"
         ) from None
+    owner = (
+        create_review_only_private_owner_login_service(google_metadata=True)
+        if google_on else create_review_only_private_owner_login_service()
+    )
     return _PrivatePreviewComposite(
-        create_preview_app(), create_review_only_private_owner_login_service(),
+        create_preview_app(), owner, google_metadata=google_on,
     )
 
 
