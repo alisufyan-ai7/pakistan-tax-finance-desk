@@ -49,7 +49,11 @@ from .private_owner_identity import (
 _MAX_QUERY = 3072
 _CALLBACK = "/internal/drive/oauth/callback"
 _FINISH = "/owner-login"
-_CALLBACK_KEYS = frozenset({"code", "state", "scope", "authuser", "prompt"})
+_CALLBACK_KEY = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,47}$")
+_GOOGLE_ISSUER = "https://accounts.google.com"
+# RFC 6749 §4.1.2 requires ignoring unrecognized authorization-response
+# parameters, e.g. Google's hd, while authenticating code+state via PKCE.
+# RFC 9207 requires verifying an optional issuer to prevent AS mix-up.
 _LOG = logging.getLogger("personal_cfo.oauth_callback")
 
 
@@ -142,21 +146,26 @@ def create_review_only_private_google_http_gateway(
             _reviewed_google_http()
             params = request.query_params
             names = set(params.keys())
-            # Real Google redirects may include optional scope/authuser/prompt
-            # in addition to code and state. Validate each, never accept
-            # duplicated keys or any unrecognized redirect parameters.
+            # The only authority-bearing response fields are code+state.
+            # Do not let ancillary Google fields prevent legitimate consent.
+            # Unknown fields are ignored per RFC 6749 §4.1.2, never used
+            # for routing, identity, permissions or token exchange.
             if (len(request.url.query) > _MAX_QUERY
                 or not {"state", "code"} <= names
-                or not names <= _CALLBACK_KEYS
-                or any(len(params.getlist(name)) != 1 for name in names)
-                or ("scope" in names
-                    and params["scope"] != GOOGLE_METADATA_SCOPE)
-                or ("authuser" in names
-                    and re.fullmatch(r"[0-9]{1,3}", params["authuser"]) is None)
-                or ("prompt" in names and params["prompt"] not in (
-                    "consent", "select_account", "consent select_account",
-                    "select_account consent",
-                ))):
+                or "error" in names or "error_description" in names
+                or "error_uri" in names
+                or len(names) > 12
+                or any(
+                    _CALLBACK_KEY.fullmatch(name) is None
+                    or len(params.getlist(name)) != 1
+                    or len(params[name]) > 2048
+                    or any(ord(ch) < 32 or ord(ch) == 127
+                           for ch in params[name])
+                    for name in names
+                )
+                # RFC 9207: when Google includes 'iss', validate it
+                # exactly, rather than ignoring a forged/mixed issuer.
+                or ("iss" in names and params["iss"] != _GOOGLE_ISSUER)):
                 raise PrivateOwnerGoogleHttpBlocked(
                     "Unapproved callback parameters"
                 )

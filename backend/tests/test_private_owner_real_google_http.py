@@ -362,21 +362,21 @@ def test_private_owner_documents_reuses_bounded_p1ap_snapshot_after_csrf(
     assert seen == []  # No Google network in this authenticated shell test.
 
 
-def test_actual_google_consent_redirect_extras_are_verified_and_persisted(owner_client):
-    """Google may append scope, authuser and prompt after successful consent.
-
-    The live owner reported a 303 redirect but status=not connected. Earlier
-    code required exactly state+code and silently rejected Google's callback.
-    """
+@pytest.mark.parametrize("ancillary", [
+    {"scope": GOOGLE_METADATA_SCOPE, "authuser": "0", "prompt": "consent"},
+    {"scope": GOOGLE_METADATA_SCOPE, "authuser": "0", "prompt": "consent",
+     "hd": "example.com", "iss": "https://accounts.google.com"},
+    {"scope": GOOGLE_METADATA_SCOPE, "hd": "example.com",
+     "unknown_google_response_field": "unrecognized_but_ignored"},
+    {"authuser": "not_used_for_identity", "prompt": "account_selection_changed"},
+])
+def test_real_google_callback_ignores_ancillary_fields_per_rfc6749(
+    owner_client, ancillary,
+):
+    """Only code+bound PKCE state authorize; Google may add hd/iss/etc."""
     c, engine, seen, _ = owner_client
     state = state_from(c, login(c))
-    query = urlencode({
-        "state": state,
-        "code": CODE,
-        "scope": GOOGLE_METADATA_SCOPE,
-        "authuser": "0",
-        "prompt": "consent",
-    })
+    query = urlencode({"state": state, "code": CODE, **ancillary})
     response = callback(c, state, path="/internal/drive/oauth/callback?" + query)
     assert_scrubbed(response, state)
     assert [method for method, *_ in seen] == ["POST", "GET"]
@@ -393,17 +393,18 @@ def test_actual_google_consent_redirect_extras_are_verified_and_persisted(owner_
 
 
 @pytest.mark.parametrize("addition", [
-    "&scope=https%3A%2F%2Fevil.invalid%2Fauth%2Fdrive",
     "&scope=" + GOOGLE_METADATA_SCOPE + "&scope=" + GOOGLE_METADATA_SCOPE,
-    "&authuser=wrong",
     "&authuser=0&authuser=1",
-    "&prompt=login",
     "&prompt=consent&prompt=consent",
     "&code=ANOTHER_FAKE_CODE_DO_NOT_ACCEPT",
-    "&unknown=1",
+    "&iss=https%3A%2F%2Fevil.invalid",
+    "&iss=https%3A%2F%2Faccounts.google.com&iss=https%3A%2F%2Faccounts.google.com",
     "&error=access_denied",
+    "&error_description=test",
+    "&%0A=bad_name",
+    "&unknown=" + "F"*2100,
 ])
-def test_optional_google_redirect_parameters_fail_closed_when_invalid(
+def test_invalid_or_ambiguous_oauth_response_still_fails_closed(
     owner_client, addition,
 ):
     c, engine, seen, _ = owner_client
@@ -415,6 +416,32 @@ def test_optional_google_redirect_parameters_fail_closed_when_invalid(
         assert db.execute(text(
             "SELECT status FROM owner_private_oauth_attempts"
         )).scalar_one() == "pending"
+        assert db.execute(text(
+            "SELECT count(*) FROM owner_google_metadata_grants"
+        )).scalar_one() == 0
+
+
+def test_actual_token_scope_must_remain_exact_metadata_readonly(
+    owner_client, monkeypatch,
+):
+    from app import private_owner_real_google_http as google_http
+    c, engine, seen, _ = owner_client
+    state = state_from(c, login(c))
+    def scope_denied(**kwargs):
+        from app.private_drive_google_http import PrivateGoogleNetworkBlocked
+        raise PrivateGoogleNetworkBlocked(
+            "Provider token missing exact metadata scope"
+        )
+    monkeypatch.setattr(google_http, "exchange_google_code", scope_denied)
+    assert_scrubbed(callback(
+        c, state, path="/internal/drive/oauth/callback?" + urlencode({
+            "state": state, "code": CODE, "hd": "example.com",
+            "iss": "https://accounts.google.com",
+        }),
+    ), state)
+    status = c.get("/internal/drive/oauth/status", headers=headers(origin=None))
+    assert status.json()["google_drive_app_connected"] is False
+    with engine.connect() as db:
         assert db.execute(text(
             "SELECT count(*) FROM owner_google_metadata_grants"
         )).scalar_one() == 0
