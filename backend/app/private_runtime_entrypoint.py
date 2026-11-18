@@ -28,6 +28,7 @@ _GOOGLE_ROUTES = frozenset({
     "/internal/drive/oauth/callback",
     "/internal/drive/oauth/status",
 })
+_DOCUMENT_ROUTES = frozenset({"/internal/drive/documents/queue"})
 
 
 class PrivateRuntimeSwitchBlocked(ValueError):
@@ -37,10 +38,17 @@ class PrivateRuntimeSwitchBlocked(ValueError):
 class _PrivatePreviewComposite:
     """Route by exact canonical path, never wildcard-prefix proxy."""
 
-    def __init__(self, preview: FastAPI, owner: FastAPI, *, google_metadata: bool = False):
+    def __init__(
+        self, preview: FastAPI, owner: FastAPI, *,
+        google_metadata: bool = False, metadata_preview: bool = False,
+    ):
         self.preview = preview
         self.owner = owner
-        self.owner_routes = _OWNER_ROUTES | (_GOOGLE_ROUTES if google_metadata else frozenset())
+        self.owner_routes = (
+            _OWNER_ROUTES |
+            (_GOOGLE_ROUTES if google_metadata else frozenset()) |
+            (_DOCUMENT_ROUTES if metadata_preview else frozenset())
+        )
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -114,12 +122,26 @@ def create_private_runtime_entrypoint():
         raise PrivateRuntimeSwitchBlocked(
             "Private runtime credential/metadata authority not accepted"
         ) from None
+    document_mode = os.getenv("P1AP_OWNER_FOLDER_METADATA_REVIEW_ONLY", "")
+    if document_mode not in ("", "0", "1"):
+        raise PrivateRuntimeSwitchBlocked("Private Documents runtime invalid")
+    documents_on = document_mode == "1"
+    if documents_on and (
+        not google_on
+        or os.getenv("P1AP_G2_AUTHENTICATED_METADATA_UI_REVIEWED") != "1"
+    ):
+        raise PrivateRuntimeSwitchBlocked(
+            "Owner Documents review has not been accepted"
+        )
     owner = (
-        create_review_only_private_owner_login_service(google_metadata=True)
+        create_review_only_private_owner_login_service(
+            google_metadata=True, metadata_preview=documents_on,
+        )
         if google_on else create_review_only_private_owner_login_service()
     )
     return _PrivatePreviewComposite(
         create_preview_app(), owner, google_metadata=google_on,
+        metadata_preview=documents_on,
     )
 
 
