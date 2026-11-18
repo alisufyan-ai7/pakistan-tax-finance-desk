@@ -191,3 +191,13 @@ def test_duplicate_valid_login_members_and_transfer_encoding_denied(client):
 
     # No replay counter should have been consumed by malformed JSON.
     assert login(c).status_code == 200
+
+
+
+def test_legacy_duplicate_owner_reference_cannot_replace_escrowed_one(client):
+    c, monkeypatch, _ = client
+    monkeypatch.delenv("P1W_OWNER_REF")
+    monkeypatch.setenv("P1Q_PRIVATE_OWNER_REF", OWNER)
+    assert login(c).status_code == 503
+    monkeypatch.setenv("P1W_OWNER_REF", OWNER)
+    assert login(c).status_code == 200
