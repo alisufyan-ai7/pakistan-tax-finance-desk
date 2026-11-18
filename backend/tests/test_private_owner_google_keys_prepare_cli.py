@@ -1,5 +1,6 @@
 """P1AR: all private Google/G2 keys prepared once without browser secret output."""
 import base64
+import sys as actual_sys
 import hmac
 from hashlib import sha256
 from types import SimpleNamespace
@@ -17,7 +18,7 @@ def baseline(monkeypatch, *, backend=None, frontend=None):
         platform="darwin",
         stdin=SimpleNamespace(isatty=lambda: True),
         stdout=SimpleNamespace(isatty=lambda: True),
-        stderr=SimpleNamespace(isatty=lambda: True),
+        stderr=actual_sys.stderr,
     ))
     monkeypatch.setattr(prep.shutil,"which",
                         lambda n: "/usr/local/bin/railway" if n=="railway" else None)
