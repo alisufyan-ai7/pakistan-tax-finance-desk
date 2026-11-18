@@ -3,7 +3,7 @@ import base64
 import hmac
 import json
 from hashlib import sha1
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, urlencode
 
 from fastapi.testclient import TestClient
 import pytest
@@ -360,3 +360,91 @@ def test_private_owner_documents_reuses_bounded_p1ap_snapshot_after_csrf(
     assert response.headers["cache-control"] == "no-store"
     assert calls == [True]
     assert seen == []  # No Google network in this authenticated shell test.
+
+
+def test_actual_google_consent_redirect_extras_are_verified_and_persisted(owner_client):
+    """Google may append scope, authuser and prompt after successful consent.
+
+    The live owner reported a 303 redirect but status=not connected. Earlier
+    code required exactly state+code and silently rejected Google's callback.
+    """
+    c, engine, seen, _ = owner_client
+    state = state_from(c, login(c))
+    query = urlencode({
+        "state": state,
+        "code": CODE,
+        "scope": GOOGLE_METADATA_SCOPE,
+        "authuser": "0",
+        "prompt": "consent",
+    })
+    response = callback(c, state, path="/internal/drive/oauth/callback?" + query)
+    assert_scrubbed(response, state)
+    assert [method for method, *_ in seen] == ["POST", "GET"]
+    status = c.get("/internal/drive/oauth/status", headers=headers(origin=None))
+    assert status.status_code == 200
+    assert status.json()["google_drive_app_connected"] is True
+    with engine.connect() as db:
+        assert db.execute(text(
+            "SELECT count(*) FROM owner_google_metadata_grants"
+        )).scalar_one() == 1
+        assert db.execute(text(
+            "SELECT status FROM owner_private_oauth_attempts"
+        )).scalar_one() == "claimed"
+
+
+@pytest.mark.parametrize("addition", [
+    "&scope=https%3A%2F%2Fevil.invalid%2Fauth%2Fdrive",
+    "&scope=" + GOOGLE_METADATA_SCOPE + "&scope=" + GOOGLE_METADATA_SCOPE,
+    "&authuser=wrong",
+    "&authuser=0&authuser=1",
+    "&prompt=login",
+    "&prompt=consent&prompt=consent",
+    "&code=ANOTHER_FAKE_CODE_DO_NOT_ACCEPT",
+    "&unknown=1",
+    "&error=access_denied",
+])
+def test_optional_google_redirect_parameters_fail_closed_when_invalid(
+    owner_client, addition,
+):
+    c, engine, seen, _ = owner_client
+    state = state_from(c, login(c))
+    base = "/internal/drive/oauth/callback?state=" + state + "&code=" + CODE
+    assert_scrubbed(callback(c, state, path=base + addition), state)
+    assert seen == []
+    with engine.connect() as db:
+        assert db.execute(text(
+            "SELECT status FROM owner_private_oauth_attempts"
+        )).scalar_one() == "pending"
+        assert db.execute(text(
+            "SELECT count(*) FROM owner_google_metadata_grants"
+        )).scalar_one() == 0
+
+
+def test_provider_failure_emits_only_safe_stage_without_code_or_state(
+    owner_client, monkeypatch, caplog,
+):
+    from app import private_owner_real_google_http as http
+    c, engine, seen, _ = owner_client
+    state = state_from(c, login(c))
+    fake_error = "FAKE_300_CHAR_PROVIDER_SECRET_NEVER_LOGGED"
+    def fail_exchange(**kwargs):
+        raise RuntimeError(fake_error)
+    monkeypatch.setattr(http, "exchange_google_code", fail_exchange)
+    with caplog.at_level("WARNING", logger="personal_cfo.oauth_callback"):
+        response = callback(
+            c, state,
+            path="/internal/drive/oauth/callback?" + urlencode({
+                "state": state, "code": CODE, "scope": GOOGLE_METADATA_SCOPE,
+                "authuser": "0", "prompt": "consent",
+            }),
+        )
+    assert_scrubbed(response, state)
+    logs = " ".join(record.getMessage() for record in caplog.records)
+    assert "stage=google_code_exchange" in logs
+    for sensitive in (state, CODE, REFRESH, ACCESS, FOLDER, CLIENT, fake_error):
+        assert sensitive not in logs
+    with engine.connect() as db:
+        assert db.execute(text(
+            "SELECT count(*) FROM owner_google_metadata_grants"
+        )).scalar_one() == 0
+    assert seen == []
