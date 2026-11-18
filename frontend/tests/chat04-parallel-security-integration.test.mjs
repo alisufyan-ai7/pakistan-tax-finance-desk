@@ -20,11 +20,12 @@ test("combined frontend keeps OAuth blocked and owner login independently gated"
   const nginx=source("nginx.railway.conf");
   const ui=source("ui.mjs"),sw=source("sw.js");
   assert.match(nginx,/location = \/api\/preview\/status/);
-  assert.doesNotMatch(nginx,/location = \/api\/drive\/oauth\/callback/);
+  assert.match(nginx,/location = \/api\/drive\/oauth\/callback/);
+  assert.match(nginx,/if \(\$p1ao_google_ingress != "1"\) \{ return 404; \}/);
   assert.doesNotMatch(nginx,/location \/api\//);
   assert.match(nginx,/location = \/api\/owner\/login/);
   assert.match(nginx,/if \(\$p1ak_owner_ingress != "1"\) \{ return 404; \}/);
-  assert.doesNotMatch(nginx,/location = \/api\/drive\/oauth\/start/);
+  assert.match(nginx,/location = \/api\/drive\/oauth\/start/);
   assert.doesNotMatch(ui,/fetch\(["']https?:/);
   assert.match(sw,/NO fetch handler/);
 });
