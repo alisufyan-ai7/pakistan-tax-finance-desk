@@ -275,3 +275,32 @@ def test_default_off_and_wrong_origin_block_start(owner_client):
     assert "/internal/drive/oauth/callback" not in {
         r.path for r in create_preview_app().routes
     }
+
+
+
+def test_owner_session_can_resume_after_google_callback_without_new_totp(
+    owner_client,
+):
+    """Navigation destroys in-memory CSRF, never the HttpOnly session cookie."""
+    c, _, seen, _ = owner_client
+    initial_csrf = login(c)
+    state = state_from(c, initial_csrf)
+    assert_scrubbed(callback(c, state), state)
+    rejoined = c.get(
+        "/internal/drive/auth/session", headers=headers(origin=None),
+    )
+    assert rejoined.status_code == 200
+    refreshed = rejoined.json()
+    assert refreshed["authenticated"] is True
+    assert refreshed["real_financial_data_enabled"] is False
+    assert refreshed["csrf_token"] != initial_csrf
+    assert len(refreshed["csrf_token"]) >= 40
+    assert c.post(
+        "/internal/drive/oauth/start",
+        headers=headers(csrf=initial_csrf),
+    ).status_code == 401
+    assert c.post(
+        "/internal/drive/oauth/start",
+        headers=headers(csrf=refreshed["csrf_token"]),
+    ).status_code == 200
+    assert len(seen) == 2  # No new Google network request on OAuth start.
