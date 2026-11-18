@@ -1,0 +1,22 @@
+# P1AO — Exact registered Google callback + owner browser consent and CSRF resume
+
+**Status:** Source-only, *disabled by default*. The existing Railway frontend/backend image may contain these routes, but neither Google consent nor actual owner login is activated without explicitly reviewed independent G2 settings and all previously approved P1AJ/P1AI/P1AK/P1AN/P1AL/P1R/P1M restricted-role/key gates.
+
+## Browser and exact ingress integration
+
+- Public exact HTTPS `POST /api/drive/oauth/start`, `GET /api/drive/oauth/callback` and `GET /api/drive/oauth/status` map only to matching private owner runtime controller methods. No `/api/*` wildcard, Google Drive content endpoint, upload/finance, provider token, or broader scope.
+- **Every Google route** independently requires new `P1AO_GOOGLE_INGRESS_ENABLED=1`, existing `P1AK_OWNER_INGRESS_ENABLED=1`, separately generated server-only proof, approved hostname, exact HTTP method and strict private upstream. Credentials and callback query are NEVER printed by the backend controller. Local Nginx access log disabled/error log critical-only; Railway edge/platform request-target and TLS logging **still require independent operational acceptance**, especially before any Google authorization code travels through a public callback. Default ingress flags remain 0 in the frontend Dockerfile to avoid missing-template crash.
+- Callback permits provider `state`/`code` query and forwards only to exact backend path where unique params, session binding and spent-state proof are verified. No cookie/body/query elsewhere. Any callback outcome redirects to fixed `/owner-login` 303 with no referrer/no-store; no authorization code in response.
+- Existing PWA's public fictional dashboard stays unconnected. Only separately guarded `/owner-login` shows a minimal owner login and Google metadata Connect/Reconnect button, connection status and signout. The button validates exact official Google authorization host/path, fixed metadata-only scope and registered Railway callback before navigating; no arbitrary callback/open redirect, localStorage, sessionStorage or client-side token persistence.
+- OAuth's full-page redirect loses JavaScript memory. New restricted SQL owner session `GET` reauthenticates existing HttpOnly SameSite=Lax session cookie, **rotates and returns only a fresh in-memory CSRF proof**, and lets owner check grant status/logout without re-entering TOTP. Old CSRF proof becomes unusable. A new token never appears in cookies, URLs, logs or persistent client-side storage. Reissue refuses missing/expired/revoked session and pending recovery hold. All financial data flags remain false.
+- New frontend source security assertions plus synthetic PostgreSQL/SQLite owner-auth tests cover exact routes with default-off conditions, origin/body/replay, CSRF reissue, no browser secret persistence and full owner->Google->callback->session-resume behavior with **fake provider**.
+
+## Actual release blockers (not completed by this PR)
+
+1. The approved owner must privately generate a gateway proof via existing [P1AM](CHAT06_P1AM_OWNER_GATEWAY_KEY_PREP_2026-11-18.md) and separately hold P1R and P1M encryption/HMAC/active keyring custody on the existing restricted owner DB.
+2. Independently accept the actual Railway frontend TLS, edge/upstream request-target logging, no-code/state/cookie logs, bounded abuse/rate policy and backend owner login process. Keep one human owner, no signup, public recovery or financial routes.
+3. Enable the exact reviewed G2 **in both** backend and frontend without ever applying unrelated staged settings inadvertently. Check exact URL security and rollback, then owner alone completes actual MFA login and Google's browser consent. No password, TOTP or Google provider code in GitHub/chat.
+4. On authentic consent, app must verify owned/unshared approved one private folder and save refresh grant encrypted before claiming connection. Metadata scan and authenticated mobile Documents queue are **next**, real financial original bytes remain G1/G3 blocked.
+5. Owner has already copied three initial encrypted recovery artifacts to two places and requests no repeat backup/restore exercises during independent engineering. Real owner restore remains a later acceptance item and is NOT inferred from synthetic CI.
+
+The Source-owned privacy feature is default-off; **do not set `APP_DATA_MODE=real`** or claim that an app is connected because these routes exist.
