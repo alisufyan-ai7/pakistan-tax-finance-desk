@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from .private_owner_identity import (
     PrivateOwnerIdentityBlocked, issue_private_owner_session,
     verify_private_owner_session, revoke_private_owner_session,
+    renew_private_owner_session_csrf,
 )
 
 _PUBLIC = "https://personal-cfo-frontend-preview-development.up.railway.app"
@@ -173,12 +174,15 @@ def create_private_owner_http_gateway(
         token = request.cookies.get(_COOKIE, "")
         try:
             with session_factory() as db:
-                verify_private_owner_session(db, owner_ref=owner, token=token)
+                proof = renew_private_owner_session_csrf(
+                    db, owner_ref=owner, token=token)
         except PrivateOwnerIdentityBlocked:
             raise HTTPException(status_code=401, detail="Owner MFA session required") from None
         except Exception:
             raise HTTPException(status_code=503, detail="Owner session unavailable") from None
-        return {"authenticated": True, "google_connected": False,
+        return {"authenticated": True,
+                "csrf_token": proof["csrf_token"],
+                "google_connected": False,
                 "real_financial_data_enabled": False}
 
     @app.post("/internal/drive/auth/logout")

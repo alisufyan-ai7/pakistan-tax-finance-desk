@@ -239,7 +239,8 @@ def test_no_live_google_or_public_route_or_staged_client_secret_access(env):
     assert "/api/google/metadata" not in paths
     from pathlib import Path
     nginx=(Path(__file__).parents[2]/"frontend/nginx.railway.conf").read_text()
-    assert "location = /api/drive/oauth/callback" not in nginx
+    assert "location = /api/drive/oauth/callback" in nginx
+    assert 'if ($p1ao_google_ingress != "1") { return 404; }' in nginx
     source=(Path(__file__).parents[1]/"app/private_metadata_grant_custody.py").read_text()
     assert "os.getenv(\"P1C_GOOGLE_CLIENT_SECRET\"" not in source
     assert "urllib.request" not in source

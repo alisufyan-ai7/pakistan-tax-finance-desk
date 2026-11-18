@@ -22,7 +22,7 @@ test("exact three public login routes are disabled unless independently enabled"
   assert.ok(conf.includes('set $p1ak_owner_ingress "${P1AK_OWNER_INGRESS_ENABLED}";'));
   assert.ok(conf.includes('set $p1ak_gateway_token "${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";'));
   assert.ok(!conf.includes('location /api/'));
-  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 4);
+  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 7);
   for (const [path, [method, internal]] of publicRoutes) {
     const b = blocks.get(path);
     assert.ok(b, path);
@@ -49,8 +49,7 @@ test("exact three public login routes are disabled unless independently enabled"
     }
     assert.ok(!b.includes("add_header ")); // inherit server-wide security headers
   }
-  for (const route of ["/api/drive/oauth/start", "/api/drive/oauth/callback",
-                       "/api/drive/oauth/status", "/api/drive/oauth/disconnect",
+  for (const route of ["/api/drive/oauth/disconnect",
                        "/api/finance", "/internal/drive/oauth/start"]) {
     assert.ok(!blocks.has(route));
   }
@@ -86,9 +85,10 @@ test("mobile owner login never persists credentials, uses only own exact login/l
   assert.ok(html.includes('href="/owner-login.css"'));
   assert.ok(js.includes('"/api/owner/login"'));
   assert.ok(js.includes('"/api/owner/logout"'));
-  for (const disallowed of ["localStorage", "sessionStorage",
+  for (const disallowed of ["localStorage.setItem", "localStorage.getItem",
+                            "sessionStorage.setItem", "sessionStorage.getItem",
                             "console.log", "document.cookie",
-                            "https://accounts.google.com", "postMessage("]) {
+                            "postMessage("]) {
     assert.ok(!js.includes(disallowed), disallowed);
   }
   for (const expected of ['credentials: "same-origin"', 'cache: "no-store"',
@@ -101,9 +101,74 @@ test("mobile owner login never persists credentials, uses only own exact login/l
   assert.ok(!docker.includes("ENV P1AK_OWNER_INGRESS_ENABLED=1"));
   // Without defined defaults envsubst leaves a literal dollar variable
   // expression and Nginx refuses to start. Keep runtime safe defaults.
-  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
+  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1AO_GOOGLE_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
   assert.ok(!docker.includes('P1AK_OWNER_INGRESS_ENABLED=1'));
 
   assert.ok(docker.includes("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN"));
   assert.ok(!docker.includes("ENV P1Q_PRIVATE_GATEWAY_SHARED_TOKEN="));
+});
+
+
+test("Google consent has exactly three independently gated metadata-only HTTP routes", () => {
+  const nginx = read("nginx.railway.conf");
+  const blocks = locations(nginx);
+  const routes = new Map([
+    ["/api/drive/oauth/start", ["POST", "/internal/drive/oauth/start"]],
+    ["/api/drive/oauth/callback", ["GET", "/internal/drive/oauth/callback"]],
+    ["/api/drive/oauth/status", ["GET", "/internal/drive/oauth/status"]],
+  ]);
+  assert.ok(nginx.includes('set $p1ao_google_ingress "${P1AO_GOOGLE_INGRESS_ENABLED}";'));
+  for (const [path,[method,internal]] of routes) {
+    const b = blocks.get(path);
+    assert.ok(b, path);
+    for(const gate of [
+      'if ($p1ao_google_ingress != "1") { return 404; }',
+      'if ($p1ak_owner_ingress != "1") { return 404; }',
+      'if ($p1ak_gateway_token = "") { return 503; }',
+      'if ($host != "'+host+'") { return 403; }',
+      'if ($request_method != "'+method+'") { return 405; }',
+      'proxy_set_header X-Personal-CFO-Private-Gateway $p1ak_gateway_token;',
+      'proxy_set_header X-Forwarded-Proto https;',
+      'proxy_set_header Forwarded "";',
+      'access_log off;',
+      'error_log /dev/null crit;',
+    ]) assert.ok(b.includes(gate), path+" missing "+gate);
+    const suffix = path.endsWith("/callback") ? "$is_args$args" : "";
+    assert.ok(b.includes("proxy_pass http://$private_google_upstream"+internal+suffix+";"));
+    assert.ok(b.includes("client_max_body_size 1k;"));
+    assert.ok(b.includes("limit_req zone=cfo_owner_global burst=12 nodelay;"));
+    assert.ok(!b.includes("$request_uri"));
+    if (path.endsWith("/callback")) {
+      assert.ok(!b.includes('if ($args != "") { return 400; }'));
+    } else {
+      assert.ok(b.includes('if ($args != "") { return 400; }'));
+    }
+  }
+  for (const blocked of ["/api/drive/oauth/disconnect","/api/drive/files",
+                         "/api/finance", "/api/owner/recovery"]) {
+    assert.ok(!blocks.has(blocked));
+  }
+  const docker = read("Dockerfile");
+  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1AO_GOOGLE_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
+  assert.ok(!docker.includes("P1AO_GOOGLE_INGRESS_ENABLED=1"));
+});
+
+test("post-redirect session resumes Google status with memory-only CSRF", () => {
+  const js = read("owner-login.mjs");
+  const html = read("owner-login.html");
+  assert.ok(html.includes('id="owner-google-status"'));
+  assert.ok(html.includes('id="owner-google-connect"'));
+  assert.ok(js.includes('"/api/owner/session"'));
+  assert.ok(js.includes('"/api/drive/oauth/status"'));
+  assert.ok(js.includes('"/api/drive/oauth/start"'));
+  assert.ok(js.includes("approvedGoogleConsentUrl"));
+  assert.ok(js.includes('url.origin !== "https://accounts.google.com"'));
+  assert.ok(js.includes('url.pathname !== "/o/oauth2/v2/auth"'));
+  assert.ok(js.includes('"https://www.googleapis.com/auth/drive.metadata.readonly"'));
+  assert.ok(js.includes("window.location.assign(url.href)"));
+  assert.ok(js.includes("void resumePrivateOwnerSession()"));
+  for (const forbidden of ["localStorage.setItem","sessionStorage.setItem",
+                           "document.cookie =", "console.log"]) {
+    assert.ok(!js.includes(forbidden), forbidden);
+  }
 });

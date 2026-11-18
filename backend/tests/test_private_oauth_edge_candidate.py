@@ -26,15 +26,17 @@ def locations(config):
     return {m["path"]:m["body"] for m in re.finditer(pattern,config,re.S)}
 
 
-def test_live_frontend_did_not_gain_auth_login_or_google_callback():
+def test_live_frontend_has_only_independently_gated_owner_and_google_routes():
     current=LIVE.read_text()
     paths=set(locations(current))
-    assert paths & ROUTES.keys() == {
-        "/api/owner/login", "/api/owner/session", "/api/owner/logout"
-    }
+    assert paths & ROUTES.keys() == set(ROUTES)
     for path in ("/api/drive/oauth/start", "/api/drive/oauth/callback",
                  "/api/drive/oauth/status"):
-        assert path not in paths
+        body = locations(current)[path]
+        assert 'if ($p1ao_google_ingress != "1") { return 404; }' in body
+        assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in body
+        assert "access_log off;" in body
+        assert "error_log /dev/null crit;" in body
     # Public-facing MFA paths remain explicitly default-off until G2.
     for path in ("/api/owner/login", "/api/owner/session",
                  "/api/owner/logout"):

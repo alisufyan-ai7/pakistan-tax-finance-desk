@@ -8,3 +8,7 @@ button{font:inherit;background:#234a82;color:#fff;border:0;border-radius:11px;mi
 button:disabled{opacity:.55;cursor:wait}button.secondary{background:#e8eef5;color:#183e67}
 .feedback{min-height:24px;font-weight:600;color:#224b79}.note{font-size:12px;border-top:1px solid #e5eaf1;padding-top:16px}.back{display:inline-block;color:#235889;font-size:14px;font-weight:600;text-underline-offset:3px}
 [hidden]{display:none!important}
+
+.google-panel{border:1px solid #d8e4f1;background:#f7faff;border-radius:12px;padding:16px;margin-top:20px}
+.google-panel h3{font-size:16px;margin:0 0 8px}.google-panel p{margin:0;font-size:13px}
+.google-panel button{margin-top:12px}

@@ -130,7 +130,8 @@ def test_private_runtime_source_never_enables_public_proxy_or_google():
         assert f"location = {route}" in frontend
     assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in frontend
     for route in ("/api/drive/oauth/callback", "/api/drive/oauth/start"):
-        assert f"location = {route}" not in frontend
+        assert f"location = {route}" in frontend
+    assert 'if ($p1ao_google_ingress != "1") { return 404; }' in frontend
     assert "location /api/" not in frontend
 
 

@@ -97,18 +97,22 @@ def test_private_login_cookie_status_and_logout_csrf(client):
         assert key in response.headers
     status = c.get("/internal/drive/auth/session",headers=headers(origin=None))
     assert status.status_code == 200 and status.json()["authenticated"]
-    denied = c.post("/internal/drive/auth/logout",
-         headers={**headers(), "x-csrf-token":"fake-invalid-token"})
-    assert denied.status_code == 401
+    new_csrf = status.json()["csrf_token"]
+    assert new_csrf != csrf
+    assert len(new_csrf) >= 40
+    for denied_proof in ("fake-invalid-token", csrf):
+        denied = c.post("/internal/drive/auth/logout",
+             headers={**headers(), "x-csrf-token":denied_proof})
+        assert denied.status_code == 401
     out = c.post("/internal/drive/auth/logout",
-        headers={**headers(),"x-csrf-token":csrf})
+        headers={**headers(),"x-csrf-token":new_csrf})
     assert out.status_code == 200 and out.json()["local_session_revoked"]
     assert out.json()["google_grant_revoked"] is False
     assert c.get("/internal/drive/auth/session",headers=headers(origin=None)).status_code == 401
     with engine.connect() as db:
         raw = str(db.execute(text("SELECT * FROM owner_private_sessions")).all())
         assert PASSWORD not in raw and SEED not in raw and SECRET not in raw
-        assert csrf not in raw
+        assert csrf not in raw and new_csrf not in raw
 
 
 @pytest.mark.parametrize("bad", [

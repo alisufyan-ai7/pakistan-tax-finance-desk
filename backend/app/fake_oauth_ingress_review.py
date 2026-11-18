@@ -106,52 +106,68 @@ def plan_fake_exact_oauth_ingress(req: FakeIngressRequest) -> dict:
 
 
 def audit_current_public_nginx(*, nginx_source: str) -> dict:
-    """Source-only review: OAuth remains unmounted; owner routes default OFF.
+    """Source-only check for exact disabled owner+Google routes.
 
-    This cannot attest actual live Railway variables, TLS, platform request
-    logging, or human G2 acceptance. An attacker-controlled or duplicate
-    owner route must never pass this source firewall.
+    All six paths can be deployed in a source image while independent
+    Railway approval flags remain OFF. This cannot independently attest
+    the actual Railway edge, platform logs or owner MFA availability.
     """
     if type(nginx_source) is not str or len(nginx_source) > 100_000:
         raise FakeOAuthIngressBlocked("Unsupported proxy configuration")
     if ("location = /api/preview/status" not in nginx_source
         or "location /api/" in nginx_source
-        or "location = /api/drive/oauth" in nginx_source
+        or "location = /api/drive/oauth/disconnect" in nginx_source
         or "location = /api/finance" in nginx_source):
         raise FakeOAuthIngressBlocked("Public ingress unexpectedly broadened")
-    approved = {
+    owner_routes = {
         "/api/owner/login": ("POST", "/internal/drive/auth/login"),
         "/api/owner/session": ("GET", "/internal/drive/auth/session"),
         "/api/owner/logout": ("POST", "/internal/drive/auth/logout"),
     }
-    for path, (method, internal) in approved.items():
+    google_routes = {
+        "/api/drive/oauth/start": ("POST", "/internal/drive/oauth/start"),
+        "/api/drive/oauth/callback": ("GET", "/internal/drive/oauth/callback"),
+        "/api/drive/oauth/status": ("GET", "/internal/drive/oauth/status"),
+    }
+    for path, (method, internal) in {**owner_routes, **google_routes}.items():
         if nginx_source.count("location = " + path + " {") != 1:
-            raise FakeOAuthIngressBlocked("Owner ingress count unsafe")
+            raise FakeOAuthIngressBlocked("Exact private ingress count unsafe")
         match = re.search(
             r"location = " + re.escape(path) + r" \{(.*?)\n    \}",
             nginx_source, re.S,
         )
         if match is None:
-            raise FakeOAuthIngressBlocked("Owner ingress config incomplete")
+            raise FakeOAuthIngressBlocked("Exact private ingress incomplete")
         body = match.group(1)
-        requirements = (
+        google = path in google_routes
+        requirements = [
             'if ($p1ak_owner_ingress != "1") { return 404; }',
             'if ($p1ak_gateway_token = "") { return 503; }',
             'if ($request_method != "' + method + '") { return 405; }',
-            'if ($args != "") { return 400; }',
-            'proxy_pass http://$private_auth_upstream' + internal + ';',
             'proxy_set_header X-Personal-CFO-Private-Gateway $p1ak_gateway_token;',
             'proxy_set_header Forwarded "";',
+            'proxy_set_header X-Forwarded-Host "";',
             'access_log off;',
             'error_log /dev/null crit;',
-        )
-        if any(term not in body for term in requirements):
-            raise FakeOAuthIngressBlocked("Owner ingress fail-closed controls absent")
-    # Static verifier does not claim an actively deployed user-facing auth
-    # route, because the trusted Railway environment was not interrogated.
+        ]
+        if google:
+            requirements.extend([
+                'if ($p1ao_google_ingress != "1") { return 404; }',
+                'proxy_pass http://$private_google_upstream' + internal
+                + ('$is_args$args' if path.endswith('/callback') else '') + ';',
+            ])
+        else:
+            requirements.append(
+                'proxy_pass http://$private_auth_upstream' + internal + ';'
+            )
+        if any(item not in body for item in requirements):
+            raise FakeOAuthIngressBlocked(
+                "Private owner/Google fail-closed controls absent"
+            )
     return {
         "synthetic_only": True,
         "public_google_oauth_route_active": False,
+        "google_routes_default_off_in_source": True,
         "owner_login_routes_default_off_in_source": True,
         "current_preview_route_only": False,
         "actual_owner_login_activation_independently_verified": False,

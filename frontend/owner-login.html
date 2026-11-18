@@ -23,7 +23,12 @@
     </form>
     <section id="owner-session" hidden>
       <h2>Private owner session active</h2>
-      <p>Your session is limited to 15 minutes. Google Drive consent and real source imports remain separately controlled.</p>
+      <p>Your session is limited to 15 minutes. Google Drive connection uses metadata-only permission and is restricted by Personal CFO to your approved private folder.</p>
+      <section class="google-panel" aria-labelledby="google-title">
+        <h3 id="google-title">Google Drive connection</h3>
+        <p id="owner-google-status">Checking your private connection…</p>
+        <button id="owner-google-connect" type="button">Connect Google Drive</button>
+      </section>
       <button id="owner-logout" type="button" class="secondary">Sign out</button>
     </section>
     <p class="feedback" id="owner-feedback" role="status" aria-live="polite"></p>

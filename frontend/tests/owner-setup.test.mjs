@@ -42,5 +42,6 @@ test("owner setup visible in desktop and mobile PWA without public secret fields
   assert.match(html,/Development preview, not your financial account/);
   assert.match(source("nginx.railway.conf"),/location\s*=\s*\/api\/owner\/login/);
   assert.match(source("nginx.railway.conf"),/if \(\$p1ak_owner_ingress != "1"\) \{ return 404; \}/);
-  assert.doesNotMatch(source("nginx.railway.conf"),/location\s*=\s*\/api\/drive\/oauth\/callback/);
+  assert.match(source("nginx.railway.conf"),/location\s*=\s*\/api\/drive\/oauth\/callback/);
+  assert.match(source("nginx.railway.conf"),/if \(\$p1ao_google_ingress != "1"\) \{ return 404; \}/);
 });
