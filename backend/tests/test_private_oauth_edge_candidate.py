@@ -121,7 +121,8 @@ def test_exact_public_candidate_route_parity_with_actual_private_asgi():
         assert f'if ($request_method != "{method}")' in candidate[public]
         assert f"proxy_pass http://$private_oauth_upstream{path}" in candidate[public]
     # No actual owner or Google credentials and no public runtime wiring.
-    assert not any(p.startswith("/internal/drive/") for p in
-                   (r.path for r in __import__("app.preview_api",
-                                                fromlist=["create_preview_app"])
-                    .create_preview_app().routes))
+    from app.preview_api import create_preview_app
+    assert not any(
+        route.path.startswith("/internal/drive/")
+        for route in create_preview_app().routes
+    )
