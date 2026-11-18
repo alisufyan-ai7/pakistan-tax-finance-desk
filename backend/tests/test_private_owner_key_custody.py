@@ -9,10 +9,15 @@ import pytest
 from app import private_owner_key_custody as custody
 
 
+REAL_TTY_GUARD = custody._tty
+
+
 @pytest.fixture(autouse=True)
 def terminal(monkeypatch):
-    monkeypatch.setattr(custody.sys,"stdin",SimpleNamespace(isatty=lambda:True))
-    monkeypatch.setattr(custody.sys,"stdout",SimpleNamespace(isatty=lambda:True))
+    # Test the user interaction with explicit synthetic TTY authorization.
+    # Pytest capture owns sys.stdout, so monkeypatching sys.stdout does not
+    # survive capture switching between test and fixture setup.
+    monkeypatch.setattr(custody,"_tty",lambda:None)
     answers=iter(["SYNTHETIC owner escrow long offline passphrase 2026"]*20)
     monkeypatch.setattr(custody.getpass,"getpass",lambda prompt="":next(answers))
 
@@ -82,6 +87,7 @@ def test_invalid_key_name_denied_before_passphrase(tmp_path):
 
 
 def test_requires_private_attended_tty(monkeypatch,tmp_path):
+    monkeypatch.setattr(custody,"_tty",REAL_TTY_GUARD)
     monkeypatch.setattr(custody.sys,"stdin",SimpleNamespace(isatty=lambda:False))
     with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
         custody.create(str(tmp_path/"keys.enc"))
