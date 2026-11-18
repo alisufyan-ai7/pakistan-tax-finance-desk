@@ -17,15 +17,15 @@ def sample():
         "created_epoch":1_800_000_000,
         "tables":{
             "owner_private_identities":[{
-                "singleton_id":1,"owner_hmac":owner,
+                "singleton_id":1,"revision":1,"owner_hmac":owner,
                 "password_scrypt":"SYNTHETIC_HASH_PRIVATE",
                 "totp_cipher":"SYNTHETIC_CIPHERTEXT_PRIVATE",
             }],
             "owner_private_recovery_states":[{
-                "owner_hmac":owner,"ciphertext":"SYNTHETIC_RECOVERY_PRIVATE",
+                "owner_hmac":owner,"revision":1,"ciphertext":"SYNTHETIC_RECOVERY_PRIVATE",
             }],
             "owner_private_recovery_audit":[{
-                "owner_hmac":owner,"action":"ISSUED",
+                "owner_hmac":owner,"revision":1,"action":"ISSUED",
                 "row_hmac":"b"*64,
             }],
             "owner_private_sessions":[],
