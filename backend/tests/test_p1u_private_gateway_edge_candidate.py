@@ -64,12 +64,12 @@ def test_live_frontend_does_not_enable_google_or_unapproved_owner_login():
     assert 'ENV P1AK_OWNER_INGRESS_ENABLED=1' not in docker
     assert "P1AK_OWNER_INGRESS_ENABLED" in live
     blocks = locations(live)
-    assert set(blocks) & EXACT == {
-        "/api/owner/login", "/api/owner/session", "/api/owner/logout"
-    }
+    assert set(blocks) & EXACT == EXACT
     for route in EXACT:
         if route.startswith("/api/drive/"):
-            assert route not in blocks
+            body = blocks[route]
+            assert 'if ($p1ao_google_ingress != "1") { return 404; }' in body
+            assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in body
     for route in set(blocks) & EXACT:
         body = blocks[route]
         assert 'if ($p1ak_owner_ingress != "1") { return 404; }' in body
