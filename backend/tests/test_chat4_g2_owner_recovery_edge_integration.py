@@ -110,7 +110,8 @@ def test_candidate_route_cannot_auto_mount_on_current_railway_private_api():
     root=Path(__file__).parents[2]
     live=(root/"frontend/nginx.railway.conf").read_text()
     candidate=(root/"ops/nginx.personal-cfo-oauth.candidate.conf").read_text()
-    assert "/api/drive/oauth/callback" not in live
+    assert "location = /api/drive/oauth/callback" in live
+    assert 'if ($p1ao_google_ingress != "1") { return 404; }' in live
     assert "location = /api/drive/oauth/callback" in candidate
     assert "access_log off;" in candidate
     assert "error_log /dev/null crit;" in candidate
