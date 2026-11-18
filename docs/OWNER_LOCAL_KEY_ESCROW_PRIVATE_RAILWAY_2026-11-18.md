@@ -35,7 +35,7 @@ python -m app.private_owner_key_custody configure-private-railway \
 
 This attended command requests:
 1. The local escrow passphrase, which is never sent to Railway.
-2. The **already-created restricted PostgreSQL role password**, hidden by `getpass`. This password is used only to construct an appropriately URL-encoded, TLS-required **`postgres.railway.internal:5432/personal_cfo_owner_auth`** credential URL.
+2. The **already-created restricted PostgreSQL role password**, hidden by `getpass`. This password is used only to construct an appropriately URL-encoded, TLS-required **`postgres-ade30e25.railway.internal:5432/personal_cfo_owner_auth`** credential URL.
 3. The exact acknowledgement `CONFIGURE PRIVATE API WITHOUT DEPLOY`.
 
 It then uses the Railway CLI's documented `railway variable set NAME --stdin --skip-deploys` command to set exactly these **seven** variables on `personal-cfo-dev-sandbox/development/personal-cfo-api-preview`:
@@ -67,3 +67,21 @@ Finally, the app's real Google browser redirect/callback and error/access loggin
 - `backend/app/private_owner_bootstrap.py`
 - `backend/app/private_credential_role_policy.py`
 - `docs/OWNER_ISOLATED_POSTGRES_BOOTSTRAP_2026-11-18.md`
+
+
+## P1AD verified private endpoint correction (18 Nov 2026)
+
+The owner ran private connectivity probe P1AC from `personal-cfo-api-preview` and received `stage=private_dns_resolution`. Railway's LIVE Postgres service configuration returned private-network endpoint label **`postgres-ade30e25`**, not `postgres`. The previous P1Z key-custody helper generated a DB URL pointing at `postgres.railway.internal`, which is not the currently assigned internal endpoint. This is not evidence of password failure, encryption-key loss or a missing database.
+
+Use the **new merged** helper to change only `P1W_OWNER_CREDENTIAL_DATABASE_URL` in the approved PRIVATE API environment (after `git pull --ff-only`):
+
+```sh
+cd ~/projects/pakistan-tax-finance-desk/backend
+git pull --ff-only
+source .venv/bin/activate
+python -m app.private_owner_key_custody repair-private-owner-db-host
+```
+
+The tool prompts **privately** for the *existing restricted PostgreSQL technical role password*, and then requires the exact phrase `REPAIR PRIVATE OWNER DATABASE HOST ONLY`. It uses `railway variable set P1W_OWNER_CREDENTIAL_DATABASE_URL --stdin --skip-deploys` with the checked `postgres-ade30e25.railway.internal` endpoint and TLS `sslmode=require`. It does **not** ask for your owner MFA password, escrow passphrase or signing private key; it does not rewrite any of the five keys, modify SQL roles/databases, accept the staged Google secret, or deploy the API.
+
+A successful variable update alone does **not** cause an already-running container to adopt the new URL. Separately verify Railway staged Google changes remain **unapplied** and arrange a controlled restart/redeploy of only the private API. Then rerun the existing private P1AC connectivity probe and complete P1AA full read-only role/empty-table preflight. If the DNS stage persists, inspect the current Railway private endpoint label again; do not disable TLS, enable public PostgreSQL or retry the whole key setup.
