@@ -342,6 +342,42 @@ def verify_private_owner_session(
         raise
 
 
+
+def renew_private_owner_session_csrf(
+    db: Session, *, owner_ref: str, token: str,
+    now_epoch: int | None = None,
+) -> dict:
+    """Reissue a session CSRF proof after OAuth's full-page round trip.
+
+    A Secure HttpOnly SameSite=Lax session cookie survives Google's redirect,
+    but the existing nonpersistent browser CSRF proof is lost on navigation.
+    Reissue a *different* proof only after verifying that cookie, under the
+    same persistent SQL advisory lock and recovery hold. A cross-site caller
+    cannot read the same-origin no-store JSON response, and no CSRF proof is
+    placed in a cookie, URL, log or localStorage.
+    """
+    _, mac, session_mac = _keys(db)
+    owner = _owner(mac, owner_ref)
+    now = _now(now_epoch)
+    try:
+        _lock(db)
+        row = _session(db, owner, session_mac, token, now, for_update=True)
+        _deny_private_recovery_hold(db, owner)
+        csrf = secrets.token_urlsafe(36)
+        row.csrf_hmac = _mac(session_mac, b"csrf", csrf)
+        db.commit()
+        return {"private_owner_mfa_session_valid": True,
+                "csrf_token": csrf,
+                "google_consent_authorized_by_session_alone": False}
+    except PrivateOwnerIdentityBlocked:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise PrivateOwnerIdentityBlocked(
+            "Private session CSRF reissue unavailable") from None
+
+
 def revoke_private_owner_session(
     db: Session, *, owner_ref: str, token: str, csrf: str,
     now_epoch: int | None=None,
