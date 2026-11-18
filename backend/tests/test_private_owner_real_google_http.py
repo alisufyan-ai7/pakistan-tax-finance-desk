@@ -304,3 +304,59 @@ def test_owner_session_can_resume_after_google_callback_without_new_totp(
         headers=headers(csrf=refreshed["csrf_token"]),
     ).status_code == 200
     assert len(seen) == 2  # No new Google network request on OAuth start.
+
+
+
+def test_private_owner_documents_reuses_bounded_p1ap_snapshot_after_csrf(
+    owner_client,
+):
+    from app import private_owner_real_google_http as app_http
+    c, _, seen, monkeypatch = owner_client
+    csrf = login(c)
+    snapshot = {
+        "contract": "personal_cfo_owner_metadata_review_preview_v1",
+        "connection": "APPROVED_METADATA_GRANT_USED",
+        "folder": "ONE_OWNER_APPROVED_FOLDER",
+        "snapshot_complete": True,
+        "total": 1,
+        "items": [{
+            "display_name": "SYNTHETIC.pdf",
+            "virtual_collection": "bank_statements",
+            "review_status": "needs_review",
+            "size_bytes": 123,
+            "modified_time": "2026-11-18T00:00:00+00:00",
+            "original_content_imported": False,
+            "financial_claims_verified": False,
+        }],
+        "snapshot_persisted": False,
+        "background_sync_active": False,
+        "source_bytes_downloaded": False,
+        "real_financial_data_enabled": False,
+    }
+    calls = []
+    def fake_snapshot(**kwargs):
+        assert kwargs["owner_ref"] == OWNER
+        assert callable(kwargs["session_factory"])
+        calls.append(True)
+        return snapshot
+    monkeypatch.setattr(app_http, "scan_one_owner_folder_metadata", fake_snapshot)
+    for bad in (
+        c.post("/internal/drive/metadata/refresh",
+               headers=headers(csrf="bad")),
+        c.post("/internal/drive/metadata/refresh",
+               headers=headers(csrf=csrf, origin="https://evil.invalid")),
+        c.post("/internal/drive/metadata/refresh",
+               headers=headers(csrf=csrf), json={}),
+        c.post("/internal/drive/metadata/refresh?override=1",
+               headers=headers(csrf=csrf)),
+    ):
+        assert bad.status_code in (400, 401, 403)
+    assert calls == []
+    response = c.post(
+        "/internal/drive/metadata/refresh", headers=headers(csrf=csrf)
+    )
+    assert response.status_code == 200
+    assert response.json() == snapshot
+    assert response.headers["cache-control"] == "no-store"
+    assert calls == [True]
+    assert seen == []  # No Google network in this authenticated shell test.
