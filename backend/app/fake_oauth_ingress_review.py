@@ -128,6 +128,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         "/api/drive/oauth/start": ("POST", "/internal/drive/oauth/start"),
         "/api/drive/oauth/callback": ("GET", "/internal/drive/oauth/callback"),
         "/api/drive/oauth/status": ("GET", "/internal/drive/oauth/status"),
+        "/api/drive/metadata/page": ("POST", "/internal/drive/metadata/page"),
     }
     for path, (method, internal) in {**owner_routes, **google_routes}.items():
         if nginx_source.count("location = " + path + " {") != 1:
