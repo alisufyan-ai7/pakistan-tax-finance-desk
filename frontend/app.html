@@ -7,7 +7,10 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
   <title>Personal CFO · Private dashboard</title>
+  <link rel="manifest" href="/owner-manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/owner-pwa.mjs"></script>
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -28,10 +31,11 @@
   <div class="main-col">
     <header class="topbar">
       <div><span class="micro">YOUR FINANCIAL WORKSPACE</span><h1 id="view-heading">Overview</h1></div>
-      <div class="top-actions"><span id="connection-pill" class="state">Checking Drive</span><a href="/owner-login" class="manage">Manage account</a></div>
+      <div class="top-actions"><span id="connection-pill" class="state">Checking Drive</span><button id="install-owner-app" type="button" class="manage install-owner">Install app</button><a href="/owner-login" class="manage">Manage account</a></div>
     </header>
     <main class="main">
       <div class="greeting"><div><h2>Welcome to your Personal CFO</h2><p>Real documents from your approved Google Drive folder. Financial totals appear only after source verification.</p></div><button id="refresh-all" type="button" class="primary">Refresh documents</button></div>
+      <p id="owner-install-help" class="status" role="status" hidden></p>
       <p id="app-status" class="status" role="status" aria-live="polite">Checking your connection…</p>
       <section id="view-home" class="view" aria-labelledby="view-heading">
         <div class="metrics">
