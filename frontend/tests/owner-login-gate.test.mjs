@@ -22,7 +22,7 @@ test("exact three public login routes are disabled unless independently enabled"
   assert.ok(conf.includes('set $p1ak_owner_ingress "${P1AK_OWNER_INGRESS_ENABLED}";'));
   assert.ok(conf.includes('set $p1ak_gateway_token "${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";'));
   assert.ok(!conf.includes('location /api/'));
-  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 7);
+  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 8);
   for (const [path, [method, internal]] of publicRoutes) {
     const b = blocks.get(path);
     assert.ok(b, path);
@@ -169,6 +169,36 @@ test("post-redirect session resumes Google status with memory-only CSRF", () => 
   assert.ok(js.includes("void resumePrivateOwnerSession()"));
   for (const forbidden of ["localStorage.setItem","sessionStorage.setItem",
                            "document.cookie =", "console.log"]) {
+    assert.ok(!js.includes(forbidden), forbidden);
+  }
+});
+
+
+test("one-folder document metadata page is protected and never downloads originals", () => {
+  const conf = read("nginx.railway.conf"), blocks = locations(conf);
+  const path = "/api/drive/metadata/page";
+  const body = blocks.get(path);
+  assert.ok(body);
+  for(const required of [
+    'if ($p1ao_google_ingress != "1") { return 404; }',
+    'if ($p1ak_owner_ingress != "1") { return 404; }',
+    'if ($p1ak_gateway_token = "") { return 503; }',
+    'if ($request_method != "POST") { return 405; }',
+    'if ($args != "") { return 400; }',
+    'proxy_pass http://$private_google_upstream/internal/drive/metadata/page;',
+    "access_log off;", "error_log /dev/null crit;",
+    "client_max_body_size 2k;",
+  ]) assert.ok(body.includes(required), required);
+  const html=read("owner-login.html"), js=read("owner-login.mjs");
+  assert.ok(html.includes('id="owner-document-list"'));
+  assert.ok(html.includes('id="owner-documents-refresh"'));
+  assert.ok(html.includes('id="owner-documents-more"'));
+  assert.ok(js.includes('"/api/drive/metadata/page"'));
+  assert.ok(js.includes("JSON.stringify({ page_token: pageToken })"));
+  assert.ok(js.includes("name.textContent = file.name"));
+  assert.ok(js.includes("documentsList.appendChild(li)"));
+  for(const forbidden of ["innerHTML", "localStorage.setItem", "fileContent",
+                          '"/api/drive/files/download"']) {
     assert.ok(!js.includes(forbidden), forbidden);
   }
 });
