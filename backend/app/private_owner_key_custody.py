@@ -54,6 +54,10 @@ _MIN_LENGTH = 20
 _MAX_LENGTH = 256
 _MAX_FILE = 5000
 _N = 2**15
+# Verified directly against the existing Railway Postgres service's
+# config.networking.privateNetworkEndpoint on 18 November 2026.
+# This is NOT the display name \"Postgres\" and not a public hostname.
+_PRIVATE_PG_HOST = "postgres-ade30e25.railway.internal"
 
 
 class LocalOwnerKeyCustodyBlocked(ValueError):
@@ -215,7 +219,7 @@ def build_isolated_credential_dsn() -> str:
     return (
         "postgresql+psycopg://personal_cfo_owner_credentials:"
         + quote(password, safe="")
-        + "@postgres.railway.internal:5432/personal_cfo_owner_auth"
+        + "@" + _PRIVATE_PG_HOST + ":5432/personal_cfo_owner_auth"
         + "?sslmode=require"
     )
 
@@ -275,6 +279,54 @@ def configure_private_railway_without_deploy(
     }
 
 
+def repair_private_owner_db_hostname_without_deploy() -> dict:
+    """Repair only the single private owner DB URL after Railway DNS check.
+
+    Uses the SAME existing PostgreSQL technical role password, re-prompted
+    locally. Never requests/rotates the five escrow keys or recovery signer.
+    Uses Railway CLI --stdin so neither role password nor URL is in argv.
+    Deliberately does not deploy or accept the staged Google OAuth secret.
+    """
+    _tty()
+    if not shutil.which("railway"):
+        raise LocalOwnerKeyCustodyBlocked("Railway CLI is not installed")
+    dsn = build_isolated_credential_dsn()
+    approval = input(
+        "Type REPAIR PRIVATE OWNER DATABASE HOST ONLY to proceed: ").strip()
+    if approval != "REPAIR PRIVATE OWNER DATABASE HOST ONLY":
+        raise LocalOwnerKeyCustodyBlocked("Private DB host repair not approved")
+    command = [
+        "railway", "variable", "set",
+        "P1W_OWNER_CREDENTIAL_DATABASE_URL", "--stdin",
+        "--project", "7021b227-f704-43d6-bcff-debdb7255b81",
+        "--environment", "development",
+        "--service", "personal-cfo-api-preview",
+        "--skip-deploys",
+    ]
+    try:
+        result = subprocess.run(
+            command, input=dsn, capture_output=True,
+            text=True, timeout=45, check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError()
+    except Exception:
+        raise LocalOwnerKeyCustodyBlocked(
+            "Owner DB host repair unavailable; inspect only the variable NAME "
+            "in Railway and never paste the URL or CLI output into chat"
+        ) from None
+    return {
+        "restricted_connection_url_updated": True,
+        "verified_railway_private_endpoint_used": True,
+        "private_variables_changed": 1,
+        "escrow_and_recovery_keys_changed": False,
+        "database_role_password_rotated": False,
+        "google_secret_touched": False,
+        "deployment_triggered": False,
+        "owner_enrolled": False,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Owner-side encrypted runtime key escrow, never run in CI or Railway")
@@ -285,12 +337,17 @@ def main(argv: list[str] | None = None) -> int:
         if command == "reveal":
             entry.add_argument("variable_name", choices=sorted(_ALL))
     sub.add_parser("dsn", help="Build a restricted private Railway URL from a hidden password prompt")
+    sub.add_parser("repair-private-owner-db-host", help="Change only the restricted owner DB private hostname without deployment")
     upload = sub.add_parser("configure-private-railway", help="Write escrowed secrets only to the reviewed private API without redeployment")
     upload.add_argument("absolute_encrypted_file")
     upload.add_argument("--confirmed-independent-backup", action="store_true", required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "configure-private-railway":
+        if args.command == "repair-private-owner-db-host":
+            print(json.dumps(
+                repair_private_owner_db_hostname_without_deploy(),
+                sort_keys=True))
+        elif args.command == "configure-private-railway":
             print(json.dumps(
                 configure_private_railway_without_deploy(
                     args.absolute_encrypted_file,

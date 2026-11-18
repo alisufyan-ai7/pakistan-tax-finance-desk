@@ -114,7 +114,7 @@ def test_password_is_only_prompted_and_url_escapes_metacharacters(monkeypatch):
         "postgresql+psycopg://personal_cfo_owner_credentials:")
     assert "SYNTHETIC%20strong%20password%202026%20%40%3A%2F%3F%26%3Dlong" in url
     assert url.endswith(
-        "@postgres.railway.internal:5432/personal_cfo_owner_auth?sslmode=require")
+        "@postgres-ade30e25.railway.internal:5432/personal_cfo_owner_auth?sslmode=require")
 
 
 def test_restricted_dsn_refuses_short_db_password(monkeypatch):
@@ -168,3 +168,70 @@ def test_upload_refuses_without_backup_or_final_operator_confirmation(tmp_path,m
     with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
         custody.configure_private_railway_without_deploy(
             str(path),backed_up_independently=True)
+
+
+def test_verified_private_endpoint_repair_only_changes_one_owner_db_url(monkeypatch):
+    from sqlalchemy.engine import make_url
+    assert custody._PRIVATE_PG_HOST == "postgres-ade30e25.railway.internal"
+    received = []
+    monkeypatch.setattr(custody.shutil, "which", lambda cmd:"/usr/bin/railway")
+    monkeypatch.setattr(
+        custody.getpass, "getpass",
+        lambda prompt="": "SYNTHETIC only-existing-role-password 2026"
+    )
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda prompt="": "REPAIR PRIVATE OWNER DATABASE HOST ONLY"
+    )
+    def fake_run(args, **kwargs):
+        received.append((args,kwargs))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+    monkeypatch.setattr(custody.subprocess, "run", fake_run)
+
+    report = custody.repair_private_owner_db_hostname_without_deploy()
+    assert report["restricted_connection_url_updated"]
+    assert report["private_variables_changed"] == 1
+    assert not report["escrow_and_recovery_keys_changed"]
+    assert not report["database_role_password_rotated"]
+    assert not report["google_secret_touched"]
+    assert not report["deployment_triggered"]
+    assert not report["owner_enrolled"]
+    assert len(received) == 1
+    argv, args = received[0]
+    assert argv[:5] == [
+        "railway","variable","set","P1W_OWNER_CREDENTIAL_DATABASE_URL","--stdin"
+    ]
+    assert "--skip-deploys" in argv
+    assert argv[argv.index("--service")+1] == "personal-cfo-api-preview"
+    assert argv[argv.index("--environment")+1] == "development"
+    assert args["check"] is False
+    assert args["capture_output"] is True
+    assert args["input"] not in " ".join(argv)
+    assert "P1C_GOOGLE_CLIENT_SECRET" not in " ".join(argv)
+    assert "P1N_OWNER_ENCRYPTION_KEY" not in " ".join(argv)
+    url = make_url(args["input"])
+    assert url.username == "personal_cfo_owner_credentials"
+    assert url.host == custody._PRIVATE_PG_HOST
+    assert url.database == "personal_cfo_owner_auth"
+    assert url.query["sslmode"] == "require"
+    assert url.password == "SYNTHETIC only-existing-role-password 2026"
+
+
+def test_private_dns_repair_does_not_change_any_variable_without_approval(monkeypatch):
+    monkeypatch.setattr(custody.shutil, "which", lambda cmd:"/usr/bin/railway")
+    monkeypatch.setattr("builtins.input",lambda prompt="":"not authorized")
+    monkeypatch.setattr(custody.subprocess,"run",
+                        lambda *a,**k:pytest.fail("must not run Railway CLI"))
+    with pytest.raises(custody.LocalOwnerKeyCustodyBlocked):
+        custody.repair_private_owner_db_hostname_without_deploy()
+
+
+def test_private_dns_repair_preserves_secret_on_cli_failure(monkeypatch):
+    monkeypatch.setattr(custody.shutil,"which",lambda cmd:"/usr/bin/railway")
+    monkeypatch.setattr("builtins.input",
+                        lambda prompt="":"REPAIR PRIVATE OWNER DATABASE HOST ONLY")
+    monkeypatch.setattr(custody.subprocess,"run",
+                        lambda *a,**k:SimpleNamespace(returncode=1,stderr="SECRET"))
+    with pytest.raises(custody.LocalOwnerKeyCustodyBlocked) as exc:
+        custody.repair_private_owner_db_hostname_without_deploy()
+    assert "SECRET" not in str(exc.value)
