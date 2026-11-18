@@ -24,6 +24,8 @@ def config(monkeypatch):
         "P1AI_G2_RUNTIME_INDEPENDENTLY_REVIEWED": "1",
         "P1N_PRIVATE_OWNER_AUTH_ONLY": "1",
         "P1N_G2_OWNER_IDENTITY_REVIEWED": "1",
+        "P1P_PRIVATE_RECOVERY_ONLY": "1",
+        "P1P_G2_RECOVERY_REVIEWED": "1",
         "P1Q_PRIVATE_HTTP_GATEWAY_ONLY": "1",
         "P1Q_G2_PRIVATE_INGRESS_REVIEWED": "1",
         "P1S_PRIVATE_CREDENTIAL_ROLE_AUDIT": "1",
@@ -180,3 +182,14 @@ def test_tls_or_one_owner_recovery_mismatch_denies_startup(
         with TestClient(app):
             pass
     assert engine.disposed
+
+@pytest.mark.parametrize("missing_recovery_gate", [
+    "P1P_PRIVATE_RECOVERY_ONLY", "P1P_G2_RECOVERY_REVIEWED",
+])
+def test_owner_service_denies_startup_instead_of_401_on_every_valid_mfa(
+    monkeypatch, missing_recovery_gate,
+):
+    config(monkeypatch)
+    monkeypatch.delenv(missing_recovery_gate, raising=False)
+    with pytest.raises(candidate.PrivateOwnerLoginServiceBlocked):
+        candidate._reviewed_private_configuration()

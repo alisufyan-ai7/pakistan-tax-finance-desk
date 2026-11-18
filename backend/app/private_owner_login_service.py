@@ -50,6 +50,10 @@ def _reviewed_private_configuration() -> None:
         or os.getenv("P1AI_G2_RUNTIME_INDEPENDENTLY_REVIEWED") != "1"
         or os.getenv("P1N_PRIVATE_OWNER_AUTH_ONLY") != "1"
         or os.getenv("P1N_G2_OWNER_IDENTITY_REVIEWED") != "1"
+        # An enrolled recovery row is always read during MFA validation.
+        # Missing these gates previously made *every* valid login HTTP 401.
+        or os.getenv("P1P_PRIVATE_RECOVERY_ONLY") != "1"
+        or os.getenv("P1P_G2_RECOVERY_REVIEWED") != "1"
         or os.getenv("P1Q_PRIVATE_HTTP_GATEWAY_ONLY") != "1"
         or os.getenv("P1Q_G2_PRIVATE_INGRESS_REVIEWED") != "1"
         or os.getenv("P1S_PRIVATE_CREDENTIAL_ROLE_AUDIT") != "1"
