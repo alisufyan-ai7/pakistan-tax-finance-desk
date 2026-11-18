@@ -160,13 +160,13 @@ class Conn:
     def execute(self,sql):
         query=str(sql)
         self.sql.append(query)
-        if query=="SET TRANSACTION READ ONLY":
+        if query=="SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY":
             return Result(None)
         if "current_database(), current_user" in query:
             return Result(("personal_cfo_owner_auth",
                            "personal_cfo_owner_credentials",True,"on"))
         for name in b._FIELDS:
-            if query==f"SELECT * FROM public.{name}":
+            if query==f"SELECT * FROM public.{name} LIMIT 101":
                 return Result(self.payload["tables"][name])
         pytest.fail("Unsafe SQL:"+query)
 
@@ -194,7 +194,7 @@ def test_remote_export_read_only_six_tables_and_least_privilege(monkeypatch):
     assert opened["tables"]==payload["tables"]
     assert audits==[conn]
     assert engine.disposed
-    assert conn.sql[0]=="SET TRANSACTION READ ONLY"
+    assert conn.sql[0]=="SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"
     assert sum(q.startswith("SELECT * FROM public.") for q in conn.sql)==6
     assert len(conn.sql)==8
     assert all(
