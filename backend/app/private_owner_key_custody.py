@@ -156,8 +156,13 @@ def create(value: str) -> dict:
 def _open(value: str) -> dict:
     _tty()
     path = _path(value)
-    if not path.is_file() or path.stat().st_size > _MAX_FILE:
-        raise LocalOwnerKeyCustodyBlocked("Local escrow missing or invalid")
+    try:
+        status = path.stat()
+    except OSError:
+        raise LocalOwnerKeyCustodyBlocked("Local escrow missing or invalid") from None
+    if (not path.is_file() or status.st_size > _MAX_FILE
+        or (status.st_mode & 0o777) != 0o600):
+        raise LocalOwnerKeyCustodyBlocked("Local escrow missing or unsafe file permissions")
     try:
         envelope = json.loads(path.read_text("ascii"))
         if type(envelope) is not dict or set(envelope) != {
