@@ -116,7 +116,9 @@ def _attest_enrolled_owner(connection) -> None:
         )
 
 
-def create_review_only_private_owner_login_service(*, google_metadata: bool = False) -> FastAPI:
+def create_review_only_private_owner_login_service(
+    *, google_metadata: bool = False, metadata_preview: bool = False,
+) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
@@ -163,7 +165,10 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
         _reviewed_google_http()
         return create_review_only_private_google_http_gateway(
             private_session, lifespan=lifespan,
+            metadata_preview=metadata_preview,
         )
+    if metadata_preview:
+        raise PrivateOwnerLoginServiceBlocked("Metadata needs approved Google mode")
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,
     )
