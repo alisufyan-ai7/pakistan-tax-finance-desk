@@ -99,6 +99,11 @@ test("mobile owner login never persists credentials, uses only own exact login/l
   assert.ok(docker.includes("COPY nginx.owner-rate-zones.conf"));
   assert.ok(docker.includes("P1AK_OWNER_INGRESS_ENABLED"));
   assert.ok(!docker.includes("ENV P1AK_OWNER_INGRESS_ENABLED=1"));
+  // Without defined defaults envsubst leaves a literal dollar variable
+  // expression and Nginx refuses to start. Keep runtime safe defaults.
+  assert.ok(docker.includes('ENV P1AK_OWNER_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEWAY_SHARED_TOKEN=""'));
+  assert.ok(!docker.includes('P1AK_OWNER_INGRESS_ENABLED=1'));
+
   assert.ok(docker.includes("P1Q_PRIVATE_GATEWAY_SHARED_TOKEN"));
   assert.ok(!docker.includes("ENV P1Q_PRIVATE_GATEWAY_SHARED_TOKEN="));
 });
