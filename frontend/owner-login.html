@@ -29,6 +29,13 @@
         <p id="owner-google-status">Checking your private connection…</p>
         <button id="owner-google-connect" type="button">Connect Google Drive</button>
       </section>
+      <section class="google-panel" aria-labelledby="documents-title" id="owner-documents" hidden>
+        <h3 id="documents-title">Your documents</h3>
+        <p>Review file names and suggested categories from your approved private Drive folder. Source contents and financial figures are not imported.</p>
+        <button id="owner-documents-refresh" type="button" class="secondary">Check documents</button>
+        <p id="owner-documents-status" role="status" aria-live="polite"></p>
+        <ul id="owner-documents-list" class="documents-list" aria-label="Private document review list"></ul>
+      </section>
       <button id="owner-logout" type="button" class="secondary">Sign out</button>
     </section>
     <p class="feedback" id="owner-feedback" role="status" aria-live="polite"></p>
