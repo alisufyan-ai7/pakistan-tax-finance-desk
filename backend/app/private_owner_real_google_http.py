@@ -315,7 +315,7 @@ def create_review_only_private_google_http_gateway(
                         verified_granted_scope=GOOGLE_CONTENT_READ_SCOPE,
                     )
             elif claim.metadata_only is True and claim.content_readonly is False:
-                stage = "google_metadata_code_exchange"
+                stage = "google_code_exchange"
                 access, refresh = exchange_google_code(
                     code=params["code"], verifier=claim.verifier,
                     config=config, transport=transport,
