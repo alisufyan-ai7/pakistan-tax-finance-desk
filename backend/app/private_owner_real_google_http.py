@@ -124,6 +124,7 @@ def create_review_only_private_google_http_gateway(
     lifespan=None,
     enable_content_oauth: bool = False,
     enable_source_preflight: bool = False,
+    enable_review_comments: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -236,6 +237,136 @@ def create_review_only_private_google_http_gateway(
                 "financial_data_enabled": False,
             }
 
+
+
+    if enable_review_comments:
+        if not enable_content_oauth:
+            raise PrivateOwnerGoogleHttpBlocked(
+                "Private financial review requires protected content OAuth")
+
+        from sqlalchemy import text as _sqltext
+        from .private_owner_review_comments import (
+            PrivateOwnerReviewBlocked, _setup as _review_setup,
+            append_owner_review_comment, list_owner_review_comments,
+        )
+        from .private_original_source_preflight import _inventory as _source_inventory
+        from .private_content_grant_custody import read_private_content_grant
+        from .private_google_content_consent import refresh_google_content_token
+        from .drive_inbox_planner import _index as _source_hmac
+
+        def _review_private_owner(request: Request, *, mutation: bool) -> str:
+            owner = _boundary(request, mutation=mutation)
+            if os.getenv("P5D_OWNER_REVIEW_HTTP_RUNTIME") != "1":
+                raise HTTPException(503, "Private financial review not activated")
+            try:
+                _reviewed_content_http()
+                with session_factory() as db:
+                    verify_private_owner_session(
+                        db, owner_ref=owner,
+                        token=request.cookies.get(_COOKIE, ""),
+                        csrf=request.headers.get(_CSRF_HEADER, "") if mutation else None,
+                        mutation=mutation,
+                    )
+                    _review_setup(db, owner)
+                    # 0024 migration is NEVER automatically applied by startup.
+                    # Keep the UI disabled if the existing DB has not passed
+                    # the reviewed encrypted backup/restore and migration gate.
+                    db.execute(_sqltext(
+                        "SELECT id FROM owner_financial_review_comments LIMIT 0"))
+            except PrivateOwnerIdentityBlocked:
+                raise HTTPException(401, "Owner MFA/CSRF required") from None
+            except Exception:
+                raise HTTPException(503, "Private review records unavailable") from None
+            return owner
+
+        async def _strict_review_body(request: Request, *, save: bool) -> dict:
+            if (request.headers.get("transfer-encoding") is not None
+                or len(await request.body()) > 1800):
+                raise HTTPException(400, "Invalid review comment request")
+            try:
+                data = await request.json()
+                fields = {"subject_hmac", "subject_kind", "comment"} if save else {
+                    "subject_hmac", "subject_kind"}
+                if (type(data) is not dict or set(data) != fields
+                    or data["subject_kind"] != "document"
+                    or type(data["subject_hmac"]) is not str
+                    or re.fullmatch(r"[a-f0-9]{64}", data["subject_hmac"]) is None
+                    or (save and (
+                        type(data["comment"]) is not str
+                        or not 1 <= len(data["comment"].strip()) <= 1500
+                    ))):
+                    raise ValueError()
+                return data
+            except Exception:
+                raise HTTPException(400, "Private review input invalid") from None
+
+        def _assert_source_approved(owner: str, subject_hmac: str) -> None:
+            """Never attach notes to invented document IDs or account-wide files."""
+            try:
+                config = private_google_configuration()
+                with session_factory() as db:
+                    refresh = read_private_content_grant(
+                        db, owner_ref=owner, folder_id=config.folder_id,
+                        client_id=config.client_id)
+                access, _rotated = refresh_google_content_token(
+                    refresh_token=refresh, config=config, transport=transport)
+                listed = _source_inventory(access, config=config, transport=transport)
+                if not any(_source_hmac("file", item.id) == subject_hmac
+                           for item in listed):
+                    raise ValueError()
+            except Exception:
+                raise HTTPException(403, "Document is not in approved source folder") from None
+
+        @app.get("/internal/finance/review/status")
+        def financial_review_status(request: Request):
+            _review_private_owner(request, mutation=False)
+            return {
+                "contract": "personal_cfo_owner_review_ready_v1",
+                "review_enabled": True,
+                "target_kind": "document",
+                "append_only_encrypted": True,
+                "auto_resolve": False,
+                "financial_figures_verified": False,
+            }
+
+        @app.post("/internal/finance/review/comment")
+        async def financial_review_comment(request: Request):
+            owner = _review_private_owner(request, mutation=True)
+            data = await _strict_review_body(request, save=True)
+            _assert_source_approved(owner, data["subject_hmac"])
+            try:
+                with session_factory() as db:
+                    result = append_owner_review_comment(
+                        db, owner_ref=owner,
+                        subject_kind="document",
+                        subject_hmac=data["subject_hmac"],
+                        comment=data["comment"],
+                    )
+                return JSONResponse({
+                    "contract":"personal_cfo_owner_review_comment_saved_v1",
+                    "saved_encrypted":result["saved_encrypted"],
+                    "review_state":result["review_state"],
+                    "revision":result["revision"],
+                    "automatically_resolved":False,
+                    "original_transaction_changed":False,
+                })
+            except PrivateOwnerReviewBlocked:
+                raise HTTPException(503, "Private review comment unavailable") from None
+
+        @app.post("/internal/finance/review/history")
+        async def financial_review_history(request: Request):
+            owner = _review_private_owner(request, mutation=True)
+            data = await _strict_review_body(request, save=False)
+            _assert_source_approved(owner, data["subject_hmac"])
+            try:
+                with session_factory() as db:
+                    records = list_owner_review_comments(
+                        db, owner_ref=owner,
+                        subject_kind="document",
+                        subject_hmac=data["subject_hmac"])
+                return JSONResponse(records)
+            except PrivateOwnerReviewBlocked:
+                raise HTTPException(503, "Private review history unavailable") from None
 
     if enable_source_preflight:
         if not enable_content_oauth:
