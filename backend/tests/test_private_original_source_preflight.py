@@ -1,6 +1,7 @@
 """P5A original-byte pilot: fake source transport, no genuine owner's data."""
 import base64
 from datetime import datetime,timezone
+from contextlib import nullcontext
 from types import SimpleNamespace
 import pytest
 
@@ -70,7 +71,7 @@ def cfg(monkeypatch):
 
 def scan():
     return p.preflight_original_owner_batch(
-       session_factory=lambda:None,owner_ref=OWNER,batch_index=0)
+       session_factory=lambda:nullcontext(None),owner_ref=OWNER,batch_index=0)
 
 
 def test_private_content_grant_hashes_only_first_three_by_fixed_order(cfg):
@@ -93,7 +94,7 @@ def test_private_content_grant_hashes_only_first_three_by_fixed_order(cfg):
 def test_next_batch_skips_unsupported_and_does_not_download(cfg):
     _,calls=cfg
     result=p.preflight_original_owner_batch(
-        session_factory=lambda:None,owner_ref=OWNER,batch_index=1)
+        session_factory=lambda:nullcontext(None),owner_ref=OWNER,batch_index=1)
     assert result["next_batch"] is None
     assert len(result["results"])==1
     assert result["results"][0]["state"]=="UNSUPPORTED_FORMAT_REVIEW"
@@ -114,7 +115,7 @@ def test_each_gate_required(monkeypatch,cfg,key):
 def test_owner_pin_and_real_mode_reject(monkeypatch,cfg):
     with pytest.raises(p.PrivateSourcePreflightBlocked):
         p.preflight_original_owner_batch(
-           session_factory=lambda:None,owner_ref="OTHER_PRIVATE_OWNER_2026",
+           session_factory=lambda:nullcontext(None),owner_ref="OTHER_PRIVATE_OWNER_2026",
            batch_index=0)
     monkeypatch.setenv("APP_DATA_MODE","real")
     with pytest.raises(p.PrivateSourcePreflightBlocked):
@@ -125,7 +126,7 @@ def test_invalid_batch_rejected(cfg):
     for index in (-1,True,334,"0"):
         with pytest.raises(p.PrivateSourcePreflightBlocked):
             p.preflight_original_owner_batch(
-              session_factory=lambda:None,owner_ref=OWNER,batch_index=index)
+              session_factory=lambda:nullcontext(None),owner_ref=OWNER,batch_index=index)
 
 
 def test_complete_inventory_required_before_any_download(monkeypatch,cfg):
