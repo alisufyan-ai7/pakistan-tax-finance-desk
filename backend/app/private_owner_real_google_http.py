@@ -250,7 +250,9 @@ def create_review_only_private_google_http_gateway(
             append_owner_review_comment, list_owner_review_comments,
         )
         from .private_original_source_preflight import _inventory as _source_inventory
-        from .private_content_grant_custody import read_private_content_grant
+        # Use the already imported module-level read_private_content_grant.
+        # A same-name import here would shadow it in the factory closure and
+        # break existing P4C content-status routes when P5D is disabled.
         from .private_google_content_consent import refresh_google_content_token
         from .drive_inbox_planner import _index as _source_hmac
 
