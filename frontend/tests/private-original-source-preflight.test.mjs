@@ -6,6 +6,8 @@ const read=n=>readFileSync(new URL("../"+n,import.meta.url),"utf8");
 test("owner original-source SHA preflight route is private and defaults closed",()=>{
  const ng=read("nginx.railway.conf"),docker=read("Dockerfile");
  const start=ng.indexOf("location = /api/drive/content/source/preflight {");
+ assert.match(ng,/^    location = \/api\/drive\/content\/source\/preflight \{/m);
+ assert.doesNotMatch(ng,/\\n    location = \/api\/drive\/content\/source\/preflight/);
  assert.ok(start>0);
  const stop=ng.indexOf("\n    }",start);
  const block=ng.slice(start,stop);
