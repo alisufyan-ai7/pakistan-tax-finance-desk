@@ -66,3 +66,13 @@ test("old owner metadata route and original Drive links unchanged",()=>{
   assert.ok(route(ng,"/api/drive/oauth/callback"));
   assert.ok(route(ng,"/api/drive/metadata/refresh"));
 });
+
+test("owner UI acknowledges saved content permission without claiming successful statement import",()=>{
+  const html=read("app.html"),js=read("app.mjs"),owner=read("owner-login.html");
+  assert.ok(html.includes('id="original-document-readiness"'));
+  assert.ok(js.includes('data.google_content_grant_stored'));
+  assert.ok(js.includes('Google read-only permission is saved. Secure statement verification'));
+  assert.ok(js.includes('no financial figures have been imported'));
+  assert.ok(owner.includes('metadata connection is separate from your Google read-only document permission'));
+  assert.ok(owner.includes('original documents are never changed'));
+});

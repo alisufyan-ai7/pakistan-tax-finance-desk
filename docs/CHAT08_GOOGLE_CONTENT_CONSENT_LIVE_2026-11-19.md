@@ -1,3 +1,5 @@
+> **OWNER FOLLOW-UP VERIFIED VIA AUTHENTICATED SCREENSHOT — 19 NOV 2026, APPROX. 17:35 PKT:** The previous "Owner's one immediate pending action" below was **COMPLETED**. `/app` shows "Google read-only permission saved · document analysis not yet complete" alongside "Drive metadata connected" and 27 filenames. **Do not request renewed Google consent or Google Cloud configuration now.** No actual content download or financial import has occurred yet. Authenticated screenshot is not an independent backend SQL/token audit. Real source reader and ledger remain next. Updated owner-login/dashboard wording to avoid falsely saying metadata-only permission is the only grant.
+
 # Chat08 Google content consent: merged, deployed and anonymously smoke-tested — 19 Nov 2026
 
 ## Owner configuration/intent
