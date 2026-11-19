@@ -42,6 +42,9 @@ _PATHS = frozenset({
     ("GET", "/internal/drive/oauth/callback"),
     ("GET", "/internal/drive/oauth/status"),
     ("POST", "/internal/drive/metadata/refresh"),
+    # P4C separately mounted/read-only Google consent routes, never wildcard.
+    ("POST", "/internal/drive/content/oauth/start"),
+    ("GET", "/internal/drive/content/oauth/status"),
 })
 _MAX_BODY = 2048
 
