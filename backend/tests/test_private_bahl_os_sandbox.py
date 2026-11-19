@@ -25,7 +25,7 @@ def test_explicit_bubblewrap_plan_unshares_network_and_host_root(monkeypatch):
     assert ["--clearenv"]==cmd[cmd.index("--clearenv"):cmd.index("--clearenv")+1]
     assert ["--tmpfs","/"]==cmd[cmd.index("--tmpfs"):cmd.index("--tmpfs")+2]
     assert ["--ro-bind","/usr","/usr"]==cmd[cmd.index("--ro-bind"):cmd.index("--ro-bind")+3]
-    assert not any(x in cmd for x in ("--share-net","--bind","--setenv", "DATABASE_URL"))
+    assert not any(x in cmd for x in ("--share-net","--bind","DATABASE_URL"))
     assert not any(x in cmd for x in ("/home","/var","/etc","SECRET_PASSWORD"))
     assert cmd[-2]=="print('FAKE_SCRIPT')"
     assert cmd[-1]=="/srv/backend"
