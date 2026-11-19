@@ -1,3 +1,5 @@
+> **BINDING OWNER DECISION — CHAT07, 19 NOV 2026:** Retire the separate public synthetic root `/` screen and duplicate synthetic PWA experience; a single authenticated mobile-first and desktop Personal CFO app uses `/app`, with `/owner-login` for signed-out MFA and a safe redirect from root. Owner reports mobile login not working; Railway status confirms mobile `403` while desktop login succeeded. This is a priority security-preserving repair, not permission to relax authentication or widen access. [Verified handoff and acceptance](CHAT07_RECOVERY_MOBILE_OWNER_APP_2026-11-19.md) · [Issue #193](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/193). The earlier P2 idea to keep the public synthetic root page is **superseded**. One-owner/no SaaS, immutable original Drive folder, separate consent for read scope and organized copies, verified-vs-unknown finance, prior setup non-repetition, and no-real-data-until-G1/G2/G3 remain binding.
+
 # Owner decisions, project direction and non-negotiable scope
 
 **Updated:** 2026-11-16.
