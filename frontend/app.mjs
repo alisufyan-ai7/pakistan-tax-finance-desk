@@ -226,6 +226,10 @@ async function loadReadOnlyGrantStatus() {
     readOnlyStatus.textContent = data.google_content_grant_stored
       ? "Google read-only permission saved · document analysis not yet complete"
       : "Document content permission not granted";
+    const readiness = byId("original-document-readiness");
+    if (readiness) readiness.textContent = data.google_content_grant_stored
+      ? "Google read-only permission is saved. Secure statement verification and isolated parsing are next; no financial figures have been imported."
+      : "Metadata is connected. Original file verification requires separate Google read-only permission and an isolated parser.";
     connectReadOnly.hidden = false;
     connectReadOnly.disabled = !safeToken(csrfToken);
     connectReadOnly.textContent = data.google_content_grant_stored
