@@ -20,6 +20,9 @@ NAME="SI-123456789 BAH eStatement(01012026).pdf"
 def scope(monkeypatch):
     for key in ("P5E_OWNER_HISTORICAL_REPORT_PILOT",
                 "P5E_G3_ISOLATED_BANK_READER_REVIEWED",
+ "P5C_BAHL_OS_JAIL_ENFORCED",
+                "P5C_BAHL_OS_JAIL_ENFORCED",
+            "P5C_BAHL_OS_JAIL_ENFORCED",
                 "P5A_ORIGINAL_HASH_PILOT",
                 "P3A_PRIVATE_SOURCE_MEDIA_ENABLED"):
         monkeypatch.setenv(key,"1")

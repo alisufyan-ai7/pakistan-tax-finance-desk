@@ -42,6 +42,7 @@ def _gate(owner: str, subject: str, password: str | None):
         or any(os.getenv(k)!="1" for k in (
             "P5E_OWNER_HISTORICAL_REPORT_PILOT",
             "P5E_G3_ISOLATED_BANK_READER_REVIEWED",
+            "P5C_BAHL_OS_JAIL_ENFORCED",
             "P5A_ORIGINAL_HASH_PILOT",
             "P3A_PRIVATE_SOURCE_MEDIA_ENABLED",
         ))):
