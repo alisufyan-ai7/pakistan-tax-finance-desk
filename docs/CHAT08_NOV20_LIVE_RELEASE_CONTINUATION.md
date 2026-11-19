@@ -1,4 +1,4 @@
-> **POST-RELEASE VERIFIED P5I MERGE — 20 NOV 2026:** PR #229 merged `9df88dd6` after exact-head synthetic backend + PG18 CI [44600562890 SUCCESS](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44600562890). The Railway backend builds this commit independently; its terminal deployment status must be read back separately. No live schema 0025 applied, no actual source SHA persistence/sync and no real bank figures/comments authorized.
+> **POST-RELEASE VERIFIED P5I MERGE — 20 NOV 2026:** PR #229 merged `9df88dd6` after exact-head synthetic backend + PG18 CI [44600562890 SUCCESS](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44600562890). Existing Railway development backend deployment `52a57d1c-976d-4a68-97b3-0470e9e8d6ed` is **terminal SUCCESS at exact `9df88dd6`**; unchanged frontend deployment skipped as expected and remains successful. No live schema 0025 applied, no actual source SHA persistence/sync and no real bank figures/comments authorized.
 
 # Chat 8 — 20 November 2026 live Personal CFO release handoff
 
