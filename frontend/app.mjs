@@ -20,6 +20,7 @@ const hashStatus = byId("source-hash-status");
 const hashResults = byId("source-hash-results");
 let nextSourceBatch = 0;
 let ownerReviewEnabled = false;
+let reviewEditorNumber = 0;
 const reviewReadiness = byId("owner-review-readiness");
 
 let csrfToken = null;
@@ -346,6 +347,8 @@ function buildPrivateReviewEditor(subject) {
   const caption=document.createElement("label");
   caption.textContent="Your comment or clarification";
   const field=document.createElement("textarea");
+  field.id="owner-review-note-"+(++reviewEditorNumber);
+  caption.htmlFor=field.id;
   field.rows=3;field.maxLength=1500;
   field.placeholder="Example: This transfer may be between accounts I own; please verify both sides.";
   const actions=document.createElement("div");actions.className="owner-review-actions";
@@ -374,7 +377,7 @@ function buildPrivateReviewEditor(subject) {
     entries.replaceChildren();
     for(const item of data.comments) {
       const li=document.createElement("li");
-      li.textContent=item.comment;
+      li.textContent="Comment "+String(item.revision)+": "+item.comment;
       entries.append(li);
     }
   }
