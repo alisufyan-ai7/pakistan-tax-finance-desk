@@ -1,3 +1,5 @@
+> **NOV 19 VERIFIED SUPERSEDING CHECKPOINT:** The four Chat07 concurrent P2 branches #197, #199, #201 and **#198** are now merged; #198 final backend+PG18 CI [44501733032 PASS](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44501733032), merge `5f9b26a`. New source-only PWA routing deployed; full actual finance, Google content scope and persistent scheduler remain pending. [Current full Chat07 handoff](CHAT07_PARALLEL_IMPLEMENTATION_2026-11-19.md). Historical entries below are preserved as past evidence only.
+
 > **LATEST 19 NOV OVERRIDE:** This is the historical 18 Nov checkpoint. Owner confirmed mobile login PASS; #197 merged/deployed root `/` → `/app` and blocks the public synthetic standalone identity. #199 merged synthetic statement continuity. #198 encrypted revision storage under review. See [Chat07 parallel delivery and security boundaries](CHAT07_PARALLEL_IMPLEMENTATION_2026-11-19.md). All actual byte/real financial gates from below remain unchanged.
 
 # P2 implementation checkpoint — 18 November 2026
