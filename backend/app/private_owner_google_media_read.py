@@ -11,7 +11,7 @@ Read credentials/tokens never enter logs, front-end code, or GitHub.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import hmac
 import os
@@ -51,7 +51,7 @@ class PrivateSourceMediaBlocked(ValueError):
 @dataclass(frozen=True)
 class PrivateSourceBlob:
     """Internal-only ephemeral bytes, NEVER returned by a public endpoint."""
-    data: bytes
+    data: bytes = field(repr=False)
     sha256: str
     content_hmac: str
     file_hmac: str
