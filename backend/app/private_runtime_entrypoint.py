@@ -161,9 +161,7 @@ def create_private_runtime_entrypoint():
     owner = (
         create_review_only_private_owner_login_service(
             google_metadata=True, google_content=True,
-            source_preflight=preflight_on,
-        review_comments=review_on,
-            review_comments=review_on)
+            source_preflight=preflight_on, review_comments=review_on)
         if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
@@ -171,7 +169,7 @@ def create_private_runtime_entrypoint():
     return _PrivatePreviewComposite(
         create_preview_app(), owner, google_metadata=google_on,
         google_content=content_on,
-        source_preflight=preflight_on,
+        source_preflight=preflight_on, review_comments=review_on,
     )
 
 
