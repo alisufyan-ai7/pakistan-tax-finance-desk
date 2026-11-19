@@ -116,9 +116,40 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         raise FakeOAuthIngressBlocked("Unsupported proxy configuration")
     if ("location = /api/preview/status" not in nginx_source
         or "location /api/" in nginx_source
-        or "location = /api/drive/oauth/disconnect" in nginx_source
-        or "location = /api/finance" in nginx_source):
+        or "location = /api/drive/oauth/disconnect" in nginx_source):
         raise FakeOAuthIngressBlocked("Public ingress unexpectedly broadened")
+    # Reviewed owner comments are separate, exact, default-off routes.
+    # Any other /api/finance route remains forbidden by this old OAuth gate.
+    review_paths = {
+        "/api/finance/review/status": ("GET", "/internal/finance/review/status"),
+        "/api/finance/review/comment": ("POST", "/internal/finance/review/comment"),
+        "/api/finance/review/history": ("POST", "/internal/finance/review/history"),
+    }
+    discovered = re.findall(
+        r"^\s*location = (/api/finance[^ ]*) \\{",
+        nginx_source, flags=re.M,
+    )
+    if len(discovered) != len(set(discovered)) or any(
+        p not in review_paths for p in discovered
+    ):
+        raise FakeOAuthIngressBlocked("Unreviewed public finance route")
+    for path in discovered:
+        match = re.search(r"^\s*location = " + re.escape(path)
+            + r" \\{(.*?)\\n    \\}", nginx_source, flags=re.S | re.M)
+        if match is None:
+            raise FakeOAuthIngressBlocked("Unverified owner notes ingress")
+        method, internal = review_paths[path]
+        body = match.group(1)
+        required = (
+            'if ($p1ak_owner_ingress != "1") { return 404; }',
+            'if ($p4c_content_ingress != "1") { return 404; }',
+            'if ($p5d_review_ingress != "1") { return 404; }',
+            'if ($request_method != "' + method + '") { return 405; }',
+            'proxy_pass http://$private_google_upstream' + internal + ';',
+            'access_log off;', 'error_log /dev/null crit;',
+        )
+        if any(value not in body for value in required):
+            raise FakeOAuthIngressBlocked("Owner review route controls absent")
     owner_routes = {
         "/api/owner/login": ("POST", "/internal/drive/auth/login"),
         "/api/owner/session": ("GET", "/internal/drive/auth/session"),
