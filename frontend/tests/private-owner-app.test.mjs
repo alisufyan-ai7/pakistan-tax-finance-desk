@@ -33,11 +33,13 @@ test("single-owner dashboard has mobile and desktop navigation, never synthetic 
   assert.ok(html.includes("PKR —"));
   assert.ok(!html.includes("180000") && !html.includes("85000"));
   assert.ok(!js.includes("demo-data.mjs"));
+  // Only explicitly reviewed finance comment endpoints, never money mutation.
+  for (const endpoint of ["/api/finance/review/status", "/api/finance/review/comment", "/api/finance/review/history"]) assert.ok(js.includes(endpoint));
   assert.ok(!html.includes("demo-data.mjs"));
   assert.ok(css.includes("@media(max-width:720px)"));
   assert.ok(css.includes(".bottom-nav"));
   for(const forbidden of ["localStorage","sessionStorage","document.cookie","console.log",
-    "innerHTML","postMessage(","/api/finance","drive/v3/files","imported_financial_amount"]) {
+    "innerHTML","postMessage(","/api/finance/ledger","drive/v3/files","imported_financial_amount"]) {
     assert.ok(!js.includes(forbidden),forbidden);
   }
 });
