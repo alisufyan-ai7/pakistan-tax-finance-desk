@@ -1,0 +1,34 @@
+# Chat08 Google content consent: merged, deployed and anonymously smoke-tested — 19 Nov 2026
+
+## Owner configuration/intent
+
+- Owner provided Google Auth Platform screenshots for existing `personal-cfo-drive-connector`: BOTH `drive.readonly` and `drive.metadata.readonly` listed under Restricted scopes; Audience **External / Testing / one test user**; scope Save disabled. No new Google Cloud project or client needed for FIRST authorized pilot.
+- Owner previously CONFIRMED mobile MFA login works and authorized rapid parallel work towards genuine source-linked bank, spending, investments, bills and tax figures. Original approved Drive source remains absolutely immutable; this new content consent requests provider-level READ across the account but internal code remains pinned to the ONE approved source folder. There is NO Drive write grant.
+- Genuine Google content OAuth consent still requires a physical owner click from inside their logged-in Personal CFO browser. Cloud scope declaration is not personal consent. Never paste content authorization URL/code/state, password, TOTP, refresh/access token or source files into GitHub.
+
+## Exact CI-green source milestones now on main
+
+- [PR #207](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/207) **MERGED** squash `08fd93e7a75bff5ea0a1291501edafbb69a99509`; [backend CI #44519087261](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44519087261) **SUCCESS** on second attempt. Exact source-only owner-MFA/session/CSRF-bound encrypted single-use PKCE content OAuth state with strict `drive.readonly`, unable to claim prior metadata state, no content token in existing metadata vault.
+- [PR #208](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/208) **MERGED** squash `2495e69364cac7169725693a9ebf142c013034ef`; [backend CI #44519767152](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44519767152) **SUCCESS** on second attempt. Domain-separated HKDF/AES-GCM and HMAC content-only OAuth grant row in already existing owner SQL grant table. No new key generator/database/migration, and no overwrite of prior metadata OAuth grant.
+- [PR #210](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/210) **MERGED** squash `153294a7ff10e6749c70543c88a55b4088f2164f`. Final same-head [frontend CI #44522714600](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44522714600) **SUCCESS**, [backend CI #44522714693](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44522714693) **SUCCESS**. Exact new private P4C content OAuth start and status routes, existing registered Google callback with distinct scope-state dispatch and folder ownership confirmation before vault, fail-closed backend/edge flags, restricted Nginx no-log routes and `/app` read-only consent button hidden until MFA+valid authenticated scope status. Existing metadata runtime compatibility preserved. **NO** full original bytes or verified PKR imported yet.
+- [PR #209](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/209) **MERGED**, latest Google scope and External/Testing details documented; see [confirmed scope document](CHAT08_GOOGLE_SCOPE_CONFIRMED_2026-11-19.md).
+
+## Verified deployment and release activation
+
+- Existing Railway project `personal-cfo-dev-sandbox` development environment, no new services. #210 SHA `153294a7` frontend deployment `406a1110-f813-4171-b6fa-cd2eb789c79b` **SUCCESS**, backend deployment `fbb33c0e-96dc-443a-83c0-47b44eb48e9a` **SUCCESS**.
+- Staged **10 non-destructive** exact backend/frontend service variable additions, reviewed no other staged resources, then committed existing development environment deployment. Frontend `P4C_CONTENT_PUBLIC_INGRESS_ENABLED=1`; backend P4, P4B, P4C nine separate consent/PKCE/custody/restricted-scope/owner-MFA/route flags, all set to `1` after exact-head tests. Existing P1 owner login/metadata settings and prior secret values **preserved**, no new keys.
+- Railway both new same-source deployments **SUCCESS**: frontend `406a1110-f813-4171-b6fa-cd2eb789c79b`, backend `fbb33c0e-96dc-443a-83c0-47b44eb48e9a`. External anonymous smoke using a fresh non-authenticated fetch observed `/healthz` body `ok`, `/app` private app HTML served, `/api/drive/content/oauth/status` **401** without MFA (expected). No sensitive owner login or Google callback probe performed. This proves route denial and service delivery, NOT successful real owner OAuth or source scanning.
+
+## Owner's one immediate pending action
+
+1. Sign in to [owner PWA](https://personal-cfo-frontend-preview-development.up.railway.app/app) using existing Personal CFO login.
+2. Click **Connect read-only documents** in the top bar. If the new button is absent, verify the page is refreshed and signed in; report a sanitized screenshot without secrets.
+3. In actual Google OAuth consent, inspect the account, app and exact read-only permission. This is Google account-wide read access, application internally pins one approved original folder. Give consent only if expected. Google returns to the registered Railway callback and redirects to owner-login.
+4. Reopen `/app`, require status `Google read-only permission saved`. If failure, report only sanitized status/screenshots; never share provider URL/state/code/token, password or MFA code.
+
+## Remaining REAL financial engineering; keep parallel tracks and truthful unknowns
+
+- **No** genuine owner Drive bytes read/hashed, no live bank/PDF/Excel/CSV/IRIS/receipt parsing, no real PKR figures yet. After owner consent, connect exact folder inventory receipts and #203 bounded read-only Google `alt=media` byte reader to real provider credentials. #203 is still unmounted and separately gated for source-read and isolated parser; receiving consent alone does not enable mass downloading.
+- Independently implement protected original-byte vault and SHA256/revision storage, sandbox real PDF/XLSX/CSV/images, bank statement account/period/balance verification and cross-document dedup, source-linked canonical encrypted journal, investments/bills/tax evidence and private finance APIs. Never report debit/credit as income/expense absent transfer/reversal identification. Accountant's current TY2025–26 Excel draft stays DRAFT, separate from filed TY2024–25 return.
+- Add one-owner hourly safe scan, durable revision history, manual refresh, changed-file statuses and last-successful-sync only AFTER reviewed live SQL migration/backup. No new SaaS/Redis/microservices, original Drive folder immutable.
+- Google's **External/Testing** Drive-scope refresh tokens commonly expire after ~7 days. **Personal mode** is a better long-term one-user solution but cannot be converted from this existing External project; requires NEW Personal-mode project/client and deliberate migration after pilot, not a blocker for first real ingestion. See earlier owner scope note.
