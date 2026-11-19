@@ -134,7 +134,9 @@ def create_private_runtime_entrypoint():
         ) from None
     owner = (
         create_review_only_private_owner_login_service(
-            google_metadata=True, google_content=content_on)
+            google_metadata=True, google_content=True)
+        if content_on else
+        create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
     )
     return _PrivatePreviewComposite(
