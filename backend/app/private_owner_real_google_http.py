@@ -125,6 +125,7 @@ def create_review_only_private_google_http_gateway(
     enable_content_oauth: bool = False,
     enable_source_preflight: bool = False,
     enable_review_comments: bool = False,
+    enable_historical_bahl: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -238,6 +239,17 @@ def create_review_only_private_google_http_gateway(
             }
 
 
+
+    if enable_historical_bahl:
+        if not enable_content_oauth or not enable_source_preflight:
+            raise PrivateOwnerGoogleHttpBlocked(
+                "Historical BAHL reporting requires approved content + source verification"
+            )
+        _reviewed_content_http()
+        from .private_historical_bahl_http import mount_private_historical_bahl_http
+        mount_private_historical_bahl_http(
+            app, session_factory=session_factory, transport=transport,
+        )
 
     if enable_review_comments:
         if not enable_content_oauth:

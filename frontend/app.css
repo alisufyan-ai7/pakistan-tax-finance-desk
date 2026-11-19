@@ -37,3 +37,18 @@
 .owner-review-actions button[disabled]{opacity:.5;cursor:not-allowed}
 .owner-review-history{margin-top:10px;padding-left:18px;overflow-wrap:anywhere}
 .owner-review-history li{padding:6px 0;font-size:13px;white-space:pre-wrap}
+
+
+/* P5H historical bank statements: no current-balance or expense implications. */
+.bank-report-action{margin:12px 0;padding:12px;border:1px solid #d2e1eb;border-radius:10px;background:#f8fbfd}
+.bank-report-action>button,.bank-password-form button{border:1px solid #346686;background:#275585;color:white;border-radius:9px;padding:10px 13px;font:inherit;font-weight:650;cursor:pointer}
+.bank-report-action button[disabled]{opacity:.55;cursor:not-allowed}
+.bank-report-action .muted{margin:9px 0 0;font-size:13px}
+.bank-password-form{margin-top:12px;flex-wrap:wrap;gap:8px}
+.bank-password-form:not([hidden]){display:flex;flex-direction:column;align-items:flex-start}
+.bank-password-form label{font-size:13px;font-weight:650}
+.bank-password-form input{box-sizing:border-box;width:min(100%,330px);min-height:42px;border-radius:8px;border:1px solid #afc5d0;padding:9px;font:inherit}
+.bank-statement-facts{display:grid;grid-template-columns:minmax(120px,2fr) minmax(115px,1fr);gap:8px 14px;margin:12px 0}
+.bank-statement-facts dt{font-size:13px;color:#415a6a}
+.bank-statement-facts dd{font-weight:750;font-variant-numeric:tabular-nums;text-align:right;margin:0;white-space:nowrap}
+@media(max-width:400px){.bank-statement-facts{grid-template-columns:1fr}.bank-statement-facts dd{text-align:left;margin-top:-5px}}

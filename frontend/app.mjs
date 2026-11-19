@@ -18,6 +18,9 @@ const readOnlyStatus = byId("readonly-connection-status");
 const checkOriginals = byId("verify-originals");
 const hashStatus = byId("source-hash-status");
 const hashResults = byId("source-hash-results");
+const historicalReportList = byId("historical-bahl-reports");
+const historicalReadiness = byId("historical-bahl-readiness");
+const historicalBankReports = new Map();
 let nextSourceBatch = 0;
 let ownerReviewEnabled = false;
 let reviewEditorNumber = 0;
@@ -62,6 +65,8 @@ function rejectSession() {
   nextSourceBatch = 0;
   ownerReviewEnabled = false;
   hashResults.replaceChildren();
+  historicalBankReports.clear();
+  historicalReportList.replaceChildren();
   checkOriginals.hidden = true;
   app.hidden = true;
   byId("bottom-nav").hidden = true;
@@ -413,6 +418,162 @@ function buildPrivateReviewEditor(subject) {
   actions.append(save,history);frame.append(caption,field,actions,feedback,entries);
   return frame;
 }
+
+const BAHL_FILE = /^SI-[0-9]{9} BAH eStatement\([0-9]{8}\)\.pdf$/;
+const HMAC_SHA = /^[a-f0-9]{64}$/;
+const historicalMoney = new Intl.NumberFormat("en-PK", {
+  style:"currency", currency:"PKR", minimumFractionDigits:2,
+  maximumFractionDigits:2,
+});
+function verifiedHistoricalBahl(data, subject) {
+  if (!data || typeof data !== "object" ||
+      data.contract !== "personal_cfo_private_historical_bahl_http_v1" ||
+      data.source_hmac !== subject || !HMAC_SHA.test(subject) ||
+      !HMAC_SHA.test(data.source_content_hmac) ||
+      typeof data.source_name !== "string" || !BAHL_FILE.test(data.source_name) ||
+      data.original_source_modified !== false ||
+      data.content_retained_on_server !== false ||
+      data.financial_values_verified !== false ||
+      data.income_minor !== null || data.expenses_minor !== null ||
+      data.current_available_balance_minor !== null ||
+      data.historical_only !== true) return false;
+  if (data.status === "PASSWORD_REQUIRED" ||
+      data.status === "PASSWORD_REJECTED") {
+    return !["historical_opening_minor","historical_closing_minor",
+       "gross_bank_debits_minor","gross_bank_credits_minor","transaction_count"]
+      .some(key => key in data);
+  }
+  if (data.status !== "SOURCE_STATEMENT_RECONCILED" ||
+      data.source_sha256_verified !== true ||
+      data.running_balance_reconciled !== true ||
+      data.printed_gross_totals_match_transactions !== true ||
+      data.owner_review_required !== true ||
+      data.transfers_excluded !== false ||
+      data.all_account_coverage_verified !== false ||
+      data.ledger_mutated !== false ||
+      !/^20\d{2}-\d{2}-\d{2}$/.test(data.statement_start) ||
+      !/^20\d{2}-\d{2}-\d{2}$/.test(data.statement_end) ||
+      data.statement_start > data.statement_end) return false;
+  const keys=["historical_opening_minor","historical_closing_minor",
+      "gross_bank_debits_minor","gross_bank_credits_minor"];
+  if (!keys.every(key=>Number.isSafeInteger(data[key]) &&
+       data[key]>=0 && data[key]<=1e15) ||
+      !Number.isSafeInteger(data.transaction_count) ||
+      data.transaction_count<1 || data.transaction_count>5000 ||
+      data.historical_opening_minor + data.gross_bank_credits_minor -
+        data.gross_bank_debits_minor !== data.historical_closing_minor) return false;
+  return true;
+}
+function renderHistoricalBankReports() {
+  historicalReportList.replaceChildren();
+  for (const result of historicalBankReports.values()) {
+    const li=document.createElement("li");
+    const title=document.createElement("strong");
+    title.textContent=result.source_name;
+    const scope=document.createElement("small");
+    scope.textContent="Historical statement · "+result.statement_start+
+      " to "+result.statement_end+" · source SHA-256 verified";
+    const details=document.createElement("dl");
+    details.className="bank-statement-facts";
+    for (const [label,key] of [
+      ["Closing balance at statement end","historical_closing_minor"],
+      ["Opening balance at statement start","historical_opening_minor"],
+      ["Gross bank debits (not expenses)","gross_bank_debits_minor"],
+      ["Gross bank credits (not income)","gross_bank_credits_minor"],
+    ]) {
+      const dt=document.createElement("dt");
+      dt.textContent=label;
+      const dd=document.createElement("dd");
+      dd.textContent=historicalMoney.format(result[key]/100);
+      details.append(dt,dd);
+    }
+    const count=document.createElement("small");
+    count.textContent=String(result.transaction_count)+" reconciled statement entries. Internal transfers and financial categories still need review.";
+    li.append(title,scope,details,count);
+    historicalReportList.appendChild(li);
+  }
+  historicalReadiness.textContent=historicalBankReports.size
+    ? "These balances are historical source observations only, not available cash or classified spending. Reports stay in this browser session and are not cached."
+    : "In Documents, verify original statements and select a Bank AL Habib statement to analyze.";
+}
+async function readHistoricalBahl(sourceHmac, providedPassword) {
+  if (!safeToken(csrfToken) || !HMAC_SHA.test(sourceHmac))
+    throw Error("Historical source not authorized");
+  const payload={source_hmac:sourceHmac};
+  if (typeof providedPassword==="string") payload.password=providedPassword;
+  const body=JSON.stringify(payload);
+  if ("password" in payload) payload.password=null;
+  const response=await fetch("/api/finance/historical/bahl",{
+    ...requestOptions, mode:"cors", method:"POST",
+    headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
+    body,
+  });
+  if (response.status===401){rejectSession();throw Error("Owner session expired");}
+  if (response.status===404 || response.status===503)
+    throw Error("Historical statement reader is not activated or requires source review");
+  if (!response.ok) throw Error("Private historical reader unavailable");
+  const data=await response.json();
+  if (!verifiedHistoricalBahl(data,sourceHmac))
+    throw Error("Unverified historical bank result rejected");
+  return data;
+}
+function buildHistoricalBankAction(entry) {
+  const frame=document.createElement("section");
+  frame.className="bank-report-action";
+  const run=document.createElement("button");
+  run.type="button";
+  run.textContent="Review historical bank balance";
+  const feedback=document.createElement("p");
+  feedback.className="muted";feedback.setAttribute("aria-live","polite");
+  const passwordArea=document.createElement("div");
+  passwordArea.className="bank-password-form";passwordArea.hidden=true;
+  const passwordLabel=document.createElement("label");
+  const passwordField=document.createElement("input");
+  passwordField.type="password";passwordField.autocomplete="off";
+  passwordField.spellcheck=false;passwordField.maxLength=128;
+  passwordField.setAttribute("aria-label","Private PDF password for this statement");
+  passwordLabel.textContent="PDF password (only sent to the private document reader)";
+  const unlock=document.createElement("button");
+  unlock.type="button";unlock.textContent="Analyze with password";
+  passwordArea.append(passwordLabel,passwordField,unlock);
+  const analyze=async withPassword=>{
+    run.disabled=true;unlock.disabled=true;
+    feedback.textContent="Reconciling this historical statement from the approved original…";
+    let pw=withPassword?passwordField.value:null;
+    passwordField.value="";
+    passwordField.autocomplete="off";
+    try {
+      if (withPassword && (!pw || pw.length>128 || /[^\x21-\x7e]/.test(pw))) {
+        feedback.textContent="Enter the PDF password, without spaces or control characters.";
+        return;
+      }
+      const outcome=await readHistoricalBahl(entry.source_hmac,pw);
+      pw=null;
+      if (outcome.status==="PASSWORD_REQUIRED" ||
+          outcome.status==="PASSWORD_REJECTED") {
+        passwordArea.hidden=false;
+        feedback.textContent=outcome.status==="PASSWORD_REQUIRED"
+          ? "This PDF is password protected. Enter its password to analyze it privately."
+          : "The PDF password was rejected. Enter a valid password and try again.";
+        return;
+      }
+      passwordArea.hidden=true;
+      passwordField.value="";
+      historicalBankReports.set(entry.source_hmac,outcome);
+      renderHistoricalBankReports();
+      feedback.textContent="Historical statement reconciled. View it under Accounts & balances; current cash and spending are still unverified.";
+    } catch {
+      feedback.textContent="Historical bank analysis is unavailable or needs source review. Your original Drive file is unchanged.";
+    } finally {
+      pw=null;passwordField.value="";
+      run.disabled=false;unlock.disabled=false;
+    }
+  };
+  run.addEventListener("click",()=>void analyze(false));
+  unlock.addEventListener("click",()=>void analyze(true));
+  frame.append(run,feedback,passwordArea);
+  return frame;
+}
 checkOriginals.addEventListener("click",async()=>{
   if (!safeToken(csrfToken) || checkOriginals.hidden) return;
   checkOriginals.disabled = true;
@@ -428,7 +589,11 @@ checkOriginals.addEventListener("click",async()=>{
     if (!response.ok) throw Error("Private original preflight unavailable");
     const data=await response.json();
     if (!validSourcePreflightResult(data,batch)) throw Error("Invalid source proof");
-    if (batch===0) hashResults.replaceChildren();
+    if (batch===0) {
+      hashResults.replaceChildren();
+      historicalBankReports.clear();
+      renderHistoricalBankReports();
+    }
     for (const entry of data.results) {
       const li=document.createElement("li");
       const name=document.createElement("strong");
@@ -443,6 +608,9 @@ checkOriginals.addEventListener("click",async()=>{
             READ_OR_REVISION_REVIEW:"Source version/authorization requires review",
           }[entry.state] || "Original requires format review");
       li.append(name,state);
+      if (entry.byte_hash_verified && BAHL_FILE.test(entry.source_name)) {
+        li.appendChild(buildHistoricalBankAction(entry));
+      }
       if (ownerReviewEnabled) li.appendChild(buildPrivateReviewEditor(entry.source_hmac));
       hashResults.appendChild(li);
     }

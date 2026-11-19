@@ -76,7 +76,14 @@
           <ul id="documents-list" class="document-list" aria-label="Drive document metadata"></ul>
         </section>
       </section>
-      <section id="view-accounts" class="view" hidden><section class="panel"><h3>Accounts & balances</h3><p>Source-backed account balances, account-month coverage and statement gaps will appear after the original statements are validated. No account or balance has been assumed from a filename.</p></section></section>
+      <section id="view-accounts" class="view" hidden>
+        <section class="panel">
+          <div class="panel-heading"><div><span class="micro">DOCUMENT-SOURCED HISTORY</span><h3>Historical account statements</h3></div><span class="label-neutral">Not current bank balances</span></div>
+          <p class="muted">Only historical balances explicitly reconciled from original bank statements appear here. Internal transfers, actual income, personal spending and current balances remain unverified until separately reconciled.</p>
+          <p class="muted" id="historical-bahl-readiness" aria-live="polite">In Documents, verify the original bank statements and select one to analyze. PDF passwords are requested only in the private session if needed.</p>
+          <ul id="historical-bahl-reports" class="document-list" aria-label="Historical bank statement balances and gross movements"></ul>
+        </section>
+      </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
       <section id="view-investments" class="view" hidden><section class="panel"><h3>Investments & expected returns</h3><p>Cost, current value, return dates and yield will be shown only with verified broker, bank or investment evidence.</p></section></section>
       <section id="view-tax" class="view" hidden><section class="panel"><h3>Tax & wealth</h3><p>Filed FBR records, accountant drafts and supported year-specific tax estimates must be reconciled before personal values appear.</p></section></section>

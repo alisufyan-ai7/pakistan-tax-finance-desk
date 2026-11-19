@@ -50,6 +50,7 @@ _PATHS = frozenset({
     ("GET", "/internal/finance/review/status"),
     ("POST", "/internal/finance/review/comment"),
     ("POST", "/internal/finance/review/history"),
+    ("POST", "/internal/finance/historical/bahl"),
 })
 _MAX_BODY = 2048
 

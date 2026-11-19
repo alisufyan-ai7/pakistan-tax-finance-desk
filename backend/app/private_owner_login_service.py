@@ -123,7 +123,8 @@ def _attest_enrolled_owner(connection) -> None:
 def create_review_only_private_owner_login_service(*, google_metadata: bool = False,
                                                    google_content: bool = False,
                                                    source_preflight: bool = False,
-                                                   review_comments: bool = False) -> FastAPI:
+                                                   review_comments: bool = False,
+                                                   historical_bahl: bool = False) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
@@ -160,6 +161,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             state["engine"] = None
             engine.dispose()
 
+    if historical_bahl and (not google_content or not source_preflight):
+        raise PrivateOwnerLoginServiceBlocked("Historical banking requires content and original verification")
     if review_comments and not google_content:
         raise PrivateOwnerLoginServiceBlocked("Private review notes require protected owner content")
     if source_preflight and not google_content:
@@ -179,6 +182,7 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             enable_content_oauth=google_content,
             enable_source_preflight=source_preflight,
             enable_review_comments=review_comments,
+            enable_historical_bahl=historical_bahl,
         )
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,
