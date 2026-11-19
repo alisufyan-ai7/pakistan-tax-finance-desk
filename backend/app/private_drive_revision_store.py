@@ -12,6 +12,7 @@ import hmac
 import json
 import os
 import re
+import uuid
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -141,7 +142,7 @@ def persist_complete_synthetic_revision_snapshot(
         seq = 1 if row is None else row.scan_number+1
         if row is None:
             db.add(PrivateDriveRevisionSnapshot(
-                folder_hmac=folder_hmac, scan_number=seq,
+                id=str(uuid.uuid4()), folder_hmac=folder_hmac, scan_number=seq,
                 source_snapshot_hmac=source_receipt, state_hmac=state_receipt,
                 payload_json=_canonical(manifest),
             ))
