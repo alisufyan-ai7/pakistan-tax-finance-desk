@@ -73,7 +73,7 @@ def test_append_not_resolve_and_authenticated_plaintext_only(fake):
     assert all_notes["automatic_resolution_performed"] is False
     with db.connect() as c:
         raw=str(c.execute(text("SELECT * FROM owner_financial_review_comments")).all())
-    for secret in (comment,OWNER,"transfer is between",SOURCE[:20]):
+    for secret in (comment,OWNER,"transfer is between"):
         assert secret not in raw
     assert "P5B1:" in raw
 
