@@ -31,6 +31,10 @@ _GOOGLE_ROUTES = frozenset({
 })
 
 
+_PRIVATE_SOURCE_ROUTES = frozenset({
+    "/internal/drive/content/source/preflight",
+})
+
 _GOOGLE_CONTENT_ROUTES = frozenset({
     "/internal/drive/content/oauth/start",
     "/internal/drive/content/oauth/status",
@@ -44,12 +48,14 @@ class _PrivatePreviewComposite:
     """Route by exact canonical path, never wildcard-prefix proxy."""
 
     def __init__(self, preview: FastAPI, owner: FastAPI, *,
-                 google_metadata: bool = False, google_content: bool = False):
+                 google_metadata: bool = False, google_content: bool = False,
+                 source_preflight: bool = False):
         self.preview = preview
         self.owner = owner
         self.owner_routes = (_OWNER_ROUTES
             | (_GOOGLE_ROUTES if google_metadata else frozenset())
-            | (_GOOGLE_CONTENT_ROUTES if google_content else frozenset()))
+            | (_GOOGLE_CONTENT_ROUTES if google_content else frozenset())
+            | (_PRIVATE_SOURCE_ROUTES if source_preflight else frozenset()))
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -105,6 +111,12 @@ def create_private_runtime_entrypoint():
     if content_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Private content OAuth mode invalid")
     content_on = content_mode == "1"
+    preflight_mode = os.getenv("P5A_PRIVATE_SOURCE_PREFLIGHT_RUNTIME", "")
+    if preflight_mode not in ("", "0", "1"):
+        raise PrivateRuntimeSwitchBlocked("Original source mode invalid")
+    preflight_on = preflight_mode == "1"
+    if preflight_on and not content_on:
+        raise PrivateRuntimeSwitchBlocked("Original source route requires protected content OAuth")
     if content_on and not google_on:
         raise PrivateRuntimeSwitchBlocked("Content OAuth cannot run without existing Google metadata")
     if google_on:
@@ -134,7 +146,8 @@ def create_private_runtime_entrypoint():
         ) from None
     owner = (
         create_review_only_private_owner_login_service(
-            google_metadata=True, google_content=True)
+            google_metadata=True, google_content=True,
+            source_preflight=preflight_on)
         if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
@@ -142,6 +155,7 @@ def create_private_runtime_entrypoint():
     return _PrivatePreviewComposite(
         create_preview_app(), owner, google_metadata=google_on,
         google_content=content_on,
+        source_preflight=preflight_on,
     )
 
 

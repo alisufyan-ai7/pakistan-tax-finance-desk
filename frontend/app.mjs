@@ -15,6 +15,11 @@ const documents = byId("documents-list");
 const refreshButton = byId("refresh-all");
 const connectReadOnly = byId("connect-readonly-documents");
 const readOnlyStatus = byId("readonly-connection-status");
+const checkOriginals = byId("verify-originals");
+const hashStatus = byId("source-hash-status");
+const hashResults = byId("source-hash-results");
+let nextSourceBatch = 0;
+
 let csrfToken = null;
 let connected = false;
 let items = [];
@@ -51,6 +56,9 @@ function showStatus(message) { status.textContent = message; }
 function rejectSession() {
   csrfToken = null;
   items = [];
+  nextSourceBatch = 0;
+  hashResults.replaceChildren();
+  checkOriginals.hidden = true;
   app.hidden = true;
   byId("bottom-nav").hidden = true;
   gate.hidden = false;
@@ -230,6 +238,7 @@ async function loadReadOnlyGrantStatus() {
     if (readiness) readiness.textContent = data.google_content_grant_stored
       ? "Google read-only permission is saved. Secure statement verification and isolated parsing are next; no financial figures have been imported."
       : "Metadata is connected. Original file verification requires separate Google read-only permission and an isolated parser.";
+    checkOriginals.hidden = !data.google_content_grant_stored;
     connectReadOnly.hidden = false;
     connectReadOnly.disabled = !safeToken(csrfToken);
     connectReadOnly.textContent = data.google_content_grant_stored
@@ -261,6 +270,82 @@ connectReadOnly.addEventListener("click",async()=>{
     readOnlyStatus.textContent = "Read-only Google connection unavailable; metadata remains connected.";
     connectReadOnly.disabled = false;
   }
+});
+
+
+function validSourcePreflightResult(data, expectedBatch) {
+  const statuses = new Set([
+    "NEEDS_SIZE_REVIEW","OVERSIZED_ISOLATED_REVIEW",
+    "UNSUPPORTED_FORMAT_REVIEW","ORIGINAL_BYTES_HASH_VERIFIED",
+    "ORIGINAL_HASH_VERIFIED_FORMAT_REVIEW",
+    "ORIGINAL_HASH_VERIFIED_NEEDS_ISOLATED_PARSER",
+    "READ_OR_REVISION_REVIEW",
+  ]);
+  if (!data || data.contract !== "personal_cfo_private_original_byte_preflight_v1" ||
+      data.approved_source_folder !== true || data.metadata_complete !== true ||
+      data.originals_modified !== false ||
+      data.source_bytes_returned_to_browser !== false ||
+      data.bytes_persisted !== false || data.source_hashes_persisted !== false ||
+      data.financial_figures_verified !== false ||
+      data.actual_bank_amounts_available !== false ||
+      data.real_pdf_parser_active !== false ||
+      data.batch_index !== expectedBatch || data.batch_size !== 3 ||
+      !Number.isInteger(data.total_source_files) || data.total_source_files < 0 ||
+      data.total_source_files > 1000 ||
+      !(data.next_batch === null || (Number.isInteger(data.next_batch) &&
+          data.next_batch === expectedBatch + 1)) ||
+      !Array.isArray(data.results) || data.results.length > 3 ||
+      !data.results.every(x=>x && typeof x.source_name === "string" &&
+        x.source_name.length > 0 && x.source_name.length <= 512 &&
+        /^[a-f0-9]{64}$/.test(x.source_hmac) &&
+        /^[a-f0-9]{64}$/.test(x.revision_hmac) &&
+        statuses.has(x.state) && typeof x.byte_hash_verified === "boolean" &&
+        (x.byte_hash_verified !== true ||
+          (/^[a-f0-9]{64}$/.test(x.source_content_hmac) &&
+            Number.isInteger(x.byte_count) && x.byte_count > 0 &&
+            x.byte_count <= 4*1024*1024)))) return false;
+  return true;
+}
+checkOriginals.addEventListener("click",async()=>{
+  if (!safeToken(csrfToken) || checkOriginals.hidden) return;
+  checkOriginals.disabled = true;
+  hashStatus.textContent = "Checking original bytes in the approved Drive folder…";
+  try {
+    const batch=nextSourceBatch;
+    const response=await fetch("/api/drive/content/source/preflight",{
+      ...requestOptions,mode:"cors",method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
+      body:JSON.stringify({batch_index:batch}),
+    });
+    if (response.status===401) { rejectSession(); return; }
+    if (!response.ok) throw Error("Private original preflight unavailable");
+    const data=await response.json();
+    if (!validSourcePreflightResult(data,batch)) throw Error("Invalid source proof");
+    if (batch===0) hashResults.replaceChildren();
+    for (const entry of data.results) {
+      const li=document.createElement("li");
+      const name=document.createElement("strong");
+      name.textContent=entry.source_name;
+      const state=document.createElement("small");
+      state.textContent=entry.byte_hash_verified
+        ? "Original bytes SHA-256 verified · document analysis pending"
+        : ({
+            NEEDS_SIZE_REVIEW:"Size unavailable; manual review",
+            OVERSIZED_ISOLATED_REVIEW:"Exceeds current safe importer limit",
+            UNSUPPORTED_FORMAT_REVIEW:"Unsupported file type; manual review",
+            READ_OR_REVISION_REVIEW:"Source version/authorization requires review",
+          }[entry.state] || "Original requires format review");
+      li.append(name,state);hashResults.appendChild(li);
+    }
+    nextSourceBatch=data.next_batch===null?0:data.next_batch;
+    checkOriginals.textContent=data.next_batch===null
+      ? "Recheck original documents":"Check next source batch";
+    hashStatus.textContent="Checked "+data.results.length+
+      " originals from a complete "+data.total_source_files+
+      "-file inventory. No private document bytes or financial amounts were returned.";
+  } catch {
+    hashStatus.textContent="Original-file verification unavailable. Existing Drive metadata and consent remain unchanged.";
+  } finally {checkOriginals.disabled=false;}
 });
 
 async function start() {

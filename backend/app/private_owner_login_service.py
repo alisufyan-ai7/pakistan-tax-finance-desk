@@ -121,7 +121,8 @@ def _attest_enrolled_owner(connection) -> None:
 
 
 def create_review_only_private_owner_login_service(*, google_metadata: bool = False,
-                                                   google_content: bool = False) -> FastAPI:
+                                                   google_content: bool = False,
+                                                   source_preflight: bool = False) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
@@ -158,6 +159,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             state["engine"] = None
             engine.dispose()
 
+    if source_preflight and not google_content:
+        raise PrivateOwnerLoginServiceBlocked("Original source preflight requires approved content OAuth")
     if google_content and not google_metadata:
         raise PrivateOwnerLoginServiceBlocked("Content OAuth requires metadata owner controller")
     if google_metadata:
@@ -171,6 +174,7 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
         return create_review_only_private_google_http_gateway(
             private_session, lifespan=lifespan,
             enable_content_oauth=google_content,
+            enable_source_preflight=source_preflight,
         )
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,
