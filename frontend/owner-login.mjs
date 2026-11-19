@@ -26,7 +26,11 @@ async function request(path, body, csrf) {
   return fetch(path, {
     method: "POST",
     credentials: "same-origin",
-    mode: "same-origin",
+    // POST must be CORS-mode even at our same-origin relative URL: with
+    // mode=same-origin + no-referrer, WebKit may send Origin: null, causing
+    // the strict backend origin check to reject mobile login with HTTP 403.
+    // This does NOT grant cross-origin access or relax backend Origin/CSRF.
+    mode: "cors",
     cache: "no-store",
     redirect: "error",
     referrerPolicy: "no-referrer",
