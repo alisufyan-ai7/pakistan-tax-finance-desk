@@ -47,7 +47,7 @@
         <div class="two-columns">
           <section class="panel">
             <div class="panel-heading"><div><span class="micro">SOURCE COVERAGE</span><h3>Your Drive documents</h3></div><button type="button" class="text-button" data-go="documents">View documents</button></div>
-            <div class="file-overview"><div><strong id="document-count">—</strong><span>verified document names</span></div><div><strong id="category-count">—</strong><span>suggested categories</span></div></div>
+            <div class="file-overview"><div><strong id="document-count">—</strong><span>inventoried document names</span></div><div><strong id="category-count">—</strong><span>suggested categories</span></div></div>
             <p id="source-updated" class="muted">No metadata refresh has completed in this session.</p>
             <div id="category-summary" class="categories" aria-label="Document category counts"></div>
           </section>
@@ -61,6 +61,12 @@
         <section class="panel"><div class="panel-heading"><h3>Financial timeline</h3><span class="label-neutral">Awaiting verified transactions</span></div><div class="empty-chart">We will plot your real income, expenses and bank movement after statement evidence is reconciled. No fictional figures appear here.</div></section>
       </section>
       <section id="view-documents" class="view" hidden>
+        <section class="panel"><div class="panel-heading"><div><span class="micro">READ-ONLY SOURCE TRIAGE</span><h3>Review readiness</h3></div></div>
+          <p class="muted" id="document-review-summary">Refresh documents to inspect file-format and source-review status.</p>
+          <div class="review-metrics"><div><span>Bank statement suggestions</span><strong id="review-suggested-bank">—</strong></div><div><span>Tax / wealth suggestions</span><strong id="review-suggested-tax">—</strong></div><div><span>Investments suggested</span><strong id="review-suggested-investments">—</strong></div><div><span>Bill / receipt suggestions</span><strong id="review-suggested-bills">—</strong></div></div>
+          <p class="muted">These categories come from untrusted filenames, not verified bank accounts, expenses, tax filings or investments.</p>
+          <ul class="document-list" id="document-review-queue" aria-label="Sources requiring classification or format review"></ul>
+        </section>
         <section class="panel"><div class="panel-heading"><div><span class="micro">APPROVED SOURCE FOLDER</span><h3>Documents & review</h3><p class="muted">On-demand live metadata. Originals stay untouched and no file bytes are downloaded.</p></div></div>
           <div class="document-controls"><label for="document-search">Find a file</label><input id="document-search" type="search" placeholder="Search names on this page" autocomplete="off"><span id="document-total"></span></div>
           <ul id="documents-list" class="document-list" aria-label="Drive document metadata"></ul>
