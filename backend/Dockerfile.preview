@@ -7,8 +7,7 @@ COPY pyproject.toml ./
 COPY app ./app
 # Candidate for default-off, OS-confined bank PDF reads. Merely installing
 # bubblewrap does not prove Railway user namespace support or G3 acceptance.
-RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap \\
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap && rm -rf /var/lib/apt/lists/*
 RUN python -m pip install --no-cache-dir '.[postgres]'
 RUN useradd --create-home --uid 10001 preview
 USER 10001
