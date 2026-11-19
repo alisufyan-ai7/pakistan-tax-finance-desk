@@ -126,7 +126,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         "/api/finance/review/history": ("POST", "/internal/finance/review/history"),
     }
     discovered = re.findall(
-        r"^\s*location = (/api/finance[^ ]*) \\{",
+        r"^\s*location = (/api/finance[^ ]*) \{",
         nginx_source, flags=re.M,
     )
     if len(discovered) != len(set(discovered)) or any(
@@ -135,7 +135,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         raise FakeOAuthIngressBlocked("Unreviewed public finance route")
     for path in discovered:
         match = re.search(r"^\s*location = " + re.escape(path)
-            + r" \\{(.*?)\\n    \\}", nginx_source, flags=re.S | re.M)
+            + r" \{(.*?)\n    \}", nginx_source, flags=re.S | re.M)
         if match is None:
             raise FakeOAuthIngressBlocked("Unverified owner notes ingress")
         method, internal = review_paths[path]
