@@ -567,3 +567,25 @@ class PrivateDriveRevisionSnapshot(Base):
         EncryptedText("private_drive_revision_snapshots.payload_json"), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class OwnerFinancialReviewComment(Base):
+    """Append-only genuine owner notes; comments encrypted, source IDs HMAC-blinded.
+
+    A user note is an evidence annotation, NEVER a certified transaction
+    category or authority to clear a statement discrepancy automatically.
+    """
+    __tablename__ = "owner_financial_review_comments"
+    __table_args__ = (
+        CheckConstraint("revision > 0",name="ck_owner_review_revision_positive"),
+        CheckConstraint("created_epoch > 0",name="ck_owner_review_created_positive"),
+        Index("ix_owner_review_subject", "owner_hmac", "subject_hmac"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
