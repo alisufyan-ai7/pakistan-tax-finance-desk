@@ -661,7 +661,8 @@ def test_p5d_owner_review_comments_scoped_to_actual_fake_folder_and_mfa(owner_cl
         md5_checksum="a"*32,trashed=False,
     )
     monkeypatch.setattr(preflight,"_inventory",lambda *a,**kw:(fake,))
-    monkeypatch.setattr(custody,"read_private_content_grant",lambda *a,**kw:"Z"*55)
+    from app import private_owner_real_google_http as owner_gateway
+    monkeypatch.setattr(owner_gateway,"read_private_content_grant",lambda *a,**kw:"Z"*55)
     monkeypatch.setattr(content,"refresh_google_content_token",lambda **kw:(ACCESS,None))
     app=create_review_only_private_google_http_gateway(
         lambda:Session(engine),
