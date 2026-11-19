@@ -53,7 +53,10 @@ test("app never shows consent button without authenticated private scope status"
   assert.ok(js.includes('include_granted_scopes'));
   assert.ok(!js.includes("innerHTML"));
   assert.ok(!js.includes("localStorage"));
-  assert.ok(!js.includes("/api/finance"));
+  // P5D owner-only review notes are separately gated from Google consent.
+  assert.ok(js.includes('get("/api/finance/review/status")'));
+  assert.ok(!js.includes("/api/finance/ledger"));
+  assert.ok(!js.includes("/api/finance/import"));
 });
 
 test("old owner metadata route and original Drive links unchanged",()=>{
