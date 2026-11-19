@@ -142,6 +142,9 @@ async function refreshMetadata() {
     const response = await fetch("/api/drive/metadata/refresh", {
       ...requestOptions,
       method:"POST",
+      // Preserve a genuine Origin on iOS/WebKit while keeping no-referrer;
+      // same-origin credentials, exact private route and CSRF stay enforced.
+      mode:"cors",
       headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
       body:"",
     });
