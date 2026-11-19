@@ -90,9 +90,9 @@ def _now(epoch: int | None) -> int:
 
 
 def _aad(row: OwnerFinancialReviewComment) -> bytes:
-    return (_PURPOSE +
-        f"{row.id}:{row.owner_hmac}:{row.subject_hmac}:{row.subject_kind}:"
-        f"{row.revision}:{row.created_epoch}".encode("ascii"))
+    binding = (f"{row.id}:{row.owner_hmac}:{row.subject_hmac}:{row.subject_kind}:"
+               f"{row.revision}:{row.created_epoch}").encode("ascii")
+    return _PURPOSE + binding
 
 
 def _seal(key: bytes, row: OwnerFinancialReviewComment, note: str) -> str:
@@ -124,11 +124,11 @@ def _read(row: OwnerFinancialReviewComment,key: bytes,mac: bytes) -> dict:
         if (_HEX.fullmatch(row.row_hmac) is None
             or not hmac.compare_digest(row.row_hmac,_tag(mac,row))
             or not row.ciphertext.startswith(_PREFIX)
-            or len(row.ciphertext)>4400):
+            or len(row.ciphertext)>14000):
             raise ValueError()
         b=base64.b64decode(row.ciphertext[len(_PREFIX):],
                            altchars=b"-_",validate=True)
-        if not 28<=len(b)<=4100:
+        if not 28<=len(b)<=10400:
             raise ValueError()
         payload=json.loads(AESGCM(key).decrypt(b[:12],b[12:],
                                               _aad(row)).decode("utf-8"))
