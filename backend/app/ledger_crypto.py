@@ -40,6 +40,7 @@ ENCRYPTED_COLUMNS = {
     "owner_recovery_states": ("bundle_json",),
     "owner_recovery_audit": ("detail_json",),
     "drive_inbox_items": ("payload_json",),
+    "private_drive_revision_snapshots": ("payload_json",),
 }
 
 
