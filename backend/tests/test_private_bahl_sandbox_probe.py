@@ -47,7 +47,7 @@ def test_fails_closed_no_independent_release(monkeypatch,reason):
 
 @pytest.mark.parametrize("first_return,first_stdout,boot_return,boot_stdout,expected", [
     (1, b"", 1, b"", "JAIL_CANNOT_START"),
-    (1, b"", 0, b"P5H_NAMESPACE_BOOTED\\n", "ISOLATED_CHILD_FAILED"),
+    (1, b"", 0, b"P5H_NAMESPACE_BOOTED\n", "ISOLATED_CHILD_FAILED"),
     (0, b"SECRET_OUTPUT_NOT_JSON", 0, b"", "CHILD_RESULT_INVALID"),
     (0, json.dumps({
         "network_denied":False,
