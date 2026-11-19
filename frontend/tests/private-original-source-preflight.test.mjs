@@ -24,6 +24,7 @@ test("owner original-source SHA preflight route is private and defaults closed",
  ])assert.ok(block.includes(line),line);
  assert.match(ng,/set \$p5a_source_ingress "\$\{P5A_SOURCE_PUBLIC_INGRESS_ENABLED\}";/);
  assert.match(docker,/P5A_SOURCE_PUBLIC_INGRESS_ENABLED=0/);
+ assert.match(docker,/P5D_REVIEW_PUBLIC_INGRESS_ENABLED=0/);
  assert.ok(!ng.includes("location /api/"));
 });
 

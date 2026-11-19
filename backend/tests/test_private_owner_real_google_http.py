@@ -626,3 +626,102 @@ def test_content_routes_do_not_exist_in_default_metadata_only_factory(owner_clie
     paths={route.path for route in c.app.routes}
     assert "/internal/drive/content/oauth/start" not in paths
     assert "/internal/drive/content/oauth/status" not in paths
+
+
+def test_p5d_owner_review_comments_scoped_to_actual_fake_folder_and_mfa(owner_client):
+    """True end-to-end private comment route uses existing P1N MFA and AEAD SQL."""
+    from app.drive_inbox_planner import DriveFile, _index as blind
+    from app import private_original_source_preflight as preflight
+    from app import private_content_grant_custody as custody
+    from app import private_google_content_consent as content
+    from datetime import datetime, timezone
+
+    _original_client,engine,_seen,monkeypatch=owner_client
+    for flag in (
+        "P4_CONTENT_OAUTH_CONTRACT_ONLY",
+        "P4_G2_OWNER_SESSION_CONTENT_REVIEWED",
+        "P4_G3_RESTRICTED_SCOPE_ACCEPTED",
+        "P4B_PRIVATE_CONTENT_GRANT_CUSTODY",
+        "P4B_G2_OWNER_CONTENT_GRANT_REVIEWED",
+        "P4B_G3_EXACT_CONTENT_SCOPE_ATTESTED",
+        "P4C_CONTENT_OAUTH_RUNTIME",
+        "P4C_G2_CONTENT_OAUTH_CALLBACK_REVIEWED",
+        "P4C_G3_READONLY_SOURCE_POLICY_REVIEWED",
+        "P5D_OWNER_REVIEW_HTTP_RUNTIME",
+        "P5B_OWNER_REVIEW_COMMENTS_ENABLED",
+        "P5B_G2_PRIVATE_REVIEW_ENCRYPTION_ACCEPTED",
+        "P5B_G3_FINANCIAL_REVIEW_SCHEMA_ACCEPTED",
+    ):
+        monkeypatch.setenv(flag,"1")
+    fake=DriveFile(
+        id="SYNTHETIC_OWNER_REVIEW_APPROVED_FILE_2026",
+        name="fake-financial-original.pdf",mime_type="application/pdf",
+        parent_ids=(FOLDER,),size_bytes=250,
+        modified_time=datetime(2026,11,19,tzinfo=timezone.utc),
+        md5_checksum="a"*32,trashed=False,
+    )
+    monkeypatch.setattr(preflight,"_inventory",lambda *a,**kw:(fake,))
+    from app import private_owner_real_google_http as owner_gateway
+    monkeypatch.setattr(owner_gateway,"read_private_content_grant",lambda *a,**kw:"Z"*55)
+    monkeypatch.setattr(content,"refresh_google_content_token",lambda **kw:(ACCESS,None))
+    app=create_review_only_private_google_http_gateway(
+        lambda:Session(engine),
+        enable_content_oauth=True,enable_review_comments=True,
+    )
+    subject=blind("file",fake.id)
+    with TestClient(app,base_url="https://"+HOST) as client:
+        unauth=client.get("/internal/finance/review/status",
+                          headers=headers(origin=None))
+        assert unauth.status_code==401
+        csrf=login(client)
+        status=client.get("/internal/finance/review/status",
+                          headers=headers(origin=None))
+        assert status.status_code==200
+        assert status.json()["review_enabled"] is True
+        assert status.json()["auto_resolve"] is False
+        good=client.post("/internal/finance/review/comment",
+                         headers=headers(csrf=csrf),
+                         json={"subject_hmac":subject,"subject_kind":"document",
+                               "comment":"Synthetic clarification: possible own transfer."})
+        assert good.status_code==200,good.text
+        assert good.json()["review_state"]=="PENDING_EVIDENCE_RECONCILIATION"
+        assert good.json()["automatically_resolved"] is False
+        history=client.post("/internal/finance/review/history",
+                            headers=headers(csrf=csrf),
+                            json={"subject_hmac":subject,"subject_kind":"document"})
+        assert history.status_code==200,history.text
+        assert history.json()["comment_count"]==1
+        assert history.json()["comments"][0]["comment"].startswith("Synthetic clarification")
+        assert history.json()["automatic_resolution_performed"] is False
+        with engine.connect() as conn:
+            raw=str(conn.execute(text(
+                "SELECT * FROM owner_financial_review_comments")).all())
+            assert "Synthetic clarification" not in raw
+            assert "possible own transfer" not in raw
+            assert subject in raw
+        bad=client.post("/internal/finance/review/comment",
+                        headers=headers(csrf=csrf),
+                        json={"subject_hmac":"f"*64,"subject_kind":"document",
+                              "comment":"Not a pinned folder document."})
+        assert bad.status_code==403
+        bad=client.post("/internal/finance/review/comment",
+                        headers=headers(csrf=csrf),
+                        json={"subject_hmac":subject,"subject_kind":"transaction",
+                              "comment":"Unreconciled row should not auto-clear."})
+        assert bad.status_code==400
+        bad=client.post("/internal/finance/review/comment",
+                        headers=headers(csrf="wrong"),
+                        json={"subject_hmac":subject,"subject_kind":"document",
+                              "comment":"No CSRF."})
+        assert bad.status_code==401
+        monkeypatch.setenv("P5D_OWNER_REVIEW_HTTP_RUNTIME","0")
+        assert client.get("/internal/finance/review/status",
+                          headers=headers(origin=None)).status_code==503
+
+
+def test_p5d_routes_not_mounted_when_unreviewed(owner_client):
+    c,_,_,_=owner_client
+    paths={r.path for r in c.app.routes}
+    assert "/internal/finance/review/status" not in paths
+    assert "/internal/finance/review/comment" not in paths
+    assert "/internal/finance/review/history" not in paths

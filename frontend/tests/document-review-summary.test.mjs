@@ -81,5 +81,6 @@ test("owner app loads module only after gated session and keeps no source cache"
   assert.ok(js.includes('get("/api/owner/session")'));
   assert.ok(js.includes('get("/api/drive/oauth/status")'));
   assert.ok(js.includes('fetch("/api/drive/metadata/refresh"'));
-  assert.doesNotMatch(js,/\/api\/finance|localStorage|sessionStorage|innerHTML/);
+  assert.doesNotMatch(js,/localStorage|sessionStorage|innerHTML/);
+  assert.match(js,/\/api\/finance\/review\/status/); // gated owner notes, no finance amounts
 });

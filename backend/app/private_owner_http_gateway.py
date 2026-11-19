@@ -46,6 +46,10 @@ _PATHS = frozenset({
     ("POST", "/internal/drive/content/oauth/start"),
     ("GET", "/internal/drive/content/oauth/status"),
     ("POST", "/internal/drive/content/source/preflight"),
+    # P5D owner-only encrypted evidence notes; never public wildcard.
+    ("GET", "/internal/finance/review/status"),
+    ("POST", "/internal/finance/review/comment"),
+    ("POST", "/internal/finance/review/history"),
 })
 _MAX_BODY = 2048
 

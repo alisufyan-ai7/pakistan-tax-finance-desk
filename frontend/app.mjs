@@ -19,6 +19,9 @@ const checkOriginals = byId("verify-originals");
 const hashStatus = byId("source-hash-status");
 const hashResults = byId("source-hash-results");
 let nextSourceBatch = 0;
+let ownerReviewEnabled = false;
+let reviewEditorNumber = 0;
+const reviewReadiness = byId("owner-review-readiness");
 
 let csrfToken = null;
 let connected = false;
@@ -57,6 +60,7 @@ function rejectSession() {
   csrfToken = null;
   items = [];
   nextSourceBatch = 0;
+  ownerReviewEnabled = false;
   hashResults.replaceChildren();
   checkOriginals.hidden = true;
   app.hidden = true;
@@ -306,6 +310,109 @@ function validSourcePreflightResult(data, expectedBatch) {
             x.byte_count <= 4*1024*1024)))) return false;
   return true;
 }
+
+async function loadOwnerReviewReadiness() {
+  ownerReviewEnabled=false;
+  try {
+    const proof=await get("/api/finance/review/status");
+    if (proof?.contract !== "personal_cfo_owner_review_ready_v1" ||
+        proof.review_enabled !== true ||
+        proof.target_kind !== "document" ||
+        proof.append_only_encrypted !== true ||
+        proof.auto_resolve !== false ||
+        proof.financial_figures_verified !== false) throw Error("Invalid review authority");
+    ownerReviewEnabled=true;
+    reviewReadiness.textContent =
+      "Private encrypted document comments are enabled. Your explanations remain pending review until matched to financial evidence.";
+  } catch {
+    reviewReadiness.textContent =
+      "Encrypted document comments will appear after secure review storage is activated. No originals or balances are changed.";
+  }
+}
+async function postOwnerReview(path,subject,payload={}) {
+  if(!safeToken(csrfToken)||!ownerReviewEnabled||
+      !/^[a-f0-9]{64}$/.test(subject))throw Error("Review input not accepted");
+  const response=await fetch(path,{
+    ...requestOptions,method:"POST",mode:"cors",
+    headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
+    body:JSON.stringify({subject_hmac:subject,subject_kind:"document",...payload}),
+  });
+  if(response.status===401){rejectSession();throw Error("Owner session expired");}
+  if(!response.ok)throw Error("Private financial review unavailable");
+  return response.json();
+}
+function buildPrivateReviewEditor(subject) {
+  const frame=document.createElement("section");
+  frame.className="owner-review-editor";
+  const caption=document.createElement("label");
+  caption.textContent="Your comment or clarification";
+  const field=document.createElement("textarea");
+  field.id="owner-review-note-"+(++reviewEditorNumber);
+  caption.htmlFor=field.id;
+  field.rows=3;field.maxLength=1500;
+  field.placeholder="Example: This transfer may be between accounts I own; please verify both sides.";
+  const actions=document.createElement("div");actions.className="owner-review-actions";
+  const save=document.createElement("button");
+  save.type="button";save.textContent="Save comment";
+  const history=document.createElement("button");
+  history.type="button";history.textContent="View comments";
+  const feedback=document.createElement("p");
+  feedback.className="muted";feedback.setAttribute("aria-live","polite");
+  const entries=document.createElement("ul");entries.className="owner-review-history";
+  async function loadHistory() {
+    const data=await postOwnerReview("/api/finance/review/history",subject);
+    if(data?.contract!=="personal_cfo_owner_encrypted_review_comments_v1" ||
+       data.subject_hmac!==subject || data.subject_kind!=="document" ||
+       data.original_source_unchanged!==true ||
+       data.financial_values_changed!==false ||
+       data.automatic_resolution_performed!==false ||
+       !Array.isArray(data.comments) || data.comments.length>50 ||
+       !data.comments.every(item=>item &&
+         item.subject_hmac===subject && item.subject_kind==="document" &&
+         item.review_state==="PENDING_EVIDENCE_RECONCILIATION" &&
+         item.analysis_pending===true &&
+         typeof item.comment==="string" && item.comment.length<=2000)) {
+       throw Error("Untrusted private review history");
+    }
+    entries.replaceChildren();
+    for(const item of data.comments) {
+      const li=document.createElement("li");
+      li.textContent="Comment "+String(item.revision)+": "+item.comment;
+      entries.append(li);
+    }
+  }
+  save.addEventListener("click",async()=>{
+    const note=field.value.trim();
+    if(!note || note.length>1500){
+      feedback.textContent="Enter a clarification of up to 1,500 characters.";
+      return;
+    }
+    save.disabled=true;history.disabled=true;
+    feedback.textContent="Saving encrypted owner comment…";
+    try {
+      const result=await postOwnerReview(
+        "/api/finance/review/comment",subject,{comment:note});
+      if(result?.contract!=="personal_cfo_owner_review_comment_saved_v1" ||
+        result.saved_encrypted!==true ||
+        result.review_state!=="PENDING_EVIDENCE_RECONCILIATION" ||
+        result.automatically_resolved!==false ||
+        result.original_transaction_changed!==false)throw Error();
+      field.value="";
+      feedback.textContent="Saved privately. Your clarification is pending evidence reconciliation; figures remain unchanged.";
+      await loadHistory();
+    } catch {
+      feedback.textContent="Could not save or retrieve review history. Check your session; no figures were updated.";
+    } finally {save.disabled=false;history.disabled=false;}
+  });
+  history.addEventListener("click",async()=>{
+    history.disabled=true;
+    try {await loadHistory();feedback.textContent="Private comment history loaded; review pending.";}
+    catch {feedback.textContent="Private history unavailable.";}
+    finally {history.disabled=false;}
+  });
+  actions.append(save,history);frame.append(caption,field,actions,feedback,entries);
+  return frame;
+}
 checkOriginals.addEventListener("click",async()=>{
   if (!safeToken(csrfToken) || checkOriginals.hidden) return;
   checkOriginals.disabled = true;
@@ -335,7 +442,9 @@ checkOriginals.addEventListener("click",async()=>{
             UNSUPPORTED_FORMAT_REVIEW:"Unsupported file type; manual review",
             READ_OR_REVISION_REVIEW:"Source version/authorization requires review",
           }[entry.state] || "Original requires format review");
-      li.append(name,state);hashResults.appendChild(li);
+      li.append(name,state);
+      if (ownerReviewEnabled) li.appendChild(buildPrivateReviewEditor(entry.source_hmac));
+      hashResults.appendChild(li);
     }
     nextSourceBatch=data.next_batch===null?0:data.next_batch;
     checkOriginals.textContent=data.next_batch===null
@@ -379,6 +488,7 @@ async function start() {
     connected = google.google_drive_app_connected;
     byId("connection-pill").textContent = connected ? "Drive metadata connected" : "Drive not connected";
     await loadReadOnlyGrantStatus();
+    await loadOwnerReviewReadiness();
     if (connected) await refreshMetadata();
     else showStatus("Your owner session is active. Connect the approved Google Drive folder from Manage account.");
   } catch {
