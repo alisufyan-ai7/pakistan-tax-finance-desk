@@ -589,3 +589,27 @@ class OwnerFinancialReviewComment(Base):
     ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
     row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
     created_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class PrivateSourceShaSnapshot(Base):
+    """P5I encrypted candidate of complete, authenticated original SHA scan state.
+
+    One logical row per owner and pinned folder. Source file IDs, names, hashes,
+    review states and timestamps only appear as HMACs inside a sealed payload.
+    Synthetic fixture writes only until separate G1/G3 backup and provider review.
+    """
+    __tablename__ = "private_source_sha_snapshots"
+    __table_args__ = (
+        CheckConstraint("scan_number > 0", name="ck_private_sha_snapshot_sequence"),
+        UniqueConstraint("owner_hmac", "folder_hmac", name="uq_private_sha_owner_folder"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    owner_hmac: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    folder_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    state_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(
+        EncryptedText("private_source_sha_snapshots.payload_json"), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
