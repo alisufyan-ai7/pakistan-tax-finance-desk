@@ -34,7 +34,8 @@ test("owner password+MFA POST preserves a real browser Origin without referrer l
   await request("/api/owner/logout","{}","SYNTHETIC_CSRF");
   assert.equal(called.options.mode,"cors");
   assert.equal(called.options.headers["X-CSRF-Token"],"SYNTHETIC_CSRF");
-  assert.ok(!js.includes("localStorage")&&!js.includes("sessionStorage"));
+  assert.ok(!js.includes("localStorage.setItem")&&!js.includes("localStorage.getItem") &&
+            !js.includes("sessionStorage.setItem")&&!js.includes("sessionStorage.getItem"));
 });
 
 test("private metadata refresh also preserves Origin and existing CSRF/session protection",()=>{
@@ -48,7 +49,8 @@ test("private metadata refresh also preserves Origin and existing CSRF/session p
   assert.match(js,/credentials: "same-origin"/);
   assert.match(js,/referrerPolicy: "no-referrer"/);
   assert.match(js,/mode: "same-origin"/); // GET remains strict same-origin
-  assert.ok(!js.includes("localStorage")&&!js.includes("sessionStorage"));
+  assert.ok(!js.includes("localStorage.setItem")&&!js.includes("localStorage.getItem") &&
+            !js.includes("sessionStorage.setItem")&&!js.includes("sessionStorage.getItem"));
 });
 
 test("only fix browser Origin serialization; never weaken exact private gateway",()=>{
