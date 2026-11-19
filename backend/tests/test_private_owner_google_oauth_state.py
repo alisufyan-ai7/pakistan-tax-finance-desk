@@ -197,3 +197,111 @@ def test_private_oauth_vault_remains_unmounted_and_does_not_connect_google(env):
     paths = {route.path for route in create_preview_app().routes}
     assert "/internal/drive/oauth/callback" not in paths
     assert "/api/drive/oauth/callback" not in paths
+
+
+def _enable_content(monkeypatch):
+    for name in ("P4_CONTENT_OAUTH_CONTRACT_ONLY",
+                 "P4_G2_OWNER_SESSION_CONTENT_REVIEWED",
+                 "P4_G3_RESTRICTED_SCOPE_ACCEPTED"):
+        monkeypatch.setenv(name, "1")
+
+
+def test_content_state_is_distinct_and_cannot_be_consumed_by_metadata(env):
+    """A metadata grant never becomes a Drive-content grant by upgrading scopes."""
+    from app.private_google_content_consent import GOOGLE_CONTENT_READ_SCOPE
+    from app.private_owner_google_oauth_state import (
+        begin_private_session_google_content_oauth,
+        consume_private_session_google_content_oauth,
+    )
+    engine, monkeypatch, proof = env
+    _enable_content(monkeypatch)
+    with Session(engine) as s:
+        content_url = begin_private_session_google_content_oauth(
+            s, owner_ref=OWNER, session_token=proof.cookie_token,
+            csrf_token=proof.csrf_token, now_epoch=T+1)
+    content_state, params = rawstate(content_url)
+    assert params["scope"] == [GOOGLE_CONTENT_READ_SCOPE]
+    assert params["redirect_uri"] == [PERSONAL_CFO_RAILWAY_CALLBACK]
+    assert params["include_granted_scopes"] == ["false"]
+    assert params["code_challenge_method"] == ["S256"]
+    with engine.connect() as c:
+        row = str(c.execute(text(
+            "SELECT * FROM owner_private_oauth_attempts")).one())
+        assert content_state not in row and proof.cookie_token not in row
+        assert "drive.readonly" not in row and CLIENT not in row
+    with pytest.raises(PrivateOAuthStateBlocked):
+        claimed(engine, proof, content_state)
+    with Session(engine) as s:
+        granted = consume_private_session_google_content_oauth(
+            s, owner_ref=OWNER, session_token=proof.cookie_token,
+            state=content_state, code=CODE, now_epoch=T+2)
+    assert granted.content_readonly is True
+    assert granted.metadata_only is False
+    assert granted.state_consumed_before_external_exchange is True
+    with pytest.raises(PrivateOAuthStateBlocked):
+        with Session(engine) as s:
+            consume_private_session_google_content_oauth(
+                s, owner_ref=OWNER, session_token=proof.cookie_token,
+                state=content_state, code=CODE, now_epoch=T+3)
+
+
+def test_existing_metadata_consent_cannot_be_claimed_as_content(env):
+    from app.private_owner_google_oauth_state import (
+        consume_private_session_google_content_oauth,
+    )
+    engine, monkeypatch, proof = env
+    _enable_content(monkeypatch)
+    state,_ = rawstate(start(engine, proof))
+    with pytest.raises(PrivateOAuthStateBlocked):
+        with Session(engine) as s:
+            consume_private_session_google_content_oauth(
+                s, owner_ref=OWNER, session_token=proof.cookie_token,
+                state=state, code=CODE, now_epoch=T+2)
+    proof_claim=claimed(engine, proof, state)
+    assert proof_claim.metadata_only is True
+    assert proof_claim.content_readonly is False
+
+
+@pytest.mark.parametrize("key",[
+    "P4_CONTENT_OAUTH_CONTRACT_ONLY",
+    "P4_G2_OWNER_SESSION_CONTENT_REVIEWED",
+    "P4_G3_RESTRICTED_SCOPE_ACCEPTED",
+])
+def test_content_oauth_release_controls_do_not_affect_metadata(env,key):
+    from app.private_owner_google_oauth_state import (
+        begin_private_session_google_content_oauth,
+    )
+    engine,monkeypatch,proof=env
+    _enable_content(monkeypatch)
+    monkeypatch.setenv(key,"0")
+    with pytest.raises(PrivateOAuthStateBlocked):
+        with Session(engine) as s:
+            begin_private_session_google_content_oauth(
+                s,owner_ref=OWNER,session_token=proof.cookie_token,
+                csrf_token=proof.csrf_token,now_epoch=T+1)
+    state,_=rawstate(start(engine,proof))
+    assert claimed(engine,proof,state).metadata_only
+
+
+def test_content_state_requires_correct_owner_csrf_and_15_minute_session(env):
+    from app.private_owner_google_oauth_state import (
+        begin_private_session_google_content_oauth,
+        consume_private_session_google_content_oauth,
+    )
+    engine,monkeypatch,proof=env
+    _enable_content(monkeypatch)
+    with pytest.raises(PrivateOAuthStateBlocked):
+        with Session(engine) as s:
+            begin_private_session_google_content_oauth(
+                s,owner_ref=OWNER,session_token=proof.cookie_token,
+                csrf_token="WRONG",now_epoch=T+1)
+    with Session(engine) as s:
+        u=begin_private_session_google_content_oauth(
+            s,owner_ref=OWNER,session_token=proof.cookie_token,
+            csrf_token=proof.csrf_token,now_epoch=T+1)
+    state,_=rawstate(u)
+    with pytest.raises(PrivateOAuthStateBlocked):
+        with Session(engine) as s:
+            consume_private_session_google_content_oauth(
+                s,owner_ref=OWNER,session_token=proof.cookie_token,
+                state=state,code=CODE,now_epoch=T+602)
