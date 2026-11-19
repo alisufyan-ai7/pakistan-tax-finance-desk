@@ -44,3 +44,55 @@ def test_fails_closed_no_independent_release(monkeypatch,reason):
     if reason=="real_mode":monkeypatch.setenv("APP_DATA_MODE","real")
     with pytest.raises(p.PrivateBahlSandboxProbeBlocked):
         p.run_synthetic_os_jail_probe()
+
+@pytest.mark.parametrize("first_return,first_stdout,boot_return,boot_stdout,expected", [
+    (1, b"", 1, b"", "JAIL_CANNOT_START"),
+    (1, b"", 0, b"P5H_NAMESPACE_BOOTED\n", "ISOLATED_CHILD_FAILED"),
+    (0, b"SECRET_OUTPUT_NOT_JSON", 0, b"", "CHILD_RESULT_INVALID"),
+    (0, json.dumps({
+        "network_denied":False,
+        "host_etc_unavailable":True,
+        "no_home":True,
+        "code_readonly":True,
+        "trusted_pypdf_import":True,
+    }).encode(), 0, b"", "ISOLATION_POLICY_FAILED"),
+])
+def test_synthetic_failure_diagnostics_are_fixed_and_no_sensitive_details(
+    monkeypatch, first_return, first_stdout, boot_return, boot_stdout, expected
+):
+    monkeypatch.setenv("APP_DATA_MODE", "synthetic")
+    monkeypatch.setenv("P5H_OPERATOR_SANDBOX_PROBE_ONLY", "1")
+    calls=[]
+    monkeypatch.setattr(p, "jailed_bahl_python_command", lambda **kwargs:
+                        ["bwrap", kwargs["child_script"]])
+    def run(cmd, **kwargs):
+        calls.append(cmd)
+        assert kwargs["stderr"] == p.subprocess.DEVNULL
+        assert kwargs["stdin"] == p.subprocess.DEVNULL
+        assert kwargs["env"] == {"PATH":"/usr/bin:/usr/local/bin"}
+        if len(calls) == 1:
+            return SimpleNamespace(returncode=first_return, stdout=first_stdout)
+        return SimpleNamespace(returncode=boot_return, stdout=boot_stdout)
+    monkeypatch.setattr(p.subprocess, "run", run)
+    with pytest.raises(p.PrivateBahlSandboxProbeBlocked) as captured:
+        p.run_synthetic_os_jail_probe()
+    assert captured.value.reason_code == expected
+    assert captured.value.reason_code in p._SAFE_REASONS
+    assert "SECRET" not in str(captured.value)
+    assert len(calls) == (2 if first_return else 1)
+
+
+def test_synthetic_unavailable_command_and_bad_authority_never_activate(monkeypatch):
+    monkeypatch.setenv("APP_DATA_MODE", "synthetic")
+    monkeypatch.setenv("P5H_OPERATOR_SANDBOX_PROBE_ONLY", "1")
+    def refuse(**kwargs):
+        raise ValueError("private secret must NEVER surface")
+    monkeypatch.setattr(p, "jailed_bahl_python_command", refuse)
+    with pytest.raises(p.PrivateBahlSandboxProbeBlocked) as captured:
+        p.run_synthetic_os_jail_probe()
+    assert captured.value.reason_code == "JAIL_COMMAND_UNAVAILABLE"
+    assert "secret" not in str(captured.value).lower()
+    monkeypatch.delenv("P5H_OPERATOR_SANDBOX_PROBE_ONLY")
+    with pytest.raises(p.PrivateBahlSandboxProbeBlocked) as captured:
+        p.run_synthetic_os_jail_probe()
+    assert captured.value.reason_code == "PROBE_NOT_ENABLED"
