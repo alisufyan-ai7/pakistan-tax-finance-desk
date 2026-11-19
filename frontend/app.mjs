@@ -1,6 +1,7 @@
 /* P2A one-owner private workspace: cookie-bound MFA session, in-memory CSRF,
  * real one-folder Drive metadata only. NO demo financial figures or local storage.
  * Every provider filename becomes textContent, never HTML. */
+import { summarizeSourceReview } from "./document-review-summary.mjs";
 const byId = id => document.getElementById(id);
 const allowedViews = new Set(["home","documents","accounts","spending","investments","tax"]);
 const viewTitles = {
@@ -111,10 +112,8 @@ function renderDocuments() {
     documents.appendChild(li);
   }
 }
-function updateSummary() {
-  const counts = new Map();
-  for (const item of items) counts.set(item.virtual_collection,
-    (counts.get(item.virtual_collection) || 0) + 1);
+function updateSummary(review = summarizeSourceReview(items)) {
+  const counts = new Map(review.categories.map(category=>[category.key,category.count]));
   byId("document-count").textContent = String(items.length);
   byId("category-count").textContent = String(counts.size);
   const box = byId("category-summary");
@@ -128,6 +127,30 @@ function updateSummary() {
     value.textContent = String(count);
     row.append(name,value);
     box.append(row);
+  }
+  const reviewSummary = byId("document-review-summary");
+  reviewSummary.textContent = review.total + " filenames inventoried · " +
+    review.reviewCount + " require metadata or format review · " +
+    review.quarantineCount + " quarantined. No original content processed.";
+  const queue=byId("document-review-queue");
+  queue.replaceChildren();
+  for (const item of review.priorityItems) {
+    const li=document.createElement("li");
+    const name=document.createElement("strong");
+    name.textContent=item.name;
+    const reason=document.createElement("small");
+    reason.textContent=item.reason;
+    li.append(name,reason);
+    queue.appendChild(li);
+  }
+  if (!review.priorityItems.length) {
+    const li=document.createElement("li");
+    li.textContent="No additional metadata-format exceptions. Source contents remain unverified.";
+    queue.appendChild(li);
+  }
+  for(const [key,count] of Object.entries(review.suggestions)) {
+    const target=byId("review-suggested-"+key);
+    if(target) target.textContent=String(count);
   }
   byId("source-updated").textContent = loadedAt
     ? "Checked during this session at " + loadedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) +
@@ -152,10 +175,12 @@ async function refreshMetadata() {
     if (!response.ok) throw Error("Metadata temporarily unavailable");
     const data = await response.json();
     const validated = validateSnapshot(data);
+    // Validate all classifications before replacing a previously good view.
+    const review = summarizeSourceReview(validated);
     items = validated;
     loadedAt = new Date();
     renderDocuments();
-    updateSummary();
+    updateSummary(review);
     showStatus("Verified " + items.length +
       " filenames from your approved Drive folder. No original content downloaded.");
   } catch {
