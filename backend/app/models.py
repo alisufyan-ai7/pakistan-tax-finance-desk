@@ -545,3 +545,24 @@ class OwnerPrivateOAuthAttempt(Base):
     expires_epoch: Mapped[int] = mapped_column(BigInteger, nullable=False)
     status: Mapped[str] = mapped_column(String(12), nullable=False)
     row_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class PrivateDriveRevisionSnapshot(Base):
+    """P2B synthetic-only, one sealed complete-folder metadata-version manifest.
+
+    Only a blind folder ID, HMAC snapshot/state receipts, and scan count are
+    queryable in SQL. Full source version/name/content-HINT identities are
+    enclosed in AES-GCM authenticated per-column text, never raw Drive IDs.
+    """
+    __tablename__ = "private_drive_revision_snapshots"
+    __table_args__ = (
+        CheckConstraint("scan_number > 0", name="ck_private_drive_revision_sequence"),
+    )
+    folder_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
+    scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_snapshot_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    state_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str] = mapped_column(
+        EncryptedText("private_drive_revision_snapshots.payload_json"), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
