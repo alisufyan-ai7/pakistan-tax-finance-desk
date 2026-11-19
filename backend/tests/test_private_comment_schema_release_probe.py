@@ -38,10 +38,12 @@ def test_schema_observation_does_not_certify_restore_or_public_comments(db):
 
 def test_wrong_revision_and_missing_schema_fail_gates(db):
     db.execute(text("UPDATE alembic_version SET version_num='0023_drive_revision'"))
+    db.commit()
     result=inspect_gaps(db,approved_synthetic_diagnostic=True)
     assert not result["alembic_revision_compatible"]
     db.rollback()
     db.execute(text("DROP TABLE owner_financial_review_comments"))
+    db.commit()
     result=inspect_gaps(db,approved_synthetic_diagnostic=True)
     assert result["schema_table_present"] is False
     assert result["schema_columns_match"] is False
