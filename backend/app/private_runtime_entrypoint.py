@@ -31,6 +31,12 @@ _GOOGLE_ROUTES = frozenset({
 })
 
 
+_OWNER_REVIEW_ROUTES = frozenset({
+    "/internal/finance/review/status",
+    "/internal/finance/review/comment",
+    "/internal/finance/review/history",
+})
+
 _PRIVATE_SOURCE_ROUTES = frozenset({
     "/internal/drive/content/source/preflight",
 })
@@ -49,13 +55,15 @@ class _PrivatePreviewComposite:
 
     def __init__(self, preview: FastAPI, owner: FastAPI, *,
                  google_metadata: bool = False, google_content: bool = False,
-                 source_preflight: bool = False):
+                 source_preflight: bool = False,
+                 review_comments: bool = False):
         self.preview = preview
         self.owner = owner
         self.owner_routes = (_OWNER_ROUTES
             | (_GOOGLE_ROUTES if google_metadata else frozenset())
             | (_GOOGLE_CONTENT_ROUTES if google_content else frozenset())
-            | (_PRIVATE_SOURCE_ROUTES if source_preflight else frozenset()))
+            | (_PRIVATE_SOURCE_ROUTES if source_preflight else frozenset())
+            | (_OWNER_REVIEW_ROUTES if review_comments else frozenset()))
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -115,6 +123,12 @@ def create_private_runtime_entrypoint():
     if preflight_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Original source mode invalid")
     preflight_on = preflight_mode == "1"
+    review_mode = os.getenv("P5D_OWNER_REVIEW_HTTP_RUNTIME", "")
+    if review_mode not in ("","0","1"):
+        raise PrivateRuntimeSwitchBlocked("Owner financial review route invalid")
+    review_on = review_mode == "1"
+    if review_on and not content_on:
+        raise PrivateRuntimeSwitchBlocked("Owner review needs content+MFA route")
     if preflight_on and not content_on:
         raise PrivateRuntimeSwitchBlocked("Original source route requires protected content OAuth")
     if content_on and not google_on:
@@ -147,7 +161,9 @@ def create_private_runtime_entrypoint():
     owner = (
         create_review_only_private_owner_login_service(
             google_metadata=True, google_content=True,
-            source_preflight=preflight_on)
+            source_preflight=preflight_on,
+        review_comments=review_on,
+            review_comments=review_on)
         if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
