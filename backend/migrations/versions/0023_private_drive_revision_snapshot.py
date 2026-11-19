@@ -16,6 +16,7 @@ def upgrade():
     op.create_table(
         "private_drive_revision_snapshots",
         sa.Column("folder_hmac", sa.String(64), primary_key=True),
+        sa.Column("id", sa.String(36), unique=True, nullable=False),
         sa.Column("scan_number", sa.Integer(), nullable=False),
         sa.Column("source_snapshot_hmac", sa.String(64), nullable=False),
         sa.Column("state_hmac", sa.String(64), nullable=False),
