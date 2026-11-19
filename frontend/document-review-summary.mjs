@@ -27,7 +27,7 @@ export function summarizeSourceReview(items) {
   const flagged=[];
   for (const item of items) {
     if (!item||typeof item!=="object"
-        || typeof item.display_name!=="string" || item.display_name.length>512
+        || typeof item.display_name!=="string" || item.display_name.length<1 || item.display_name.length>512
         || !CATEGORIES.includes(item.virtual_collection)
         || !REVIEW_STATUSES.includes(item.review_status)
         || item.financial_claims_verified!==false
