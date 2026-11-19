@@ -63,6 +63,8 @@ SOURCE_COLUMNS = {
     "drive_inbox_items": "id folder_hmac file_hmac revision_hmac payload_json created_at updated_at",
     # Encrypted P2B synthetic manifest: non-economic source metadata only.
     "private_drive_revision_snapshots": "id folder_hmac scan_number source_snapshot_hmac state_hmac payload_json updated_at",
+    # P5I owner-bound encrypted complete-source SHA candidate; not finance authority.
+    "private_source_sha_snapshots": "id owner_hmac folder_hmac scan_number snapshot_hmac state_hmac payload_json updated_at",
     # P5B encrypted owner-only notes: evidence annotation, never certified finance.
     "owner_financial_review_comments": "id owner_hmac subject_hmac subject_kind revision ciphertext row_hmac created_epoch",
     # Fully inventoried for backup/provenance, NEVER treated as financial facts.
