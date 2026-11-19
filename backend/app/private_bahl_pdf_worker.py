@@ -15,6 +15,9 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from .private_bahl_os_sandbox import (
+    jailed_bahl_python_command, PrivateBahlSandboxBlocked,
+)
 
 _MAX_PDF_BYTES = 4 * 1024 * 1024
 _MAX_JSON = 5500
@@ -101,8 +104,16 @@ def inspect_private_bahl_pdf(
     root=str(Path(__file__).resolve().parents[1])
     try:
         with tempfile.TemporaryDirectory(prefix="cfo-bahl-private-reader-") as cwd:
+            if os.getenv("P5E_OWNER_HISTORICAL_REPORT_PILOT") == "1":
+                # Live historical report ALWAYS requires an OS network/filesystem
+                # jail; missing bubblewrap or incompatible kernel fails CLOSED.
+                command=jailed_bahl_python_command(
+                    executable=sys.executable,root=root,child_script=_CHILD)
+            else:
+                # Preserved only for unexposed fixture-parser unit tests.
+                command=[sys.executable,"-I","-B","-c",_CHILD,root]
             result=subprocess.run(
-                [sys.executable,"-I","-B","-c",_CHILD,root],
+                command,
                 input=payload,stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 cwd=cwd,env=env,timeout=14,check=False,
