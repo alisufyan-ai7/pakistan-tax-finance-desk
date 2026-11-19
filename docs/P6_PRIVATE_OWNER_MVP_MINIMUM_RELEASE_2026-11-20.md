@@ -1,0 +1,40 @@
+# P6 — Private Personal CFO MVP: release the first verified financial evidence
+
+**Accepted product direction — 20 November 2026.** Owner explicitly requests we proceed, document decisions in GitHub, reduce over-engineered release blockers, and make the existing mobile-first Personal CFO app display genuine document-backed financial facts. The existing approved Google Drive folder stays read-only. This is the operational release scope; it supersedes exploratory "complete every G1–G6 feature first" language as a *dependency ordering*, but never overrides genuinely necessary login, data-security, recovery or accuracy requirements.
+
+## Definition of an immediately useful v1
+
+- The owner opens the existing [Railway app](https://personal-cfo-frontend-preview-development.up.railway.app/app) on desktop/mobile/PWA, authenticates through existing one-owner MFA, and retains their already saved Google **read-only-content** permission. No routine reauthorization, additional setup, passwords in chat, separate paid service or move to another hosting provider.
+- The app shows approved-folder original-source counts and, **as each individually validated Bank AL Habib statement succeeds**, displays its *historical* opening balance, closing balance **as of the statement end date**, gross bank debits/credits and covered period. The same validated facts appear on the home screen and Accounts. Do not wait for every bank, PDF, tax workbook or cross-account transfer to be certified before showing a fully reconciled historical observation.
+- Other money claims (available cash *today*, actual monthly personal spending, taxable income, recurring bill due, net investment returns, liquid net worth) remain **Not yet verified**, never zero or an invented PKR value. Show precise coverage, source period and next action. No automatic conversion of a historical closing balance to today's cash.
+- From Documents, one owner can securely leave encrypted comments on unclear sources as append-only contextual evidence once table migration and recovery are proven. Later transaction-specific notes require a server-issued imported row HMAC, not arbitrary user HMACs. No unreviewed note changes financial categories.
+- Refresh is **on demand first**. A scheduled source poller, organized Drive copy folder, complex classification, forecasting, tax optimization, HA replicas, further framework rewrites and unnecessary review ceremonies are explicitly deferred. Keep existing login, Google consent, source pinning, complete SHA proof, isolation, at-rest encryption, exact paths, CSRF/no-log and one working restore.
+
+## Minimal release checkpoints (no artificial extra gates)
+
+| Stage | Owner-visible acceptance | Dependency strictly necessary for it |
+|---|---|---|
+| A — show validated history | After private statement analysis returns `SOURCE_STATEMENT_RECONCILED`, home + Accounts display *that exact statement's historical* dates and PKR values, refreshed in memory only; clearing session/source refresh removes it. Nothing shown if parser/pinning/amount continuity fails. | Existing MFA/Google consent; verified original SHA/version, supported BAHL layout, no-network PDF sandbox observed to work on actual Railway runtime |
+| B — save a clarification | Saved comment returned by owner-only authenticated app, append-only encrypted DB row, view history; correct pending status. | Verified *current full* encrypted DB backup, one disposable restore, reviewed additive Alembic `0024` and least-privilege role; no new DB solely for preparing code |
+| C — maintain source history | Manual bounded refresh safely upserts complete verified HMAC+SHA manifest; reruns distinguish changed/new/missing, never alter originals. | Same verified backup/restore; separately reviewed additive `0025`, pinned whole-folder inventory; safe partial-scan rejection |
+| D — expense / balance dashboard | True current balance and monthly expense values appear only for reconciled account/period coverage with transfer/duplicate exclusions. | Encrypted normalized genuine rows, account ownership/coverage, classification and period reconciliation; independently audited evidence |
+| E — nice-to-haves | Automatic periodic sync, investments forecast, all bank formats, advanced taxes and accountant packages. | **Post-MVP**; never block Stages A–C |
+
+### Boundaries that remain security requirements, not bureaucracy
+
+- Use **the existing** Railway project and service. Avoid cost-bearing new databases until the owner approves a specific temporary resource. Prefer a disposable PostgreSQL18 restored clone on already available approved infrastructure, with *no chance of overwriting the active owner database*. A restore proof from only the initial six-table credential snapshot is not a full contemporary financial DB restore.
+- The PDF reader must run with a verified OS-enforced network and filesystem deny policy. There is already a safe `private_bahl_sandbox_probe`; run it through authenticated Railway backend shell using temporary *process-local* flags only, without owner originals/passwords. If the host doesn't support namespaces, adjust isolated worker architecture, **not** bypass isolation.
+- Only read genuine source through existing owner MFA/CSRF and pinned Drive read-only-content consent. No bank/tax PDFs, names, account numbers, access tokens, passphrases, source hashes or exact financial amounts enter public GitHub, GitHub Actions or developer docs.
+- A genuine BAHL sample is private runtime evidence; fictional positive and negative test fixtures in CI are helpful but not proof that every owner-bank layout is supported. Show partial validated observations quickly, quarantine unsupported source variants.
+- Keep the historical-vs-current labels and null semantics even when a value might be inferred. Identity HMACs are not money. Draft accountant TY2025–26 remains draft; filed TY2024–25 remains distinct.
+
+## Immediate executable implementation (owner-independent)
+
+1. Add verified statement **home overview** rendering from the already accepted and response-validated `historicalBankReports` in-memory map. Use the exact existing `verifiedHistoricalBahl` validator; show source period, source name, historical closing amount, gross bank flows separately and provenance. Avoid localStorage, caching and aggregation of overlapping statements; clear on session invalidation and source refresh. Add browser contract tests covering accepted/denied, no fake current balance and clearing behavior.
+2. Keep existing Accounts history and Documents `Check original documents` action and owner comments editor unchanged except clearer minimal navigation; do not introduce a second data source, new SQL table, public URL or feature flag to turn on this UI.
+3. Run relevant static/node suites and deploy the existing frontend via GitHub PR, verify exact head CI and Railway deployment SUCCESS; no database or API variable modification from this PR.
+4. Operational follow-up is one trusted operator synthetic-only sandbox execution, then one encrypted full owner DB backup/disposable restore acceptance for future schema and comments. Require owner action only where necessary and give exact, short steps.
+
+## Source of truth and success test
+
+Document future progress here and in [issue #185](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/185), [#222](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/222), [#219](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/219), [#218](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/218), plus `docs/CURRENT_HANDOFF.md` and `docs/PROJECT_STATUS.md`. Do not report full financial release until live owner-visible genuine results are independently observed. Code merge/healthy backend is not equivalent to authentic analyzed figures.
