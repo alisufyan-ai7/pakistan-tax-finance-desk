@@ -67,6 +67,10 @@ function rejectSession() {
   hashResults.replaceChildren();
   historicalBankReports.clear();
   historicalReportList.replaceChildren();
+  // Never leave a previously authenticated financial observation onscreen
+  // after a private session expires or the source evidence is invalidated.
+  byId("home-historical-evidence-list").replaceChildren();
+  byId("home-historical-evidence").hidden = true;
   checkOriginals.hidden = true;
   app.hidden = true;
   byId("bottom-nav").hidden = true;
@@ -495,6 +499,44 @@ function renderHistoricalBankReports() {
   historicalReadiness.textContent=historicalBankReports.size
     ? "These balances are historical source observations only, not available cash or classified spending. Reports stay in this browser session and are not cached."
     : "In Documents, verify original statements and select a Bank AL Habib statement to analyze.";
+  renderHomeHistoricalEvidence();
+}
+// Home uses ONLY the existing strict verifiedHistoricalBahl-accepted results.
+// Never sum dated statements (period overlap/ownership may be unresolved),
+// label historical closing as current cash, or cache values in browser storage.
+function renderHomeHistoricalEvidence() {
+  const section=byId("home-historical-evidence");
+  const list=byId("home-historical-evidence-list");
+  list.replaceChildren();
+  const observations=[...historicalBankReports.values()].sort(
+    (a,b)=>b.statement_end.localeCompare(a.statement_end) ||
+           a.source_name.localeCompare(b.source_name)
+  );
+  for (const result of observations) {
+    const li=document.createElement("li");
+    const title=document.createElement("strong");
+    title.textContent=result.source_name;
+    const period=document.createElement("small");
+    period.textContent="Historical balance as of "+result.statement_end+
+      " · Statement covers "+result.statement_start+" to "+result.statement_end+
+      " · Original SHA-256 verified";
+    const details=document.createElement("dl");
+    details.className="bank-statement-facts";
+    for (const [label,key] of [
+      ["Closing balance at statement end","historical_closing_minor"],
+      ["Gross bank debits (not expenses)","gross_bank_debits_minor"],
+      ["Gross bank credits (not income)","gross_bank_credits_minor"],
+    ]) {
+      const dt=document.createElement("dt");
+      dt.textContent=label;
+      const dd=document.createElement("dd");
+      dd.textContent=historicalMoney.format(result[key]/100);
+      details.append(dt,dd);
+    }
+    li.append(title,period,details);
+    list.appendChild(li);
+  }
+  section.hidden=observations.length===0;
 }
 async function readHistoricalBahl(sourceHmac, providedPassword) {
   if (!safeToken(csrfToken) || !HMAC_SHA.test(sourceHmac))
