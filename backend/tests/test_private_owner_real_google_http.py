@@ -475,3 +475,154 @@ def test_provider_failure_emits_only_safe_stage_without_code_or_state(
             "SELECT count(*) FROM owner_google_metadata_grants"
         )).scalar_one() == 0
     assert seen == []
+
+
+def _content_oauth_client(owner_client):
+    """Share only the fabricated DB, never the real production gateway."""
+    from app.private_owner_real_google_http import (
+        create_review_only_private_google_http_gateway,
+    )
+    from app.private_google_content_consent import GOOGLE_CONTENT_READ_SCOPE
+    from app.private_content_grant_custody import read_private_content_grant
+    c, engine, _, monkeypatch = owner_client
+    for name in (
+        "P4_CONTENT_OAUTH_CONTRACT_ONLY",
+        "P4_G2_OWNER_SESSION_CONTENT_REVIEWED",
+        "P4_G3_RESTRICTED_SCOPE_ACCEPTED",
+        "P4B_PRIVATE_CONTENT_GRANT_CUSTODY",
+        "P4B_G2_OWNER_CONTENT_GRANT_REVIEWED",
+        "P4B_G3_EXACT_CONTENT_SCOPE_ATTESTED",
+        "P4C_CONTENT_OAUTH_RUNTIME",
+        "P4C_G2_CONTENT_OAUTH_CALLBACK_REVIEWED",
+        "P4C_G3_READONLY_SOURCE_POLICY_REVIEWED",
+    ):
+        monkeypatch.setenv(name,"1")
+    calls=[]
+    selected={"scope":GOOGLE_CONTENT_READ_SCOPE}
+    def content_provider(method,url,form,bearer):
+        calls.append((method,url,form is not None))
+        if method=="POST":
+            assert url=="https://oauth2.googleapis.com/token"
+            assert form["code"]==CODE
+            assert form["grant_type"]=="authorization_code"
+            assert form["code_verifier"]
+            assert bearer is None
+            return {
+                "access_token":ACCESS,"refresh_token":REFRESH,
+                "scope":selected["scope"],"token_type":"Bearer","expires_in":3600,
+            }
+        if method=="GET":
+            assert url.startswith("https://www.googleapis.com/drive/v3/files/"+FOLDER)
+            assert bearer==ACCESS
+            return {
+                "id":FOLDER,"mimeType":"application/vnd.google-apps.folder",
+                "trashed":False,"shared":False,"owners":[{"me":True}],
+            }
+        raise AssertionError("Unexpected fake provider method")
+    app=create_review_only_private_google_http_gateway(
+        lambda:Session(engine),transport=content_provider,
+        enable_content_oauth=True,
+    )
+    return TestClient(app,base_url="https://"+HOST),engine,calls,selected
+
+
+def test_separate_content_oauth_end_to_end_fake_google_encrypted_grant(owner_client):
+    from app.private_content_grant_custody import read_private_content_grant
+    c,engine,calls,selected=_content_oauth_client(owner_client)
+    with c:
+        csrf=login(c)
+        status=c.get("/internal/drive/content/oauth/status",
+                     headers=headers(origin=None))
+        assert status.status_code==200
+        assert status.json()=={
+            "content_scope":"DRIVE_READONLY_CONTENT",
+            "google_content_grant_stored":False,
+            "source_bytes_downloaded":False,
+            "financial_data_enabled":False,
+        }
+        response=c.post("/internal/drive/content/oauth/start",
+                        headers=headers(csrf=csrf))
+        assert response.status_code==200
+        body=response.json()
+        assert body["scope"]=="DRIVE_READONLY_CONTENT"
+        assert body["google_content_grant_stored"] is False
+        assert body["source_bytes_downloaded"] is False
+        params=parse_qs(urlsplit(body["authorization_url"]).query)
+        assert params["scope"]==["https://www.googleapis.com/auth/drive.readonly"]
+        assert params["include_granted_scopes"]==["false"]
+        state=params["state"][0]
+        result=callback(c,state)
+        assert_scrubbed(result,state)
+        status=c.get("/internal/drive/content/oauth/status",
+                     headers=headers(origin=None))
+        assert status.status_code==200
+        assert status.json()["google_content_grant_stored"] is True
+        assert status.json()["source_bytes_downloaded"] is False
+        assert [x[0] for x in calls]==["POST","GET"]
+        with Session(engine) as db:
+            assert read_private_content_grant(
+                db,owner_ref=OWNER,folder_id=FOLDER,client_id=CLIENT)==REFRESH
+        with engine.connect() as db:
+            stored=str(db.execute(text(
+                "SELECT * FROM owner_google_metadata_grants")).one())
+            assert "P4C1:" in stored
+            for secret in (REFRESH,ACCESS,CODE,state,FOLDER):
+                assert secret not in stored
+        assert_scrubbed(callback(c,state),state)
+        assert len(calls)==2  # no second exchange after state consumed
+
+
+def test_bad_content_scope_never_persists_a_refresh_token(owner_client):
+    c,engine,calls,selected=_content_oauth_client(owner_client)
+    selected["scope"]="https://www.googleapis.com/auth/drive.metadata.readonly"
+    with c:
+        csrf=login(c)
+        payload=c.post("/internal/drive/content/oauth/start",
+                       headers=headers(csrf=csrf)).json()
+        state=parse_qs(urlsplit(payload["authorization_url"]).query)["state"][0]
+        assert_scrubbed(callback(c,state),state)
+        assert c.get("/internal/drive/content/oauth/status",
+                     headers=headers(origin=None)).json()["google_content_grant_stored"] is False
+        with engine.connect() as db:
+            assert db.execute(text(
+                "SELECT count(*) FROM owner_google_metadata_grants")).scalar_one()==0
+        assert [x[0] for x in calls]==["POST"]
+
+
+def test_content_route_rejects_no_mfa_csrf_foreign_origin_or_body(owner_client):
+    c,_,calls,_=_content_oauth_client(owner_client)
+    with c:
+        assert c.post("/internal/drive/content/oauth/start",
+                      headers=headers()).status_code==401
+        csrf=login(c)
+        assert c.post("/internal/drive/content/oauth/start",
+                      headers=headers(csrf="wrong")).status_code==401
+        assert c.post("/internal/drive/content/oauth/start",
+                      headers=headers(origin="https://evil.invalid",csrf=csrf)).status_code==403
+        assert c.post("/internal/drive/content/oauth/start",
+                      headers=headers(csrf=csrf),json={}).status_code==400
+        assert calls==[]
+
+
+def test_existing_metadata_cookie_and_grant_still_work_when_content_gate_on(owner_client):
+    c,engine,calls,selected=_content_oauth_client(owner_client)
+    selected["scope"]=GOOGLE_METADATA_SCOPE
+    with c:
+        csrf=login(c)
+        state=state_from(c,csrf)
+        assert_scrubbed(callback(c,state),state)
+        response=c.get("/internal/drive/oauth/status",
+                       headers=headers(origin=None))
+        assert response.status_code==200
+        assert response.json()["google_drive_app_connected"] is True
+        response=c.get("/internal/drive/content/oauth/status",
+                       headers=headers(origin=None))
+        assert response.json()["google_content_grant_stored"] is False
+        assert len(calls)==2
+
+
+def test_content_routes_do_not_exist_in_default_metadata_only_factory(owner_client):
+    c,_,_,_=owner_client
+    paths={route.path for route in c.app.routes}
+    assert "/internal/drive/content/oauth/start" not in paths
+    assert "/internal/drive/content/oauth/status" not in paths

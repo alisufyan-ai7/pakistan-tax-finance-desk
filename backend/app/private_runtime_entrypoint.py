@@ -31,6 +31,11 @@ _GOOGLE_ROUTES = frozenset({
 })
 
 
+_GOOGLE_CONTENT_ROUTES = frozenset({
+    "/internal/drive/content/oauth/start",
+    "/internal/drive/content/oauth/status",
+})
+
 class PrivateRuntimeSwitchBlocked(ValueError):
     """Owner route exposure not authorized by exact private release gates."""
 
@@ -38,10 +43,13 @@ class PrivateRuntimeSwitchBlocked(ValueError):
 class _PrivatePreviewComposite:
     """Route by exact canonical path, never wildcard-prefix proxy."""
 
-    def __init__(self, preview: FastAPI, owner: FastAPI, *, google_metadata: bool = False):
+    def __init__(self, preview: FastAPI, owner: FastAPI, *,
+                 google_metadata: bool = False, google_content: bool = False):
         self.preview = preview
         self.owner = owner
-        self.owner_routes = _OWNER_ROUTES | (_GOOGLE_ROUTES if google_metadata else frozenset())
+        self.owner_routes = (_OWNER_ROUTES
+            | (_GOOGLE_ROUTES if google_metadata else frozenset())
+            | (_GOOGLE_CONTENT_ROUTES if google_content else frozenset()))
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -93,6 +101,12 @@ def create_private_runtime_entrypoint():
     if google_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Private Google mode invalid")
     google_on = google_mode == "1"
+    content_mode = os.getenv("P4C_CONTENT_OAUTH_RUNTIME", "")
+    if content_mode not in ("", "0", "1"):
+        raise PrivateRuntimeSwitchBlocked("Private content OAuth mode invalid")
+    content_on = content_mode == "1"
+    if content_on and not google_on:
+        raise PrivateRuntimeSwitchBlocked("Content OAuth cannot run without existing Google metadata")
     if google_on:
         if (
             os.getenv("P1AN_G2_GOOGLE_CALLBACK_INGRESS_REVIEWED") != "1"
@@ -111,16 +125,23 @@ def create_private_runtime_entrypoint():
         if google_on:
             from .private_owner_real_google_http import _reviewed_google_http
             _reviewed_google_http()
+            if content_on:
+                from .private_owner_real_google_http import _reviewed_content_http
+                _reviewed_content_http()
     except Exception:
         raise PrivateRuntimeSwitchBlocked(
             "Private runtime credential/metadata authority not accepted"
         ) from None
     owner = (
+        create_review_only_private_owner_login_service(
+            google_metadata=True, google_content=True)
+        if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
     )
     return _PrivatePreviewComposite(
         create_preview_app(), owner, google_metadata=google_on,
+        google_content=content_on,
     )
 
 

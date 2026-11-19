@@ -13,6 +13,8 @@ const app = byId("owner-app");
 const status = byId("app-status");
 const documents = byId("documents-list");
 const refreshButton = byId("refresh-all");
+const connectReadOnly = byId("connect-readonly-documents");
+const readOnlyStatus = byId("readonly-connection-status");
 let csrfToken = null;
 let connected = false;
 let items = [];
@@ -188,6 +190,75 @@ async function refreshMetadata() {
     showStatus("Could not complete the document check. Previous on-screen metadata may be out of date.");
   } finally { refreshButton.disabled = false; }
 }
+
+function approvedContentConsentUrl(raw) {
+  if (typeof raw !== "string" || raw.length > 4096) return null;
+  try {
+    const url = new URL(raw);
+    if (url.origin !== "https://accounts.google.com" ||
+        url.pathname !== "/o/oauth2/v2/auth" ||
+        url.username || url.password || url.hash ||
+        url.searchParams.get("response_type") !== "code" ||
+        url.searchParams.get("scope") !== "https://www.googleapis.com/auth/drive.readonly" ||
+        url.searchParams.get("include_granted_scopes") !== "false" ||
+        url.searchParams.get("code_challenge_method") !== "S256" ||
+        url.searchParams.get("redirect_uri") !==
+          "https://personal-cfo-frontend-preview-development.up.railway.app/api/drive/oauth/callback" ||
+        !/^[A-Za-z0-9_-]{40,128}$/.test(url.searchParams.get("state") || "") ||
+        url.searchParams.getAll("state").length !== 1 ||
+        url.searchParams.getAll("scope").length !== 1 ||
+        url.searchParams.getAll("redirect_uri").length !== 1) return null;
+    return url;
+  } catch { return null; }
+}
+async function loadReadOnlyGrantStatus() {
+  // Content OAuth is independently gated. No new button until backend and
+  // Nginx BOTH confirm the authenticated exact read-only content route.
+  connectReadOnly.hidden = true;
+  readOnlyStatus.hidden = true;
+  try {
+    const data = await get("/api/drive/content/oauth/status");
+    if (data?.content_scope !== "DRIVE_READONLY_CONTENT" ||
+        typeof data.google_content_grant_stored !== "boolean" ||
+        data.source_bytes_downloaded !== false ||
+        data.financial_data_enabled !== false) throw Error("Untrusted content grant status");
+    readOnlyStatus.hidden = false;
+    readOnlyStatus.textContent = data.google_content_grant_stored
+      ? "Google read-only permission saved · document analysis not yet complete"
+      : "Document content permission not granted";
+    connectReadOnly.hidden = false;
+    connectReadOnly.disabled = !safeToken(csrfToken);
+    connectReadOnly.textContent = data.google_content_grant_stored
+      ? "Reconnect read-only documents" : "Connect read-only documents";
+  } catch { /* No content endpoint: keep metadata-only app functional. */ }
+}
+connectReadOnly.addEventListener("click",async()=>{
+  if (!safeToken(csrfToken) || connectReadOnly.hidden) return;
+  connectReadOnly.disabled = true;
+  readOnlyStatus.textContent = "Preparing Google read-only permission…";
+  try {
+    const response = await fetch("/api/drive/content/oauth/start", {
+      ...requestOptions, method:"POST", mode:"cors",
+      headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
+      body:"",
+    });
+    if (response.status===401) { rejectSession(); return; }
+    if (!response.ok) throw Error("Content permission cannot start");
+    const data = await response.json();
+    if (data?.scope !== "DRIVE_READONLY_CONTENT" ||
+        data.google_content_grant_stored !== false ||
+        data.source_bytes_downloaded !== false ||
+        data.financial_data_enabled !== false) throw Error("Untrusted content request");
+    const url = approvedContentConsentUrl(data.authorization_url);
+    if (!url) throw Error("Google content destination refused");
+    csrfToken = null;
+    window.location.assign(url.href);
+  } catch {
+    readOnlyStatus.textContent = "Read-only Google connection unavailable; metadata remains connected.";
+    connectReadOnly.disabled = false;
+  }
+});
+
 async function start() {
   // Nothing private, even document filenames, appears until session checked.
   try {
@@ -218,6 +289,7 @@ async function start() {
     }
     connected = google.google_drive_app_connected;
     byId("connection-pill").textContent = connected ? "Drive metadata connected" : "Drive not connected";
+    await loadReadOnlyGrantStatus();
     if (connected) await refreshMetadata();
     else showStatus("Your owner session is active. Connect the approved Google Drive folder from Manage account.");
   } catch {

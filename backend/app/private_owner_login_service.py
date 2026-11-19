@@ -120,7 +120,8 @@ def _attest_enrolled_owner(connection) -> None:
         )
 
 
-def create_review_only_private_owner_login_service(*, google_metadata: bool = False) -> FastAPI:
+def create_review_only_private_owner_login_service(*, google_metadata: bool = False,
+                                                   google_content: bool = False) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
@@ -157,6 +158,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             state["engine"] = None
             engine.dispose()
 
+    if google_content and not google_metadata:
+        raise PrivateOwnerLoginServiceBlocked("Content OAuth requires metadata owner controller")
     if google_metadata:
         # Distinct from the ordinary three-route MFA service. P1AL verifies
         # all separately approved real Google/PKCE/metadata-only gates.
@@ -167,6 +170,7 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
         _reviewed_google_http()
         return create_review_only_private_google_http_gateway(
             private_session, lifespan=lifespan,
+            enable_content_oauth=google_content,
         )
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,

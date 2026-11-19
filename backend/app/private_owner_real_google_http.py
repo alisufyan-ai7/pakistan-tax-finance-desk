@@ -37,6 +37,15 @@ from .private_owner_drive_metadata_preview import (
 from .private_owner_google_oauth_state import (
     PrivateOAuthStateBlocked, begin_private_session_google_oauth,
     consume_private_session_google_oauth,
+    begin_private_session_google_content_oauth,
+    consume_private_session_google_content_oauth,
+)
+from .private_google_content_consent import (
+    GOOGLE_CONTENT_READ_SCOPE, exchange_google_content_code,
+)
+from .private_content_grant_custody import (
+    PrivateContentGrantBlocked, read_private_content_grant,
+    store_private_content_grant,
 )
 from .private_owner_http_gateway import (
     _boundary, _COOKIE, _CSRF_HEADER,
@@ -59,6 +68,25 @@ _LOG = logging.getLogger("personal_cfo.oauth_callback")
 
 class PrivateOwnerGoogleHttpBlocked(ValueError):
     """Real Google connection is not independently accepted."""
+
+def _reviewed_content_http() -> None:
+    """Independent consent+vault+ingress gate, NEVER implied by metadata mode."""
+    _reviewed_google_http()
+    if any(os.getenv(name) != "1" for name in (
+        "P4_CONTENT_OAUTH_CONTRACT_ONLY",
+        "P4_G2_OWNER_SESSION_CONTENT_REVIEWED",
+        "P4_G3_RESTRICTED_SCOPE_ACCEPTED",
+        "P4B_PRIVATE_CONTENT_GRANT_CUSTODY",
+        "P4B_G2_OWNER_CONTENT_GRANT_REVIEWED",
+        "P4B_G3_EXACT_CONTENT_SCOPE_ATTESTED",
+        "P4C_CONTENT_OAUTH_RUNTIME",
+        "P4C_G2_CONTENT_OAUTH_CALLBACK_REVIEWED",
+        "P4C_G3_READONLY_SOURCE_POLICY_REVIEWED",
+    )):
+        raise PrivateOwnerGoogleHttpBlocked(
+            "Private read-only content OAuth not independently accepted"
+        )
+
 
 
 def _reviewed_google_http() -> None:
@@ -94,6 +122,7 @@ def create_review_only_private_google_http_gateway(
     session_factory: Callable[[], Session], *,
     transport: Callable = _http_google,
     lifespan=None,
+    enable_content_oauth: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -103,6 +132,9 @@ def create_review_only_private_google_http_gateway(
     app = create_private_owner_http_gateway(
         session_factory, lifespan=lifespan,
     )
+    if enable_content_oauth:
+        _reviewed_content_http()
+
 
     @app.post("/internal/drive/oauth/start")
     async def start(request: Request):
@@ -134,6 +166,74 @@ def create_review_only_private_google_http_gateway(
             "content_download_enabled": False,
             "financial_data_enabled": False,
         })
+
+
+    if enable_content_oauth:
+        @app.post("/internal/drive/content/oauth/start")
+        async def content_start(request: Request):
+            owner = _boundary(request, mutation=True)
+            try:
+                _reviewed_content_http()
+            except PrivateOwnerGoogleHttpBlocked:
+                raise HTTPException(503, "Private content OAuth disabled") from None
+            if (request.headers.get("content-length", "0") not in ("", "0")
+                or request.headers.get("transfer-encoding") is not None
+                or await request.body()):
+                raise HTTPException(400, "Content consent requires empty POST")
+            try:
+                with session_factory() as db:
+                    url = begin_private_session_google_content_oauth(
+                        db, owner_ref=owner,
+                        session_token=request.cookies.get(_COOKIE, ""),
+                        csrf_token=request.headers.get(_CSRF_HEADER, ""),
+                    )
+            except (PrivateOwnerIdentityBlocked, PrivateOAuthStateBlocked):
+                raise HTTPException(401, "Owner MFA/CSRF required") from None
+            except Exception:
+                raise HTTPException(503, "Read-only content consent unavailable") from None
+            return JSONResponse({
+                "authorization_url": url,
+                "scope": "DRIVE_READONLY_CONTENT",
+                "google_content_grant_stored": False,
+                "source_bytes_downloaded": False,
+                "financial_data_enabled": False,
+            })
+
+        @app.get("/internal/drive/content/oauth/status")
+        def content_status(request: Request):
+            owner = _boundary(request, mutation=False)
+            try:
+                _reviewed_content_http()
+            except PrivateOwnerGoogleHttpBlocked:
+                raise HTTPException(503, "Private content status disabled") from None
+            try:
+                with session_factory() as db:
+                    verify_private_owner_session(
+                        db, owner_ref=owner,
+                        token=request.cookies.get(_COOKIE, ""),
+                    )
+                config = private_google_configuration()
+                try:
+                    with session_factory() as db:
+                        # Token discarded inside private process, never in JSON.
+                        read_private_content_grant(
+                            db, owner_ref=owner, folder_id=config.folder_id,
+                            client_id=config.client_id,
+                        )
+                except PrivateContentGrantBlocked:
+                    stored = False
+                else:
+                    stored = True
+            except PrivateOwnerIdentityBlocked:
+                raise HTTPException(401, "Owner MFA required") from None
+            except Exception:
+                raise HTTPException(503, "Content grant status unavailable") from None
+            return {
+                "content_scope": "DRIVE_READONLY_CONTENT",
+                "google_content_grant_stored": stored,
+                "source_bytes_downloaded": False,
+                "financial_data_enabled": False,
+            }
 
     @app.get(_CALLBACK)
     def callback(request: Request):
@@ -170,34 +270,68 @@ def create_review_only_private_google_http_gateway(
                     "Unapproved callback parameters"
                 )
             stage = "session_bound_one_use_pkce"
-            with session_factory() as db:
-                # Atomic one-use state claim + commit happens BEFORE network.
-                claim = consume_private_session_google_oauth(
-                    db, owner_ref=owner,
-                    session_token=request.cookies.get(_COOKIE, ""),
-                    state=params["state"], code=params["code"],
-                )
-            if (claim.metadata_only is not True
-                or claim.state_consumed_before_external_exchange is not True):
-                raise PrivateOwnerGoogleHttpBlocked("PKCE claim was not accepted")
-            stage = "google_code_exchange"
+            # The fixed callback is already Google-registered. An independent
+            # encrypted scope is bound to every one-time pending state. ONLY
+            # a genuine content state can reach the content-token vault.
+            claim = None
+            if enable_content_oauth:
+                try:
+                    with session_factory() as db:
+                        claim = consume_private_session_google_content_oauth(
+                            db, owner_ref=owner,
+                            session_token=request.cookies.get(_COOKIE, ""),
+                            state=params["state"], code=params["code"],
+                        )
+                except PrivateOAuthStateBlocked:
+                    claim = None
+            if claim is None:
+                with session_factory() as db:
+                    claim = consume_private_session_google_oauth(
+                        db, owner_ref=owner,
+                        session_token=request.cookies.get(_COOKIE, ""),
+                        state=params["state"], code=params["code"],
+                    )
+            if claim.state_consumed_before_external_exchange is not True:
+                raise PrivateOwnerGoogleHttpBlocked("One-use PKCE claim rejected")
             config = private_google_configuration()
-            access, refresh = exchange_google_code(
-                code=params["code"], verifier=claim.verifier,
-                config=config, transport=transport,
-            )
-            stage = "owner_private_folder_verification"
-            verify_owner_private_folder(
-                access_token=access, config=config, transport=transport,
-            )
-            # Never store refresh token until the folder's identity/visibility
-            # and exact metadata scope have been independently authenticated.
-            stage = "encrypted_metadata_grant_storage"
-            with session_factory() as db:
-                store_private_metadata_grant(
-                    db, owner_ref=owner, folder_id=config.folder_id,
-                    client_id=config.client_id, refresh_token=refresh,
+            if claim.content_readonly is True and claim.metadata_only is False:
+                if not enable_content_oauth:
+                    raise PrivateOwnerGoogleHttpBlocked("Content route not mounted")
+                _reviewed_content_http()
+                stage = "google_content_code_exchange"
+                access, refresh = exchange_google_content_code(
+                    code=params["code"], verifier=claim.verifier,
+                    config=config, transport=transport,
                 )
+                stage = "approved_content_folder_verification"
+                verify_owner_private_folder(
+                    access_token=access, config=config, transport=transport,
+                )
+                stage = "encrypted_content_grant_storage"
+                with session_factory() as db:
+                    store_private_content_grant(
+                        db, owner_ref=owner, folder_id=config.folder_id,
+                        client_id=config.client_id, refresh_token=refresh,
+                        verified_granted_scope=GOOGLE_CONTENT_READ_SCOPE,
+                    )
+            elif claim.metadata_only is True and claim.content_readonly is False:
+                stage = "google_code_exchange"
+                access, refresh = exchange_google_code(
+                    code=params["code"], verifier=claim.verifier,
+                    config=config, transport=transport,
+                )
+                stage = "owner_private_folder_verification"
+                verify_owner_private_folder(
+                    access_token=access, config=config, transport=transport,
+                )
+                stage = "encrypted_metadata_grant_storage"
+                with session_factory() as db:
+                    store_private_metadata_grant(
+                        db, owner_ref=owner, folder_id=config.folder_id,
+                        client_id=config.client_id, refresh_token=refresh,
+                    )
+            else:
+                raise PrivateOwnerGoogleHttpBlocked("Content/metadata state confusion")
         except Exception:
             # Only an enumerated stage, never exception strings or secrets.
             # Response is identical for success and failure.
