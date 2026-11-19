@@ -27,6 +27,9 @@ from .drive_google_oauth import (
     GOOGLE_METADATA_SCOPE, PERSONAL_CFO_RAILWAY_CALLBACK,
     begin_google_metadata_consent, private_google_configuration,
 )
+from .private_google_content_consent import (
+    GOOGLE_CONTENT_READ_SCOPE, begin_google_content_read_consent,
+)
 from .models import OwnerPrivateOAuthAttempt
 from .private_owner_identity import (
     PrivateOwnerIdentityBlocked, _keys as owner_keys, _owner, _mac as owner_mac,
@@ -51,6 +54,7 @@ class PrivateClaimedPKCE:
     verifier: str
     metadata_only: bool
     state_consumed_before_external_exchange: bool
+    content_readonly: bool = False
 
 
 def _key(name: str) -> bytes:
@@ -148,15 +152,20 @@ def _owner_session(db: Session, mac: bytes, session_mac: bytes,
     return owner, auth
 
 
-def begin_private_session_google_oauth(
+def _begin_private_session_google_oauth(
     db: Session, *, owner_ref: str, session_token: str,
     csrf_token: str, now_epoch: int | None = None,
+    expected_scope: str = GOOGLE_METADATA_SCOPE,
 ) -> str:
     """Return a Google authorization URL ONLY to a trusted private controller.
 
     The caller enforces exact TLS, Origin and POST; the URL MUST NOT be logged.
     """
     cfg, enc, mac, owner_key, session_key = _config(db)
+    if expected_scope == GOOGLE_CONTENT_READ_SCOPE:
+        _content_guard()
+    elif expected_scope != GOOGLE_METADATA_SCOPE:
+        raise PrivateOAuthStateBlocked("Unapproved Google OAuth request scope")
     now = _now(now_epoch)
     try:
         _lock(db)
@@ -171,7 +180,9 @@ def begin_private_session_google_oauth(
             ))
         if total >= _MAX_RETAINED or outstanding >= _MAX_OUTSTANDING:
             raise PrivateOAuthStateBlocked("Private OAuth start rate limit")
-        pending = begin_google_metadata_consent(cfg)
+        pending = (begin_google_content_read_consent(config=cfg)
+                   if expected_scope == GOOGLE_CONTENT_READ_SCOPE
+                   else begin_google_metadata_consent(cfg))
         state_hmac = _tag(mac, "state", pending.state)
         row = OwnerPrivateOAuthAttempt(
             state_hmac=state_hmac, owner_hmac=owner,
@@ -186,7 +197,7 @@ def begin_private_session_google_oauth(
             "client": cfg.client_id,
             "redirect": cfg.redirect_uri,
             "folder_hmac": cfg.folder_hmac,
-            "scope": GOOGLE_METADATA_SCOPE,
+            "scope": expected_scope,
             "session": auth.token_hmac,
         })
         row.row_hmac = _row_mac(mac, row)
@@ -201,9 +212,10 @@ def begin_private_session_google_oauth(
         raise PrivateOAuthStateBlocked("Private session OAuth start failed") from None
 
 
-def consume_private_session_google_oauth(
+def _consume_private_session_google_oauth(
     db: Session, *, owner_ref: str, session_token: str,
     state: str, code: str, now_epoch: int | None = None,
+    expected_scope: str = GOOGLE_METADATA_SCOPE,
 ) -> PrivateClaimedPKCE:
     """One-time CAS-style commit before Google exchange, including worker races.
 
@@ -212,6 +224,10 @@ def consume_private_session_google_oauth(
     URLs; no raw code/state can be logged in any edge or upstream layer.
     """
     cfg, enc, mac, owner_key, session_key = _config(db)
+    if expected_scope == GOOGLE_CONTENT_READ_SCOPE:
+        _content_guard()
+    elif expected_scope != GOOGLE_METADATA_SCOPE:
+        raise PrivateOAuthStateBlocked("Unapproved Google OAuth claim scope")
     now = _now(now_epoch)
     if (type(state) is not str or _STATE.fullmatch(state) is None
         or type(code) is not str or _CODE.fullmatch(code) is None):
@@ -238,7 +254,7 @@ def consume_private_session_google_oauth(
             or payload["client"] != cfg.client_id
             or payload["redirect"] != cfg.redirect_uri
             or payload["folder_hmac"] != cfg.folder_hmac
-            or payload["scope"] != GOOGLE_METADATA_SCOPE
+            or payload["scope"] != expected_scope
             or payload["session"] != auth.token_hmac):
             raise PrivateOAuthStateBlocked("Google callback scope/PKCE mismatch")
         verifier = payload["verifier"]
@@ -246,10 +262,76 @@ def consume_private_session_google_oauth(
         row.ciphertext = _cipher(enc, row, {"claimed": True})
         row.row_hmac = _row_mac(mac, row)
         db.commit()
-        return PrivateClaimedPKCE(verifier, True, True)
+        return PrivateClaimedPKCE(
+            verifier, expected_scope == GOOGLE_METADATA_SCOPE, True,
+            expected_scope == GOOGLE_CONTENT_READ_SCOPE,
+        )
     except (PrivateOAuthStateBlocked, PrivateOwnerIdentityBlocked):
         db.rollback()
         raise PrivateOAuthStateBlocked("Private session OAuth callback denied") from None
     except Exception:
         db.rollback()
         raise PrivateOAuthStateBlocked("Private session OAuth callback failed") from None
+
+
+def _content_guard() -> None:
+    """Separate operator acceptance for restricted content OAuth scope.
+
+    This gate is intentionally stricter than metadata OAuth and can never be
+    selected by untrusted browser input. The caller must prove real owner
+    session+CSRF in the existing transaction and independent G3 scope review.
+    """
+    if (os.getenv("P4_CONTENT_OAUTH_CONTRACT_ONLY") != "1"
+        or os.getenv("P4_G2_OWNER_SESSION_CONTENT_REVIEWED") != "1"
+        or os.getenv("P4_G3_RESTRICTED_SCOPE_ACCEPTED") != "1"):
+        raise PrivateOAuthStateBlocked("Owner content OAuth state disabled")
+
+
+def begin_private_session_google_oauth(
+    db: Session, *, owner_ref: str, session_token: str,
+    csrf_token: str, now_epoch: int | None = None,
+) -> str:
+    """Existing metadata-only entrypoint; never starts content access."""
+    return _begin_private_session_google_oauth(
+        db, owner_ref=owner_ref, session_token=session_token,
+        csrf_token=csrf_token, now_epoch=now_epoch,
+        expected_scope=GOOGLE_METADATA_SCOPE,
+    )
+
+
+def begin_private_session_google_content_oauth(
+    db: Session, *, owner_ref: str, session_token: str,
+    csrf_token: str, now_epoch: int | None = None,
+) -> str:
+    """Distinct read-only content request, with same sealed session PKCE."""
+    _content_guard()
+    return _begin_private_session_google_oauth(
+        db, owner_ref=owner_ref, session_token=session_token,
+        csrf_token=csrf_token, now_epoch=now_epoch,
+        expected_scope=GOOGLE_CONTENT_READ_SCOPE,
+    )
+
+
+def consume_private_session_google_oauth(
+    db: Session, *, owner_ref: str, session_token: str,
+    state: str, code: str, now_epoch: int | None = None,
+) -> PrivateClaimedPKCE:
+    """Existing metadata callback cannot claim a content authorization."""
+    return _consume_private_session_google_oauth(
+        db, owner_ref=owner_ref, session_token=session_token,
+        state=state, code=code, now_epoch=now_epoch,
+        expected_scope=GOOGLE_METADATA_SCOPE,
+    )
+
+
+def consume_private_session_google_content_oauth(
+    db: Session, *, owner_ref: str, session_token: str,
+    state: str, code: str, now_epoch: int | None = None,
+) -> PrivateClaimedPKCE:
+    """Content callback cannot claim a metadata state or reuse old consent."""
+    _content_guard()
+    return _consume_private_session_google_oauth(
+        db, owner_ref=owner_ref, session_token=session_token,
+        state=state, code=code, now_epoch=now_epoch,
+        expected_scope=GOOGLE_CONTENT_READ_SCOPE,
+    )
