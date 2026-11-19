@@ -13,3 +13,10 @@
 
 .install-owner{border:1px solid #dce4ec;border-radius:9px;background:#f5f8fb;padding:9px 12px;cursor:pointer;white-space:nowrap}.install-owner:hover{background:#e7f1f4}
 @media(max-width:720px){.install-owner{padding:7px 8px;font-size:11px}}
+
+/* Metadata-only source-review indicators, never financial figures. */
+.review-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:15px 0}
+.review-metrics>div{background:#f6f9fb;border:1px solid #e4ebf0;border-radius:11px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.review-metrics span{color:#60768a;font-size:11px;line-height:1.4}
+.review-metrics strong{color:#1f4b67;font-size:23px}
+@media(max-width:720px){.review-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
