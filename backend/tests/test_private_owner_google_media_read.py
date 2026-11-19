@@ -45,12 +45,12 @@ def expected(raw=META):
         modified_time=datetime.fromisoformat(raw["modifiedTime"].replace("Z","+00:00")),
         md5_checksum=raw["md5Checksum"],trashed=raw["trashed"],
     )
-    return _index("file",record.id),_version(record)
+    return _index("file",record.id),_version(record),_index("filename",record.name)
 
 
 def run(metadata=None, body=RAW, *, scope=reader._CONTENT_SCOPE,
         repeat=None, verifier=None, file_id=FILE_ID, **extra):
-    h,r=expected()
+    h,r,n=expected()
     calls=[]
     def google(method,url,form,token):
         calls.append(("metadata",method,url))
@@ -71,6 +71,7 @@ def run(metadata=None, body=RAW, *, scope=reader._CONTENT_SCOPE,
     result=reader.read_pinned_google_source_once(
         file_id=file_id,expected_file_hmac=extra.get("hmac",h),
         expected_revision_hmac=extra.get("revision",r),
+        expected_name_hmac=extra.get("name_hmac",n),
         access_token=extra.get("token","A"*40),
         granted_scope=scope,
         metadata_transport=google,media_transport=media,
