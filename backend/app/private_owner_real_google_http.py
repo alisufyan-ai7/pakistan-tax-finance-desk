@@ -123,6 +123,7 @@ def create_review_only_private_google_http_gateway(
     transport: Callable = _http_google,
     lifespan=None,
     enable_content_oauth: bool = False,
+    enable_source_preflight: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -234,6 +235,57 @@ def create_review_only_private_google_http_gateway(
                 "source_bytes_downloaded": False,
                 "financial_data_enabled": False,
             }
+
+
+    if enable_source_preflight:
+        if not enable_content_oauth:
+            raise PrivateOwnerGoogleHttpBlocked(
+                "Source preflight requires protected content OAuth")
+
+        @app.post("/internal/drive/content/source/preflight")
+        async def original_source_preflight(request: Request):
+            """Hash real originals only after MFA+CSRF, never accept file IDs."""
+            from .private_original_source_preflight import (
+                PrivateSourcePreflightBlocked, preflight_original_owner_batch,
+            )
+            owner = _boundary(request, mutation=True)
+            try:
+                _reviewed_content_http()
+            except PrivateOwnerGoogleHttpBlocked:
+                raise HTTPException(503, "Private source service disabled") from None
+            if (request.headers.get("transfer-encoding") is not None
+                or len(await request.body()) > 128):
+                raise HTTPException(400, "Invalid private source batch request")
+            try:
+                payload = await request.json()
+                if type(payload) is not dict or set(payload) != {"batch_index"}:
+                    raise ValueError()
+                batch_index = payload["batch_index"]
+                if type(batch_index) is not int or not 0 <= batch_index <= 333:
+                    raise ValueError()
+            except Exception:
+                raise HTTPException(400, "Invalid private source batch") from None
+            try:
+                with session_factory() as db:
+                    verify_private_owner_session(
+                        db, owner_ref=owner,
+                        token=request.cookies.get(_COOKIE, ""),
+                        csrf=request.headers.get(_CSRF_HEADER, ""),
+                        mutation=True,
+                    )
+            except PrivateOwnerIdentityBlocked:
+                raise HTTPException(401, "Owner MFA/CSRF required") from None
+            try:
+                result = preflight_original_owner_batch(
+                    session_factory=session_factory,
+                    owner_ref=owner, batch_index=batch_index,
+                    transport=transport,
+                )
+            except PrivateSourcePreflightBlocked:
+                raise HTTPException(
+                    503, "Private source preflight unavailable or needs review"
+                ) from None
+            return JSONResponse(result)
 
     @app.get(_CALLBACK)
     def callback(request: Request):
