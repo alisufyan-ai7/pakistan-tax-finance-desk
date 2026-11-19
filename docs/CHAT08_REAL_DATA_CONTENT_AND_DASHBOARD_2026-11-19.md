@@ -1,4 +1,4 @@
-# Chat08 — real document access to complete owner Personal CFO (19 November 2026)
+> **VERIFIED RAILWAY FINAL P3A DEPLOY:** Exact source SHA `212db04823bd893c275ac8d8f6f747972d913493` was deployed to existing Personal CFO backend Railway, deployment `27a8259a-4152-42e2-86f9-787c18cf4975` **SUCCESS** on 19 November 2026. The code is an **unmounted gated capability** and does not perform live Google content downloads.\n\n# Chat08 — real document access to complete owner Personal CFO (19 November 2026)
 
 **Owner instruction:** Mobile owner MFA is confirmed working. Proceed with ALL safe independent engineering in parallel. Owner offers to immediately perform Google Cloud permissions/consent and wants every available document analyzed and reflected in one mobile-first/desktop PWA, with clear statements, accounts, investments, expenses, bills and tax/wealth evidence. No repetition of owner enrollment, no new OAuth client, no extra cloud services, and the original approved Drive folder MUST NEVER be modified, renamed, moved or deleted.
 
