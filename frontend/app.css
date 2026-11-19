@@ -26,3 +26,14 @@
 .source-hash-actions button{background:#275585;color:white;border:0;border-radius:10px;padding:12px 15px;font:inherit;font-weight:700;cursor:pointer}
 .source-hash-actions button[disabled]{opacity:.55;cursor:not-allowed}
 .source-hash-actions .muted{margin:0;flex:1;min-width:220px}
+
+
+/* Private source comments (only after separately accepted 0024 SQL custody). */
+.owner-review-editor{margin-top:12px;padding:13px;background:#f7fafc;border:1px solid #d8e4eb;border-radius:10px}
+.owner-review-editor label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+.owner-review-editor textarea{box-sizing:border-box;display:block;width:100%;min-height:88px;padding:10px;border-radius:8px;border:1px solid #aec5d1;font:inherit;resize:vertical}
+.owner-review-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.owner-review-actions button{border:1px solid #aac0ce;border-radius:7px;background:#eef5f8;color:#164763;padding:9px 12px;font:inherit;font-weight:600;cursor:pointer}
+.owner-review-actions button[disabled]{opacity:.5;cursor:not-allowed}
+.owner-review-history{margin-top:10px;padding-left:18px;overflow-wrap:anywhere}
+.owner-review-history li{padding:6px 0;font-size:13px;white-space:pre-wrap}
