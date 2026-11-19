@@ -130,6 +130,7 @@ def _bounded_google_media(method: str, url: str, token: str) -> bytes:
 def _file(
     raw: object, *, file_id: str, folder_id: str,
     expected_file_hmac: str, expected_revision_hmac: str,
+    expected_name_hmac: str,
 ) -> tuple[DriveFile, str]:
     if type(raw) is not dict or set(raw) != {
         "id","name","mimeType","parents","size","modifiedTime",
@@ -146,6 +147,8 @@ def _file(
             or "." not in file.name
             or _HASH.fullmatch(expected_file_hmac) is None
             or _HASH.fullmatch(expected_revision_hmac) is None
+            or _HASH.fullmatch(expected_name_hmac) is None
+            or not hmac.compare_digest(_index("filename", file.name), expected_name_hmac)
             or not hmac.compare_digest(_index("file", file_id), expected_file_hmac)
             or not hmac.compare_digest(_version(file), expected_revision_hmac)):
             raise ValueError()
@@ -159,6 +162,7 @@ def _file(
 
 def read_pinned_google_source_once(
     *, file_id: str, expected_file_hmac: str, expected_revision_hmac: str,
+    expected_name_hmac: str,
     access_token: str, granted_scope: str,
     metadata_transport: Callable = _http_google,
     media_transport: Callable = _bounded_google_media,
@@ -186,6 +190,7 @@ def read_pinned_google_source_once(
             first, file_id=file_id, folder_id=config.folder_id,
             expected_file_hmac=expected_file_hmac,
             expected_revision_hmac=expected_revision_hmac,
+            expected_name_hmac=expected_name_hmac,
         )
         blob = media_transport("GET", _media_url(file_id), access_token)
         if type(blob) is not bytes or len(blob) != file.size_bytes:
@@ -196,6 +201,7 @@ def read_pinned_google_source_once(
             second, file_id=file_id, folder_id=config.folder_id,
             expected_file_hmac=expected_file_hmac,
             expected_revision_hmac=expected_revision_hmac,
+            expected_name_hmac=expected_name_hmac,
         )
         if confirmed != file or extension_again != extension:
             raise PrivateSourceMediaBlocked("Original source changed while reading")
