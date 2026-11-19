@@ -85,7 +85,7 @@ def _safe_failure_reason_after_child_error() -> str:
             child_script=_START_CHILD,
         )
         proc = _run_in_jail(command)
-        if proc.returncode == 0 and proc.stdout == b"P5H_NAMESPACE_BOOTED\\n":
+        if proc.returncode == 0 and proc.stdout == b"P5H_NAMESPACE_BOOTED\n":
             return "ISOLATED_CHILD_FAILED"
         return "JAIL_CANNOT_START"
     except subprocess.TimeoutExpired:
