@@ -53,7 +53,7 @@ test("only authenticated owner receives an editable comment UI",()=>{
  assert.match(js,/"X-CSRF-Token":csrfToken/);
  assert.match(js,/field\.maxLength=1500/);
  assert.match(js,/name\.textContent=entry\.source_name/);
- assert.match(js,/li\.textContent=item\.comment/);
+ assert.match(js,/li\.textContent="Comment "\+String\(item\.revision\)\+": "\+item\.comment/);
  assert.match(js,/PENDING_EVIDENCE_RECONCILIATION/);
  assert.ok(!js.includes("innerHTML"));
  assert.ok(!js.includes("localStorage"));
