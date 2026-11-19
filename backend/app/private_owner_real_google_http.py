@@ -172,7 +172,10 @@ def create_review_only_private_google_http_gateway(
         @app.post("/internal/drive/content/oauth/start")
         async def content_start(request: Request):
             owner = _boundary(request, mutation=True)
-            _reviewed_content_http()
+            try:
+                _reviewed_content_http()
+            except PrivateOwnerGoogleHttpBlocked:
+                raise HTTPException(503, "Private content OAuth disabled") from None
             if (request.headers.get("content-length", "0") not in ("", "0")
                 or request.headers.get("transfer-encoding") is not None
                 or await request.body()):
@@ -199,7 +202,10 @@ def create_review_only_private_google_http_gateway(
         @app.get("/internal/drive/content/oauth/status")
         def content_status(request: Request):
             owner = _boundary(request, mutation=False)
-            _reviewed_content_http()
+            try:
+                _reviewed_content_http()
+            except PrivateOwnerGoogleHttpBlocked:
+                raise HTTPException(503, "Private content status disabled") from None
             try:
                 with session_factory() as db:
                     verify_private_owner_session(
