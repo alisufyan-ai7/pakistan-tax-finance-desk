@@ -558,6 +558,7 @@ class PrivateDriveRevisionSnapshot(Base):
     __table_args__ = (
         CheckConstraint("scan_number > 0", name="ck_private_drive_revision_sequence"),
     )
+    id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
     folder_hmac: Mapped[str] = mapped_column(String(64), primary_key=True)
     scan_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_snapshot_hmac: Mapped[str] = mapped_column(String(64), nullable=False)
