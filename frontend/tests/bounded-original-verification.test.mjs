@@ -152,7 +152,7 @@ test("accepted new Drive inventory clears prior historical bank evidence and SHA
     checkOriginals,historicalBankReports:report,
     nextSourceBatch:5,sourceCheckedCount:15,sourceExpectedTotal:60,
     seenSourceHmacs:new Set(["old"]),sourceScanVersion:0,bankCsvRefreshEpoch:0,clearBankCsvEvidence:()=>{},
-     propertyRefreshEpoch:0,clearPropertyInvestmentEvidence:()=>{},resetFinancialPeriodEvidence:()=>{},
+     propertyRefreshEpoch:0,clearPropertyInvestmentEvidence:()=>{},resetFinancialPeriodEvidence:()=>{},closeTransactionDetail:()=>{},
     sourceScanCancelled:false,loadedAt:null,items:[{display_name:"old"}],
     fetch:async(path,opts)=>{
       assert.equal(path,"/api/drive/metadata/refresh");
