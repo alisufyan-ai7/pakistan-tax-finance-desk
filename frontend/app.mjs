@@ -71,6 +71,10 @@ function rejectSession() {
   // after a private session expires or the source evidence is invalidated.
   byId("home-historical-evidence-list").replaceChildren();
   byId("home-historical-evidence").hidden = true;
+  // Source inventory is owner-private: drop every filename from the Home queue
+  // when the MFA session is no longer authorized.
+  byId("home-document-priority-list").replaceChildren();
+  byId("home-document-priorities").hidden = true;
   checkOriginals.hidden = true;
   app.hidden = true;
   byId("bottom-nav").hidden = true;
@@ -135,6 +139,51 @@ function renderDocuments() {
     documents.appendChild(li);
   }
 }
+// Derived solely from authenticated, complete Drive metadata already validated
+// by validateSnapshot and summarizeSourceReview. No source text is trusted HTML,
+// no financial amount is inferred, and no document data is stored in the browser.
+function renderHomeDocumentPriorities(review) {
+  const panel=byId("home-document-priorities");
+  const list=byId("home-document-priority-list");
+  const state=byId("home-document-priority-summary");
+  list.replaceChildren();
+  if (!items.length) {
+    panel.hidden=true;
+    state.textContent="";
+    return;
+  }
+  panel.hidden=false;
+  state.textContent=review.reviewCount + " of " + review.total +
+    " files need filename or format review; " + review.quarantineCount +
+    " have an unsupported format or size. Suggestions are based on metadata, not verified balances or transactions.";
+  const chosen=review.priorityItems.slice(0,5);
+  for (const item of chosen) {
+    const li=document.createElement("li");
+    const title=document.createElement("strong");
+    title.textContent=item.name;
+    const reason=document.createElement("small");
+    reason.textContent=item.reason;
+    const open=document.createElement("button");
+    open.type="button";
+    open.className="text-button home-file-action";
+    open.textContent="Find in Documents";
+    open.addEventListener("click",()=>{
+      // The filename remains inside the authenticated DOM; no query string,
+      // URL path, analytics event or browser storage contains source metadata.
+      byId("document-search").value=item.name;
+      renderDocuments();
+      go("documents");
+      byId("document-search").focus();
+    });
+    li.append(title,reason,open);
+    list.appendChild(li);
+  }
+  if (!chosen.length) {
+    const li=document.createElement("li");
+    li.textContent="No filename or format exceptions in this inventory. Original document contents and financial figures still require verification.";
+    list.appendChild(li);
+  }
+}
 function updateSummary(review = summarizeSourceReview(items)) {
   const counts = new Map(review.categories.map(category=>[category.key,category.count]));
   byId("document-count").textContent = String(items.length);
@@ -179,6 +228,7 @@ function updateSummary(review = summarizeSourceReview(items)) {
     ? "Checked during this session at " + loadedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) +
       ". This is not a background sync or verified financial statement."
     : "No document check completed.";
+  renderHomeDocumentPriorities(review);
 }
 async function refreshMetadata() {
   if (!connected || !safeToken(csrfToken)) { showStatus("Connect Google Drive first."); return; }
