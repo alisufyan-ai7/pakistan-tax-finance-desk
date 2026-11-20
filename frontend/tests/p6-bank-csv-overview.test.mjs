@@ -5,10 +5,15 @@ import vm from "node:vm";
 
 const read=name=>readFileSync(new URL("../"+name,import.meta.url),"utf8");
 function node() {
-  return {children:[],hidden:true,textContent:"",
+  const listeners={};
+  return {children:[],hidden:true,textContent:"",open:false,handlers:listeners,
     append(...children){this.children.push(...children);},
     appendChild(child){this.children.push(child);},
     replaceChildren(...children){this.children=[...children];},
+    addEventListener(type,cb){listeners[type]=cb;},
+    setAttribute(name,value){this[name]=value;},
+    showModal(){this.open=true;},
+    close(){this.open=false;},
   };
 }
 function report() {
@@ -50,6 +55,11 @@ function harness(){
     ["transaction-search",node()],["transaction-source-filter",node()],
     ["transaction-category-filter",node()],["transaction-direction-filter",node()],
     ["transaction-show-more",node()],
+    ["transaction-detail-dialog",node()],
+    ["transaction-detail-amount",node()],["transaction-detail-date",node()],
+    ["transaction-detail-description",node()],["transaction-detail-source",node()],
+    ["transaction-detail-row",node()],["transaction-detail-balance",node()],
+    ["transaction-detail-category",node()],["transaction-detail-review",node()],
   ]);
   const ctx={
     HMAC_SHA:/^[a-f0-9]{64}$/,
@@ -286,6 +296,15 @@ test("source-proved transaction rows stay distinct from expenses, with period/ac
   assert.equal(lookup.get("transaction-rows").children.length,2);
   assert.match(lookup.get("transactions-coverage").textContent,/2 matching transactions/);
   assert.match(lookup.get("transaction-rows").children[0].children[2].textContent,/SHA-verified/);
+  const detail=lookup.get("transaction-rows").children[0].children[3];
+  assert.equal(detail.textContent,"Details");
+  detail.handlers.click();
+  assert.equal(lookup.get("transaction-detail-dialog").open,true);
+  assert.match(lookup.get("transaction-detail-amount").textContent,/PKR 25.00/);
+  assert.match(lookup.get("transaction-detail-review").textContent,/Secure row-level classification/);
+  ctx.closeTransactionDetail();
+  assert.equal(lookup.get("transaction-detail-dialog").open,false);
+  assert.equal(lookup.get("transaction-detail-description").textContent,"—");
   lookup.get("transaction-search").value="fictional outward";
   ctx.renderTransactionExplorer();
   assert.equal(lookup.get("transaction-rows").children.length,1);

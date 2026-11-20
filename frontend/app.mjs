@@ -396,6 +396,8 @@ function rejectSession() {
   byId("home-historical-evidence").hidden = true;
   bankCsvRefreshEpoch++;
   clearBankCsvEvidence();
+  closeTransactionDetail();
+  closeMobileMore();
   propertyRefreshEpoch++;
   clearPropertyInvestmentEvidence();
   resetFinancialPeriodEvidence();
@@ -591,6 +593,7 @@ async function refreshMetadata() {
     renderHistoricalBankReports();
     bankCsvRefreshEpoch++;
     clearBankCsvEvidence();
+    closeTransactionDetail();
     propertyRefreshEpoch++;
     clearPropertyInvestmentEvidence();
     resetFinancialPeriodEvidence();
@@ -1419,6 +1422,44 @@ function updateTransactionSourceChoices(){
   picker.value=periodEvidence.transactionSources.some(s=>s.source_hmac===previous)
     ?previous:"all";
 }
+const CATEGORY_LABELS={
+  BANK_PROFIT:"Bank-labelled profit",
+  BANK_WITHHOLDING:"Bank withholding tax",
+  BANK_CHARGE:"Verified bank fee",
+  TRANSFER_CANDIDATE:"Possible transfer · needs your classification",
+  NEEDS_REVIEW:"Purpose needs your classification",
+};
+function closeTransactionDetail(){
+  const dialog=byId("transaction-detail-dialog");
+  if(dialog.open)dialog.close();
+  for(const id of [
+    "transaction-detail-amount","transaction-detail-date",
+    "transaction-detail-description","transaction-detail-source",
+    "transaction-detail-row","transaction-detail-balance",
+    "transaction-detail-category"]){
+      byId(id).textContent="—";
+    }
+}
+function openTransactionDetail(tx){
+  // All content has passed owner-only exact-source SHA and per-row continuity
+  // validation; place private descriptions in textContent, never HTML.
+  const dialog=byId("transaction-detail-dialog");
+  if(dialog.open)dialog.close();
+  byId("transaction-detail-amount").textContent=
+    (tx.direction==="INBOUND"?"Money in · ":"Money out · ")+
+    historicalMoney.format(tx.amount_minor/100);
+  byId("transaction-detail-date").textContent=tx.date;
+  byId("transaction-detail-description").textContent=tx.description;
+  byId("transaction-detail-source").textContent=tx.source_name;
+  byId("transaction-detail-row").textContent=String(tx.ordinal);
+  byId("transaction-detail-balance").textContent=
+    historicalMoney.format(tx.balance_after_minor/100)+" · historical only";
+  byId("transaction-detail-category").textContent=CATEGORY_LABELS[tx.category];
+  byId("transaction-detail-review").textContent=tx.review_required
+    ?"Bank movement is verified; its purpose is not. Secure row-level classification and encrypted notes are not active yet. Do not treat this as personal income, expense, capital or repayment."
+    :"This exact bank-labelled event is verified from the source. It does not establish your complete monthly income, spending or tax position.";
+  dialog.showModal();
+}
 function renderTransactionExplorer(){
   const list=byId("transaction-rows");
   list.replaceChildren();
@@ -1431,19 +1472,14 @@ function renderTransactionExplorer(){
   const filtered=entries.filter(row=>
     periodContainsDate(row.date,financialPeriod) &&
     (direction==="all" || row.direction===direction) &&
-    (category==="all" || row.category===category) &&
+    (category==="all" || (category==="REVIEW_REQUIRED"
+      ?row.review_required===true:row.category===category)) &&
     (source==="all" || row.source_hmac===source) &&
     (!query || [row.description,row.date,row.source_name,String(row.amount_minor/100)]
       .some(text=>text.toLocaleLowerCase().includes(query))));
   filtered.sort((a,b)=>b.date.localeCompare(a.date) ||
     a.source_hmac.localeCompare(b.source_hmac) || b.ordinal-a.ordinal);
-  const categories={
-    BANK_PROFIT:"Bank-labelled profit",
-    BANK_WITHHOLDING:"Bank withholding tax",
-    BANK_CHARGE:"Verified bank fee",
-    TRANSFER_CANDIDATE:"Possible transfer · needs your classification",
-    NEEDS_REVIEW:"Purpose needs your classification",
-  };
+  const categories=CATEGORY_LABELS;
   for(const tx of filtered.slice(0,transactionVisibleLimit)){
     const li=document.createElement("li");li.className="transaction-card";
     const title=document.createElement("strong");
@@ -1456,7 +1492,12 @@ function renderTransactionExplorer(){
       tx.ordinal+" · historical after-transaction balance "+
       historicalMoney.format(tx.balance_after_minor/100)+
       " · SHA-verified source, no purpose assumed";
-    li.append(title,date,evidence);
+    const inspect=document.createElement("button");
+    inspect.type="button";inspect.className="transaction-detail-action";
+    inspect.textContent="Details";
+    inspect.setAttribute("aria-label","View verified transaction details from "+tx.date);
+    inspect.addEventListener("click",()=>openTransactionDetail(tx));
+    li.append(title,date,evidence,inspect);
     list.appendChild(li);
   }
   const allAvailable=entries.length>0;
@@ -1735,6 +1776,7 @@ function renderBankCsvReportList(id,reports) {
 }
 async function loadBankCsvOverview() {
   const epoch=++bankCsvRefreshEpoch;
+  closeTransactionDetail();
   clearBankCsvEvidence();
   periodEvidence.bankReports=[];
   periodEvidence.transactionSources=[];
@@ -2024,9 +2066,34 @@ async function start() {
     else rejectSession();
   }
 }
+function closeMobileMore(){
+  const menu=byId("mobile-more-menu");
+  menu.hidden=true;
+  byId("mobile-more-toggle").setAttribute("aria-expanded","false");
+}
 for (const btn of document.querySelectorAll("[data-view], [data-go]")) {
   btn.addEventListener("click",()=>go(btn.dataset.view || btn.dataset.go));
+  btn.addEventListener("click",closeMobileMore);
 }
+byId("mobile-more-toggle").addEventListener("click",()=>{
+  const menu=byId("mobile-more-menu");
+  menu.hidden=!menu.hidden;
+  byId("mobile-more-toggle").setAttribute(
+    "aria-expanded",String(!menu.hidden));
+});
+document.addEventListener("keydown",event=>{
+  if(event.key==="Escape")closeMobileMore();
+});
+byId("transaction-detail-close").addEventListener("click",closeTransactionDetail);
+byId("transaction-detail-done").addEventListener("click",closeTransactionDetail);
+byId("transaction-detail-documents").addEventListener("click",()=>{
+  closeTransactionDetail();
+  go("documents");
+});
+byId("transaction-detail-dialog").addEventListener("close",closeTransactionDetail);
+byId("transaction-detail-dialog").addEventListener("click",event=>{
+  if(event.target===byId("transaction-detail-dialog"))closeTransactionDetail();
+});
 byId("finance-period-mode").addEventListener("change",()=>{
   updateFinancialPeriod();
 });
