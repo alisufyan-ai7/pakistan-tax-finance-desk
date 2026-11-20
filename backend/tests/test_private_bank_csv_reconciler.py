@@ -89,6 +89,7 @@ def test_real_original_reader_default_off(monkeypatch):
 
 
 def test_pinned_approved_folder_report_reconciles_only_csv(monkeypatch):
+    monkeypatch.setenv("P7_OWNER_TRANSACTION_ROWS_ENABLED","1")
     owner="owner-fake-123456789012345"
     monkeypatch.setenv("APP_DATA_MODE","synthetic")
     monkeypatch.setenv("P1W_OWNER_REF",owner)
@@ -136,6 +137,12 @@ def test_pinned_approved_folder_report_reconciles_only_csv(monkeypatch):
     assert result["csv_sources_found"]==1
     assert len(result["reports"])==1
     assert result["reports"][0]["closing_minor"]==12500
+    owner_rows=result["reports"][0]["transactions"]
+    assert owner_rows["contract"]=="personal_cfo_p7_reconciled_bank_csv_rows_v1"
+    assert owner_rows["transaction_count"]==5
+    assert owner_rows["rows"][0]["review_required"] is True
+    assert owner_rows["rows"][2]["category"]=="BANK_PROFIT"
+    assert owner_rows["rows"][4]["classified_as_personal_expense"] is False
     assert result["reports"][0]["source_sha256_verified"] is True
     assert result["personal_income_minor"] is None
     assert len(calls)==1
