@@ -60,6 +60,11 @@
           <p class="muted">Real, SHA-256-verified bank CSV statements only. Balances are valid on their last transaction dates; gross credits and debits are not personal income or spending. This does not represent today's balance or complete bank coverage.</p>
           <ul id="home-bank-csv-list" class="document-list" aria-label="Verified historical CSV bank balances"></ul>
         </section>
+        <section id="home-property-investments" class="panel" hidden aria-labelledby="home-property-title">
+          <div class="panel-heading"><div><span class="micro">VERIFIED SOURCE REGISTER</span><h3 id="home-property-title">Property investments & recorded sale profits</h3></div><button class="text-button" data-go="investments" type="button">View investments</button></div>
+          <p class="muted">Private source-register values: recorded investment costs and sold-property profits, not current market valuations, cash proceeds or taxable income.</p>
+          <ul id="home-property-investment-list" class="document-list" aria-label="Source-backed property investment cost and profit"></ul>
+        </section>
         <div class="two-columns">
           <section class="panel">
             <div class="panel-heading"><div><span class="micro">SOURCE COVERAGE</span><h3>Your Drive documents</h3></div><button type="button" class="text-button" data-go="documents">View documents</button></div>
@@ -110,7 +115,13 @@
         </section>
       </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
-      <section id="view-investments" class="view" hidden><section class="panel"><h3>Investments & expected returns</h3><p>Cost, current value, return dates and yield will be shown only with verified broker, bank or investment evidence.</p></section></section>
+      <section id="view-investments" class="view" hidden>
+        <section class="panel"><h3>Investments & expected returns</h3>
+          <p>Recorded property acquisition costs, sales and owner profit shares appear when their original workbook reconciles. Current market values, unsold-property returns and investment income not independently verified remain unknown.</p>
+          <div id="property-investment-detail" hidden>
+            <ul id="property-investment-detail-list" class="document-list" aria-label="Verified property records from original investment workbook"></ul>
+          </div>
+        </section></section>
       <section id="view-tax" class="view" hidden><section class="panel"><h3>Tax & wealth</h3><p>Filed FBR records, accountant drafts and supported year-specific tax estimates must be reconciled before personal values appear.</p></section></section>
       <footer class="footer">Personal CFO · One-owner private workspace · No original source content imported</footer>
     </main>
