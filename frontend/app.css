@@ -92,3 +92,16 @@
 .finance-period-controls p{min-width:0;width:100%}
 .period-evidence .panel-heading{align-items:start}
 }
+
+/* P7 private transaction explorer; no horizontal bank-table trap on phones. */
+.transaction-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:16px}
+.transaction-filters label{display:flex;flex-direction:column;gap:6px;min-width:0;color:#52667c;font-size:12px;font-weight:650}
+.transaction-filters input,.transaction-filters select{background:#fff;border:1px solid #b9cdd8;border-radius:9px;color:#24435b;min-height:44px;padding:9px 11px;font-size:13px;min-width:0;width:100%}
+.transaction-filters :is(input,select):focus-visible{outline:3px solid #88bdc0}
+.transaction-cards{display:grid;gap:10px}
+.transaction-cards .transaction-card{border:1px solid #e4ebef;border-radius:12px;padding:12px;display:grid;gap:4px;background:#fcfdff}
+.transaction-cards .transaction-card strong{font-size:13px;line-height:1.55}
+.transaction-cards .transaction-card small{color:#64768d;font-size:12px;line-height:1.5}
+#transaction-show-more{min-height:44px;padding:11px 15px;margin-top:12px;cursor:pointer}
+@media(max-width:1000px){.transaction-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.transaction-filters{grid-template-columns:1fr}.bottom-nav button{min-width:40px;font-size:19px}}
