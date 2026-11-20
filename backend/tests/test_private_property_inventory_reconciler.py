@@ -27,14 +27,17 @@ def fabricated_inventory():
         sold=n in (0,1,2,3,8,9)
         cells += [c(f"A{row}",n+1),c(f"B{row}","Plot/Shop",True),
                   c(f"C{row}",f"Asset {n+1}",True),
-                  c(f"C{row+1}",46000),c(f"C{row+6}",100)]
+                  c(f"C{row+1}",46000),c(f"C{row+2}",100),
+                  c(f"C{row+3}",0),c(f"C{row+4}",0),c(f"C{row+5}",0),
+                  c(f"E{row+3}",0),c(f"E{row+4}",0),c(f"E{row+5}",0),
+                  c(f"C{row+6}",100)]
         if sold:
-            cells += [c(f"E{row+1}",46100),c(f"E{row+6}",110),
+            cells += [c(f"E{row+1}",46100),c(f"E{row+2}",110),c(f"E{row+6}",110),
                       c(f"C{row+7}",10),c(f"C{row+8}",6),
                       c(f"C{row+9}",4)]
             profits+=10;owner_share+=6;other_share+=4
         else:
-            cells += [c(f"E{row+6}",0),c(f"C{row+7}",0),
+            cells += [c(f"E{row+2}",0),c(f"E{row+6}",0),c(f"C{row+7}",0),
                       c(f"C{row+8}",0),c(f"C{row+9}",0)]
             held+=100
     cells += [c("B126",held),c("C126",profits),
