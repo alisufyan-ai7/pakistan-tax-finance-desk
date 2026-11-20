@@ -591,6 +591,84 @@ function renderHistoricalBankReports() {
 // label historical closing as current cash, or cache values in browser storage.
 // Source-backed investment costs and realized sales: never inferred market value
 // or cash earnings. Strict client response contract for authenticated-only values.
+// Owner-declared partner names are served from private Railway configuration,
+// never embedded in public JS. No unverified principal, valuation or profit.
+function validInvestmentRelationshipRegistry(reg, hasPropertyReport) {
+  if(!reg || reg.contract!=="personal_cfo_p6_owner_investment_registry_v1" ||
+     reg.source!=="PRIVATE_OWNER_DECLARATION" ||
+     reg.current_market_values_verified!==false ||
+     reg.all_investment_contributions_reconciled!==false ||
+     !Array.isArray(reg.groups) || reg.groups.length>10 ||
+     !(reg.property_register_group_id===null ||
+        typeof reg.property_register_group_id==="string"))return false;
+  if(reg.groups.length===0)return reg.property_register_group_id===null;
+  if(!/^[a-z][a-z0-9_]{2,39}$/.test(reg.property_register_group_id||""))return false;
+  const seen=new Set();
+  let sourceFound=0;
+  for(const group of reg.groups){
+    if(!group || typeof group.id!=="string" ||
+       !/^[a-z][a-z0-9_]{2,39}$/.test(group.id) ||
+       seen.has(group.id) ||
+       typeof group.title!=="string" ||
+       group.title.length<2 || group.title.length>96 ||
+       group.owner_declared!==true ||
+       !Array.isArray(group.ventures) ||
+       !group.ventures.length || group.ventures.length>4)return false;
+    seen.add(group.id);
+    const seenVentures=new Set();
+    for(const venture of group.ventures){
+      if(!venture || typeof venture.id!=="string" ||
+         !/^[a-z][a-z0-9_]{2,39}$/.test(venture.id) ||
+         seenVentures.has(venture.id) ||
+         typeof venture.title!=="string" || venture.title.length<2 ||
+         venture.title.length>96 ||
+         !["property","business","education","other"].includes(venture.category) ||
+         venture.confirmed_invested_principal_minor!==null ||
+         venture.current_market_value_minor!==null ||
+         venture.realized_cash_return_minor!==null ||
+         venture.expected_return_minor!==null ||
+         typeof venture.property_register_linked!=="boolean")return false;
+      seenVentures.add(venture.id);
+      const sourceCandidate=group.id===reg.property_register_group_id &&
+        venture.category==="property";
+      if(sourceCandidate)sourceFound++;
+      if(venture.property_register_linked!==(sourceCandidate&&hasPropertyReport))return false;
+      if(venture.evidence_status!==(
+          sourceCandidate&&hasPropertyReport
+          ? "PROPERTY_REGISTER_RECONCILED_HISTORICAL_COSTS_ONLY"
+          : "OWNER_DECLARED_AWAITING_TRANSACTION_ALLOCATION"))return false;
+    }
+  }
+  return sourceFound===1;
+}
+function renderInvestmentRelationshipRegistry(reg) {
+  byId("investment-partner-list").replaceChildren();
+  for(const group of reg.groups){
+    const li=document.createElement("li");
+    const heading=document.createElement("strong");
+    heading.textContent=group.title;
+    li.appendChild(heading);
+    const list=document.createElement("ul");
+    for(const venture of group.ventures){
+      const entry=document.createElement("li");
+      const title=document.createElement("strong");
+      title.textContent=venture.title;
+      const note=document.createElement("small");
+      note.textContent=venture.property_register_linked
+        ? "Original property register reconciled · costs and sale profits below · current valuation unknown"
+        : "Owner-declared investment · transactions and allocation need review · balance and returns unknown";
+      entry.append(title,note);
+      list.appendChild(entry);
+    }
+    li.appendChild(list);
+    byId("investment-partner-list").appendChild(li);
+  }
+  byId("investment-partner-groups").hidden=reg.groups.length===0;
+  const source=reg.groups.find(g=>g.id===reg.property_register_group_id);
+  if(source)byId("property-investment-detail-heading").textContent=
+    source.title+" · property register breakdown";
+}
+
 function validPrivatePropertyOverview(data) {
   if(!data || data.contract!=="personal_cfo_owner_property_inventory_overview_v1" ||
      data.approved_source_folder!==true || data.inventory_complete!==true ||
@@ -600,7 +678,10 @@ function validPrivatePropertyOverview(data) {
      !Number.isInteger(data.xlsx_sources_examined) ||
      data.xlsx_sources_examined<0 || data.xlsx_sources_examined>10 ||
      !Array.isArray(data.reports) || data.reports.length>1 ||
-     data.property_register_sources_verified!==data.reports.length)return false;
+     data.property_register_sources_verified!==data.reports.length ||
+    (data.owner_relationships!==undefined &&
+      !validInvestmentRelationshipRegistry(data.owner_relationships,data.reports.length===1)))
+    return false;
   for(const report of data.reports){
     if(report.contract!=="personal_cfo_p6_property_inventory_v1" ||
        report.source_type!=="PROPERTY_COST_AND_SALES_REGISTER" ||
@@ -652,8 +733,11 @@ function validPrivatePropertyOverview(data) {
   return true;
 }
 function clearPropertyInvestmentEvidence(){
-  for(const id of ["home-property-investment-list","property-investment-detail-list"])
+  for(const id of ["home-property-investment-list","property-investment-detail-list",
+      "property-cost-chart","investment-partner-list"])
     byId(id).replaceChildren();
+  byId("investment-partner-groups").hidden=true;
+  byId("property-investment-detail-heading").textContent="Source-verified property register breakdown";
   byId("home-property-investments").hidden=true;
   byId("property-investment-detail").hidden=true;
 }
@@ -689,6 +773,24 @@ function renderPropertyInvestments(report){
     li.append(name,state);
     byId("property-investment-detail-list").appendChild(li);
   }
+  // Compact relative-cost chart for HELD property records only.
+  // No portfolio-wide pie while the other ventures lack confirmed values.
+  const held=report.properties.filter(x=>x.source_status==="HELD_COST_NOT_MARKET_VALUE");
+  const maxCost=Math.max(0,...held.map(x=>x.recorded_purchase_cost_minor));
+  byId("property-cost-chart").replaceChildren();
+  if(maxCost>0){
+    for(const p of held){
+      const li=document.createElement("li");
+      const label=document.createElement("span");
+      label.textContent=p.property_label+" · "+
+        historicalMoney.format(p.recorded_purchase_cost_minor/100);
+      const bar=document.createElement("meter");
+      bar.min=0;bar.max=maxCost;bar.value=p.recorded_purchase_cost_minor;
+      bar.textContent=label.textContent;
+      li.append(label,bar);
+      byId("property-cost-chart").appendChild(li);
+    }
+  }
   byId("home-property-investments").hidden=false;
   byId("property-investment-detail").hidden=false;
 }
@@ -701,6 +803,8 @@ async function loadPropertyInvestments(){
     if(epoch!==propertyRefreshEpoch || !safeToken(csrfToken))return;
     if(!validPrivatePropertyOverview(data))throw Error("Untrusted property evidence");
     if(data.reports.length)renderPropertyInvestments(data.reports[0]);
+    if(data.owner_relationships?.groups?.length)
+      renderInvestmentRelationshipRegistry(data.owner_relationships);
   }catch{clearPropertyInvestmentEvidence();}
 }
 
