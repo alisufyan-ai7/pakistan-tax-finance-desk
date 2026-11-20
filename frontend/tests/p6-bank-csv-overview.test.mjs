@@ -40,6 +40,8 @@ function harness(){
   const lookup=new Map([
     ["home-bank-csv-list",node()],["account-bank-csv-list",node()],
     ["home-bank-csv-evidence",node()],["account-bank-csv-section",node()],
+    ["home-latest-bank-balance",node()],["home-latest-bank-context",node()],
+    ["home-bank-profit",node()],["home-bank-profit-context",node()],
   ]);
   const ctx={
     HMAC_SHA:/^[a-f0-9]{64}$/,
@@ -134,4 +136,32 @@ test("strict source classifier distinguishes unknown transfers from actual bank 
     pending_review_count:0}}),false);
   assert.equal(x.ctx.validBankCsvSource({...classified,classification:{...c,
     months:[{...c.months[0],unclassified_debit_minor:0}]}}),false);
+});
+
+
+test("Home uses only latest reconciled statement, not an all-bank current balance",()=>{
+  const {ctx,lookup}=harness(),first=report();
+  const older={...first,source_hmac:"c".repeat(64),source_content_hmac:"d".repeat(64),
+    statement_start:"2025-01-01",statement_end:"2025-01-31",
+    opening_minor:20000,closing_minor:25000,
+    gross_bank_debits_minor:0,gross_bank_credits_minor:5000,
+    months:[{...first.months[0],month:"2025-01",
+      gross_bank_debits_minor:0,gross_bank_credits_minor:5000,
+      last_reported_balance_minor:25000}]};
+  ctx.renderHomeBankCsvMetrics([older,first]);
+  assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR 125.00");
+  assert.match(lookup.get("home-latest-bank-context").textContent,/2026-01-02/);
+  assert.match(lookup.get("home-latest-bank-context").textContent,/not today's cash/);
+  assert.equal(lookup.get("home-bank-profit").textContent,"");
+  const classified={...first,classification:{bank_profit_received_minor:321}};
+  ctx.renderHomeBankCsvMetrics([classified]);
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR 3.21");
+  assert.match(lookup.get("home-bank-profit-context").textContent,/not total personal income/);
+  ctx.clearBankCsvEvidence();
+  assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR —");
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
+  const html=read("app.html");
+  assert.match(html,/home-latest-bank-balance/);
+  assert.match(html,/home-bank-profit/);
+  assert.match(html,/today's total available cash/);
 });

@@ -282,6 +282,8 @@ async function refreshMetadata() {
     renderHistoricalBankReports();
     bankCsvRefreshEpoch++;
     clearBankCsvEvidence();
+    propertyRefreshEpoch++;
+    clearPropertyInvestmentEvidence();
     hashStatus.textContent =
       "Drive metadata refreshed. Recheck original documents to verify current file bytes.";
     checkOriginals.textContent = "Check original documents";
@@ -818,6 +820,10 @@ function clearPropertyInvestmentEvidence(){
   byId("property-investment-detail-heading").textContent="Source-verified property register breakdown";
   byId("home-property-investments").hidden=true;
   byId("property-investment-detail").hidden=true;
+  byId("home-held-property-cost").textContent="PKR —";
+  byId("home-held-property-context").textContent="No source-reconciled property register currently available.";
+  byId("home-property-profit-share").textContent="PKR —";
+  byId("home-property-profit-context").textContent="Recorded sale profits require original source verification.";
 }
 function renderPropertyInvestments(report){
   clearPropertyInvestmentEvidence();
@@ -871,6 +877,14 @@ function renderPropertyInvestments(report){
   }
   byId("home-property-investments").hidden=false;
   byId("property-investment-detail").hidden=false;
+  byId("home-held-property-cost").textContent=
+    historicalMoney.format(report.held_recorded_investment_cost_minor/100);
+  byId("home-held-property-context").textContent=
+    report.held_property_count+" held entries · purchase-cost register, not market value.";
+  byId("home-property-profit-share").textContent=
+    historicalMoney.format(report.owner_recorded_sale_profit_share_minor/100);
+  byId("home-property-profit-context").textContent=
+    report.sold_property_count+" sold entries · register allocation only, not confirmed cash.";
 }
 async function loadPropertyInvestments(){
   const epoch=++propertyRefreshEpoch;
@@ -1019,6 +1033,28 @@ function clearBankCsvEvidence() {
   byId("account-bank-csv-list").replaceChildren();
   byId("home-bank-csv-evidence").hidden=true;
   byId("account-bank-csv-section").hidden=true;
+  byId("home-latest-bank-balance").textContent="PKR —";
+  byId("home-latest-bank-context").textContent="No verified source statement available; current cash is unknown.";
+  byId("home-bank-profit").textContent="PKR —";
+  byId("home-bank-profit-context").textContent="No reconciled bank profit observation available.";
+}
+function renderHomeBankCsvMetrics(reports) {
+  // The newest source is shown, never sum possibly overlapping statements.
+  const latest=[...reports].sort((a,b)=>
+    b.statement_end.localeCompare(a.statement_end) ||
+    a.source_hmac.localeCompare(b.source_hmac))[0];
+  if(!latest) return;
+  byId("home-latest-bank-balance").textContent=
+    historicalMoney.format(latest.closing_minor/100);
+  byId("home-latest-bank-context").textContent=
+    "As of "+latest.statement_end+" · most recent CSV statement only · not today's cash.";
+  if(latest.classification){
+    byId("home-bank-profit").textContent=
+      historicalMoney.format(latest.classification.bank_profit_received_minor/100);
+    byId("home-bank-profit-context").textContent=
+      "Bank label in the "+latest.statement_start+"–"+latest.statement_end+
+      " statement · not total personal income.";
+  }
 }
 function renderBankCsvReportList(id,reports) {
   const list=byId(id);
@@ -1085,6 +1121,7 @@ async function loadBankCsvOverview() {
     if(!data.reports.length)return;
     renderBankCsvReportList("home-bank-csv-list",data.reports);
     renderBankCsvReportList("account-bank-csv-list",data.reports);
+    renderHomeBankCsvMetrics(data.reports);
     byId("home-bank-csv-evidence").hidden=false;
     byId("account-bank-csv-section").hidden=false;
   }catch{
@@ -1360,5 +1397,6 @@ byId("document-search").addEventListener("input",renderDocuments);
 refreshButton.addEventListener("click",async()=>{
   await refreshMetadata();
   await loadBankCsvOverview();
+  await loadPropertyInvestments();
 });
 void start();
