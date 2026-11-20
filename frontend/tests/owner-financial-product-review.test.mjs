@@ -4,10 +4,11 @@ import {readFileSync} from "node:fs";
 import vm from "node:vm";
 
 const read=n=>readFileSync(new URL("../"+n,import.meta.url),"utf8");
-function element(){return {children:[],hidden:true,textContent:"",
+function element(){return {children:[],hidden:true,textContent:"",handlers:{},
   append(...items){this.children.push(...items);},
   appendChild(item){this.children.push(item);},
-  replaceChildren(...items){this.children=[...items];}};
+  replaceChildren(...items){this.children=[...items];},
+  addEventListener(event,cb){this.handlers[event]=cb;}};
 }
 function harness(){
   const js=read("app.mjs"),a=js.indexOf("function renderOwnerReviewQueue(){"),
@@ -48,6 +49,8 @@ test("Home review queue highlights actual ambiguous entries without claiming sav
   const row=ids.get("home-review-list").children[0];
   assert.match(row.children[0].textContent,/PKR 24.00/);
   assert.match(row.children[1].textContent,/possible transfer/);
+  assert.equal(row.children[2].textContent,"Inspect bank entry");
+  assert.equal(typeof row.children[2].handlers.click,"function");
   ctx.periodEvidence.transactionSources=[];
   ctx.renderOwnerReviewQueue();
   assert.match(ids.get("home-review-list").children[0].textContent,/No pending entries/);
