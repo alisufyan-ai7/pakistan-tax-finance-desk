@@ -17,3 +17,74 @@ button:disabled{opacity:.55;cursor:wait}button.secondary{background:#e8eef5;colo
 .document-list li{padding:10px 0;border-bottom:1px solid #e4e9f1;overflow-wrap:anywhere}
 .document-list strong{display:block;font-size:14px;color:#1d3859}
 .document-list span{display:block;font-size:12px;color:#617488;margin-top:3px}
+
+
+/* Premium one-owner sign-in — no remote assets or third-party trackers. */
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#18334a;background:#eef3f6}
+body{
+  position:relative;isolation:isolate;background:
+    radial-gradient(ellipse 56% 70% at 10% 10%,rgba(36,141,128,.18),transparent 70%),
+    radial-gradient(ellipse 42% 55% at 85% 95%,rgba(75,110,151,.14),transparent 75%),
+    linear-gradient(145deg,#eaf2f3,#f8fafd 57%,#eef5f3);
+  padding:clamp(18px,4vw,40px);min-height:100dvh
+}
+body:before{
+  content:"";position:fixed;z-index:-1;right:-130px;top:-145px;
+  height:440px;width:440px;border:1px solid #4cb9aa20;border-radius:50%;
+  box-shadow:0 0 0 50px #32b8a409,0 0 0 100px #32b8a406;
+}
+body:after{
+  content:"PERSONAL CFO • SECURE OWNER ACCESS";
+  position:fixed;left:clamp(18px,4vw,42px);bottom:24px;
+  font-size:10px;color:#7b9ba1;letter-spacing:1.8px;font-weight:800
+}
+.panel{
+  border:1px solid #dde8e9;border-radius:25px;padding:clamp(26px,5vw,42px);
+  max-width:470px;box-shadow:0 25px 75px rgba(17,53,71,.12),0 3px 12px rgba(17,53,71,.03);
+  background:rgba(255,255,255,.98)
+}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:33px}
+.auth-brand-mark{
+  width:46px;height:46px;border-radius:15px;display:grid;place-items:center;
+  color:#fff;background:linear-gradient(145deg,#1aab98,#0f6e67);
+  box-shadow:0 10px 25px #15877939;font-size:26px
+}
+.auth-brand strong{display:block;font-size:20px;font-weight:800;letter-spacing:-.9px;color:#142e40}
+.auth-brand small{display:block;font-size:11px;color:#748b96;margin-top:2px}
+.eyebrow{color:#0d8374;font-weight:830;letter-spacing:1.8px;font-size:10px;display:flex;align-items:center;gap:8px}
+.auth-lock{display:inline-block;height:7px;width:7px;background:#17a589;color:transparent;border-radius:50%;box-shadow:0 0 0 4px #1da78a1a}
+h1{font-size:clamp(29px,5vw,37px);letter-spacing:-1.25px;line-height:1.12;margin:14px 0 12px;color:#122d43;font-weight:810}
+.intro{color:#667d8e;font-size:13px;line-height:1.72;margin:0 0 21px}
+label{color:#314f61;font-size:12px;font-weight:760;margin:16px 0 7px}
+input{
+  border:1px solid #d4e1e6;background:#f9fbfc;border-radius:11px;
+  min-height:51px;font-size:16px;color:#173a4b;padding:13px 15px;
+  transition:border-color .18s,box-shadow .18s,background .18s
+}
+input:hover{border-color:#a6ccc7}
+input:focus-visible{outline:none;border-color:#0a8a7a;box-shadow:0 0 0 4px #1ea9981a;background:#fff}
+button{
+  background:linear-gradient(115deg,#10786e,#0b6762);
+  box-shadow:0 9px 25px #0f7f7823;border-radius:12px;
+  min-height:52px;margin-top:24px;font-size:13px;letter-spacing:.1px;font-weight:790
+}
+button:hover:not(:disabled){background:linear-gradient(115deg,#0b6a61,#075b56);transform:translateY(-1px)}
+button:focus-visible,.back:focus-visible{outline:3px solid #68bdac;outline-offset:3px}
+button.secondary{background:#eaf4f2;color:#0c6a62;box-shadow:none;border:1px solid #d0e8e0}
+.feedback{min-height:20px;font-size:12px;line-height:1.6;color:#236f65;margin:12px 0}
+.note{
+  padding-top:18px;border-top:1px solid #e5ecef;font-size:11px;
+  color:#7d8e9d;line-height:1.65;margin-top:19px
+}
+.auth-footnote{font-size:11px;color:#8b9ba7;text-align:center;margin:18px 0 0}
+.google-panel{border-color:#d8e9e5;background:#f5faf8;border-radius:13px}
+.google-panel h3{color:#1c5355}
+.back{color:#087f72;font-weight:770;font-size:13px;display:inline-flex;margin-top:15px}
+@media(max-width:520px){
+  body{padding:16px;align-items:center}
+  body:after{display:none}
+  .panel{padding:26px 23px;border-radius:21px}
+  .auth-brand{margin-bottom:24px}
+  h1{font-size:33px}
+}
+@media(prefers-reduced-motion:reduce){button,input{transition:none}}
