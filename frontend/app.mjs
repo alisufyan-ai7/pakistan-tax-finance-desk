@@ -4,9 +4,9 @@
 import { summarizeSourceReview } from "./document-review-summary.mjs";
 import {safePeriod,periodContainsDate,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
 const byId = id => document.getElementById(id);
-const allowedViews = new Set(["home","documents","accounts","spending","investments","tax"]);
+const allowedViews = new Set(["home","documents","accounts","transactions","spending","investments","tax"]);
 const viewTitles = {
-  home:"Overview",documents:"Documents",accounts:"Accounts & balances",
+  home:"Overview",documents:"Documents",accounts:"Accounts & balances",transactions:"Transactions",
   spending:"Spending & bills",investments:"Investments",tax:"Tax & wealth",
 };
 const gate = byId("app-gate");
@@ -37,7 +37,8 @@ let reviewEditorNumber = 0;
 const reviewReadiness = byId("owner-review-readiness");
 
 // Owner-private evidence is held in RAM only and never survives session expiry.
-const periodEvidence = {bankReports:[],candidateGroups:[],registryGroups:[],properties:[]};
+const periodEvidence = {bankReports:[],candidateGroups:[],registryGroups:[],properties:[],transactionSources:[]};
+let transactionVisibleLimit=200;
 let financialPeriod = {mode:"all",value:"all"};
 let csrfToken = null;
 let connected = false;
@@ -65,6 +66,9 @@ function resetFinancialPeriodEvidence(){
   periodEvidence.candidateGroups=[];
   periodEvidence.registryGroups=[];
   periodEvidence.properties=[];
+  periodEvidence.transactionSources=[];
+  transactionVisibleLimit=200;
+  updateTransactionSourceChoices();
   updateFinancialPeriod();
 }
 function periodOptions(){
@@ -195,6 +199,7 @@ function renderFinancialPeriodEvidence(){
   byId("investment-period-coverage").textContent=
     "The period applies to dated bank candidates and recorded property sales. "+
     "Held-property costs and all-time partner/venture records below are not period market values.";
+  renderTransactionExplorer();
 }
 function go(view) {
   if (!allowedViews.has(view)) return;
@@ -1119,6 +1124,124 @@ function validBankCsvClassification(data,report) {
   return [...money,...counts].every(k=>sums[k]===data[k]);
 }
 
+function validBankCsvTransactionRows(tx,report){
+  if(!tx || tx.contract!=="personal_cfo_p7_reconciled_bank_csv_rows_v1" ||
+    tx.source_hmac!==report.source_hmac ||
+    tx.transaction_count!==report.transaction_count ||
+    tx.all_running_balances_reconciled!==true ||
+    tx.source_pinned_by_parent!==true ||
+    tx.source_description_account_references_masked!==true ||
+    tx.historical_only!==true || tx.current_available_balance_minor!==null ||
+    tx.personal_income_minor!==null || tx.personal_expenses_minor!==null ||
+    tx.all_rows_returned!==true ||
+    !Array.isArray(tx.rows) || tx.rows.length!==report.transaction_count ||
+    tx.rows.length>600)return false;
+  let running=report.opening_minor,credit=0,debit=0,last="";
+  const seen=new Set(),months=new Map();
+  const cats=new Set(["BANK_PROFIT","BANK_WITHHOLDING","BANK_CHARGE",
+    "TRANSFER_CANDIDATE","NEEDS_REVIEW"]);
+  for(const [i,row] of tx.rows.entries()){
+    if(!row || !HMAC_SHA.test(row.event_hmac) ||
+       row.source_hmac!==report.source_hmac ||
+       row.ordinal!==i+1 || seen.has(row.event_hmac) ||
+       !/^20[0-4][0-9]-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$/.test(row.date) ||
+       (last && row.date<last) || row.date<report.statement_start ||
+       row.date>report.statement_end || !["INBOUND","OUTBOUND"].includes(row.direction) ||
+       !Number.isSafeInteger(row.amount_minor) || row.amount_minor<=0 ||
+       !Number.isSafeInteger(row.balance_after_minor) ||
+       row.balance_after_minor<0 || !Number.isSafeInteger(row.ordinal) ||
+       typeof row.description!=="string" || row.description.length<1 ||
+       row.description.length>180 || !cats.has(row.category) ||
+       row.review_required!==["TRANSFER_CANDIDATE","NEEDS_REVIEW"].includes(row.category) ||
+       row.classified_as_personal_income!==false ||
+       row.classified_as_personal_expense!==false ||
+       row.investment_purpose_verified!==false)return false;
+    const incoming=row.direction==="INBOUND";
+    running+=incoming?row.amount_minor:-row.amount_minor;
+    if(running!==row.balance_after_minor)return false;
+    if(incoming)credit+=row.amount_minor;else debit+=row.amount_minor;
+    const m=row.date.slice(0,7);
+    months.set(m,(months.get(m)||0)+1);
+    last=row.date;seen.add(row.event_hmac);
+  }
+  return running===report.closing_minor &&
+    credit===report.gross_bank_credits_minor &&
+    debit===report.gross_bank_debits_minor &&
+    report.months.every(m=>months.get(m.month)===m.transaction_count) &&
+    months.size===report.months.length;
+}
+function updateTransactionSourceChoices(){
+  const picker=byId("transaction-source-filter");
+  const previous=picker.value||"all";
+  picker.replaceChildren();
+  const all=document.createElement("option");
+  all.value="all";all.textContent="All available CSV sources";
+  picker.appendChild(all);
+  for(const source of periodEvidence.transactionSources){
+    const option=document.createElement("option");
+    option.value=source.source_hmac;
+    option.textContent=source.source_name;
+    picker.appendChild(option);
+  }
+  picker.value=periodEvidence.transactionSources.some(s=>s.source_hmac===previous)
+    ?previous:"all";
+}
+function renderTransactionExplorer(){
+  const list=byId("transaction-rows");
+  list.replaceChildren();
+  const query=byId("transaction-search").value.trim().toLocaleLowerCase();
+  const direction=byId("transaction-direction-filter").value||"all";
+  const category=byId("transaction-category-filter").value||"all";
+  const source=byId("transaction-source-filter").value||"all";
+  const entries=periodEvidence.transactionSources.flatMap(report=>
+    report.transactions.rows.map(row=>({...row,source_name:report.source_name})));
+  const filtered=entries.filter(row=>
+    periodContainsDate(row.date,financialPeriod) &&
+    (direction==="all" || row.direction===direction) &&
+    (category==="all" || row.category===category) &&
+    (source==="all" || row.source_hmac===source) &&
+    (!query || [row.description,row.date,row.source_name,String(row.amount_minor/100)]
+      .some(text=>text.toLocaleLowerCase().includes(query))));
+  filtered.sort((a,b)=>b.date.localeCompare(a.date) ||
+    a.source_hmac.localeCompare(b.source_hmac) || b.ordinal-a.ordinal);
+  const categories={
+    BANK_PROFIT:"Bank-labelled profit",
+    BANK_WITHHOLDING:"Bank withholding tax",
+    BANK_CHARGE:"Verified bank fee",
+    TRANSFER_CANDIDATE:"Possible transfer · needs your classification",
+    NEEDS_REVIEW:"Purpose needs your classification",
+  };
+  for(const tx of filtered.slice(0,transactionVisibleLimit)){
+    const li=document.createElement("li");li.className="transaction-card";
+    const title=document.createElement("strong");
+    title.textContent=(tx.direction==="INBOUND"?"Money in ":"Money out ")+
+      historicalMoney.format(tx.amount_minor/100)+" · "+tx.description;
+    const date=document.createElement("small");
+    date.textContent=tx.date+" · "+categories[tx.category];
+    const evidence=document.createElement("small");
+    evidence.textContent="Bank: "+tx.source_name+" · statement row "+
+      tx.ordinal+" · historical after-transaction balance "+
+      historicalMoney.format(tx.balance_after_minor/100)+
+      " · SHA-verified source, no purpose assumed";
+    li.append(title,date,evidence);
+    list.appendChild(li);
+  }
+  const allAvailable=entries.length>0;
+  byId("transactions-coverage").textContent=
+    filtered.length+" matching transactions · "+periodTitle(financialPeriod)+
+    " · "+entries.length+" available source-proved CSV rows."+
+    (allAvailable
+      ? " More accounts and unimported PDF-only rows may be missing; transfers are not expenses."
+      : " Transaction rows are not active or not yet supported; no empty-month claim.")+
+    (filtered.length>transactionVisibleLimit
+      ? " Showing the first "+transactionVisibleLimit+"; select Show more or refine filters.":"");
+  byId("transaction-show-more").hidden=filtered.length<=transactionVisibleLimit;
+  if(!filtered.length){
+    const empty=document.createElement("li");
+    empty.textContent="No verified CSV rows match this selection. This does not prove no transactions occurred.";
+    list.appendChild(empty);
+  }
+}
 function validBankCsvSource(result) {
   if (!result || result.contract!=="personal_cfo_p6_reconciled_bank_csv_v1" ||
       result.source_type!=="BANK_CSV_EXACT_RUNNING_BALANCES" ||
@@ -1163,7 +1286,9 @@ function validBankCsvSource(result) {
     count===result.transaction_count && lastBalance===result.closing_minor &&
     result.statement_end.startsWith(last) &&
     (result.classification===undefined ||
-      validBankCsvClassification(result.classification,result));
+      validBankCsvClassification(result.classification,result)) &&
+    (result.transactions===undefined ||
+      validBankCsvTransactionRows(result.transactions,result));
 }
 
 function validOfflineBahlPdfOverview(bundle){
@@ -1351,6 +1476,9 @@ async function loadBankCsvOverview() {
   const epoch=++bankCsvRefreshEpoch;
   clearBankCsvEvidence();
   periodEvidence.bankReports=[];
+  periodEvidence.transactionSources=[];
+  transactionVisibleLimit=200;
+  updateTransactionSourceChoices();
   updateFinancialPeriod();
   if(!safeToken(csrfToken))return;
   try {
@@ -1358,6 +1486,8 @@ async function loadBankCsvOverview() {
     if(epoch!==bankCsvRefreshEpoch || !safeToken(csrfToken))return;
     if(!validBankCsvOverview(data))throw Error("Untrusted source-backed bank overview");
     periodEvidence.bankReports=data.reports;
+    periodEvidence.transactionSources=data.reports.filter(r=>r.transactions);
+    updateTransactionSourceChoices();
     updateFinancialPeriod();
     if(data.offline_pdf && data.offline_pdf.reports.length)
       renderOfflineBahlPdfEvidence(data.offline_pdf);
@@ -1648,6 +1778,17 @@ byId("finance-period-value").addEventListener("change",()=>{
   }
 });
 updateFinancialPeriod();
+for(const id of ["transaction-search","transaction-direction-filter",
+    "transaction-category-filter","transaction-source-filter"]){
+  byId(id).addEventListener(id==="transaction-search"?"input":"change",()=>{
+    transactionVisibleLimit=200;
+    renderTransactionExplorer();
+  });
+}
+byId("transaction-show-more").addEventListener("click",()=>{
+  transactionVisibleLimit+=200;
+  renderTransactionExplorer();
+});
 byId("document-search").addEventListener("input",renderDocuments);
 refreshButton.addEventListener("click",async()=>{
   await refreshMetadata();
