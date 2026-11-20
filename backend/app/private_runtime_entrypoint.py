@@ -141,8 +141,11 @@ def create_private_runtime_entrypoint():
     if csv_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Owner bank CSV mode invalid")
     csv_on = csv_mode == "1"
-    if csv_on and (not content_on or not preflight_on):
-        raise PrivateRuntimeSwitchBlocked("Bank CSV requires authenticated original source verification")
+    # Bank CSV uses the same approved read-only Google-content grant and pinned
+    # SHA256 reader directly. The P5A 3-file UI preflight is optional and must
+    # not block a separately verified text-only, owner-authenticated adapter.
+    if csv_on and not content_on:
+        raise PrivateRuntimeSwitchBlocked("Bank CSV requires authenticated read-only content grant")
     historical_mode = os.getenv("P5H_OWNER_HISTORICAL_BAHL_RUNTIME", "")
     if historical_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Historical bank route mode invalid")
