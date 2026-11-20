@@ -154,7 +154,7 @@ async function readStdinLimited(maxBytes = 5_700_000) {
 async function main() {
   if (process.env.P5H_REMOTE_VM_WORKER_ACTIVE !== "1" ||
       process.env.P5H_REMOTE_VM_G3_REVIEWED !== "1" ||
-      !process.env.RAILWAY_API_TOKEN ||
+      !process.env.RAILWAY_TOKEN ||
       !process.env.RAILWAY_ENVIRONMENT_ID) {
     throw new Error("P5H_RUNTIME_DISABLED");
   }
