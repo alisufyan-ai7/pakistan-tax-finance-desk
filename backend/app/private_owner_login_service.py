@@ -125,7 +125,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
                                                    source_preflight: bool = False,
                                                    review_comments: bool = False,
                                                    historical_bahl: bool = False,
-                                                   bank_csv: bool = False) -> FastAPI:
+                                                   bank_csv: bool = False,
+                                                   property_inventory: bool = False) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
@@ -162,6 +163,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             state["engine"] = None
             engine.dispose()
 
+    if property_inventory and not google_content:
+        raise PrivateOwnerLoginServiceBlocked("Property inventory requires approved content OAuth")
     if bank_csv and not google_content:
         raise PrivateOwnerLoginServiceBlocked("Bank CSV requires approved content grant")
     if historical_bahl and (not google_content or not source_preflight):
@@ -187,6 +190,7 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             enable_review_comments=review_comments,
             enable_historical_bahl=historical_bahl,
             enable_bank_csv=bank_csv,
+            enable_property_inventory=property_inventory,
         )
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,
