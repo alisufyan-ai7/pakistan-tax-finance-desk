@@ -38,12 +38,13 @@
       <p id="owner-install-help" class="status" role="status" hidden></p>
       <p id="app-status" class="status" role="status" aria-live="polite">Checking your connection…</p>
       <section id="view-home" class="view" aria-labelledby="view-heading">
-        <div class="metrics">
-          <article class="metric"><span>Available bank balances</span><strong>PKR —</strong><small>Not verified from original statements</small></article>
-          <article class="metric"><span>Income this month</span><strong>PKR —</strong><small>Not verified from transaction evidence</small></article>
-          <article class="metric"><span>Expenses this month</span><strong>PKR —</strong><small>Coverage not established</small></article>
-          <article class="metric"><span>Investments & returns</span><strong>PKR —</strong><small>Evidence and valuation pending</small></article>
+        <div class="metrics" id="home-source-evidence-metrics" aria-label="Actual verified evidence from your approved sources">
+          <article class="metric"><span>Latest CSV statement balance</span><strong id="home-latest-bank-balance">PKR —</strong><small id="home-latest-bank-context">Checking original bank CSV. Historical only, not cash available today.</small></article>
+          <article class="metric"><span>Bank-labelled profit</span><strong id="home-bank-profit">PKR —</strong><small id="home-bank-profit-context">Source-verified bank profit only; not total income.</small></article>
+          <article class="metric"><span>Held property purchase cost</span><strong id="home-held-property-cost">PKR —</strong><small id="home-held-property-context">Recorded cost in your property register; not market value.</small></article>
+          <article class="metric"><span>Owner's recorded sold-property profit share</span><strong id="home-property-profit-share">PKR —</strong><small id="home-property-profit-context">Recorded sale profits, not bank-confirmed cash received.</small></article>
         </div>
+        <p class="home-unknown-facts">Not yet established from complete evidence: <strong>today's total available cash, this month's classified income and spending, outstanding investment principal, and expected future returns.</strong> Unverified amounts are not presented as zero.</p>
         <section id="home-historical-evidence" class="panel" hidden aria-labelledby="home-historical-title">
           <div class="panel-heading">
             <div><span class="micro">VERIFIED SOURCE OBSERVATIONS</span><h3 id="home-historical-title">Historical bank statements</h3></div>
