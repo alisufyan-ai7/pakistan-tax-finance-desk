@@ -9,6 +9,7 @@ Requires separate G3 sandbox review before any production activation.
 from __future__ import annotations
 
 import base64
+from datetime import date
 import json
 import os
 from pathlib import Path
@@ -70,6 +71,83 @@ sys.stdout.write(json.dumps(result,sort_keys=True,separators=(",",":")))
 '''
 
 
+
+# This exact closed contract also applies to a future isolated VM result.
+# Never accept additional labels, forged money, or an isolated child claiming
+# to have verified investment profit, current balances, or owner identity.
+_RECONCILED_KEYS = frozenset((
+    "contract", "bank", "statement_start", "statement_end",
+    "opening_minor", "closing_minor", "gross_bank_debits_minor",
+    "gross_bank_credits_minor", "transaction_count", "page_count",
+    "printed_closing_matches_transactions",
+    "printed_gross_totals_match_transactions",
+    "transaction_running_balances_match",
+    "current_available_balance_minor", "income_minor", "expenses_minor",
+    "own_transfers_identified", "source_independent_account_ownership_verified",
+    "all_account_coverage_verified", "real_file_sha256_bound_by_caller",
+    "original_source_modified", "owner_review_required", "status",
+    "isolated_process_preview", "financial_values_verified",
+    "gross_bank_movements_only",
+))
+
+
+def _validate_child_result(parsed: object) -> dict:
+    """Require a bounded, exact, historically labelled parser result."""
+    if type(parsed) is not dict:
+        raise ValueError()
+    status = parsed.get("status")
+    if status in ("PASSWORD_REQUIRED", "PASSWORD_REJECTED"):
+        if (set(parsed) != {"status", "financial_values_verified"}
+            or parsed["financial_values_verified"] is not False):
+            raise ValueError()
+        return parsed
+    if set(parsed) != _RECONCILED_KEYS:
+        raise ValueError()
+    required_true = (
+        "printed_closing_matches_transactions",
+        "printed_gross_totals_match_transactions",
+        "transaction_running_balances_match", "owner_review_required",
+        "isolated_process_preview", "gross_bank_movements_only",
+    )
+    required_false = (
+        "own_transfers_identified",
+        "source_independent_account_ownership_verified",
+        "all_account_coverage_verified", "real_file_sha256_bound_by_caller",
+        "original_source_modified", "financial_values_verified",
+    )
+    if (status != "SOURCE_STATEMENT_RECONCILED"
+        or parsed["contract"] != "personal_cfo_bahl_reconciled_statement_v1"
+        or parsed["bank"] != "Bank AL Habib Limited"
+        or any(parsed[k] is not True for k in required_true)
+        or any(parsed[k] is not False for k in required_false)
+        or any(parsed[k] is not None for k in (
+            "income_minor", "expenses_minor", "current_available_balance_minor",
+        ))):
+        raise ValueError()
+    money = (
+        "opening_minor", "closing_minor",
+        "gross_bank_debits_minor", "gross_bank_credits_minor",
+    )
+    if any(type(parsed[k]) is not int or not 0 <= parsed[k] <= 10**15 for k in money):
+        raise ValueError()
+    if (type(parsed["transaction_count"]) is not int
+        or not 1 <= parsed["transaction_count"] <= 5000
+        or type(parsed["page_count"]) is not int
+        or not 1 <= parsed["page_count"] <= 100
+        or parsed["opening_minor"] + parsed["gross_bank_credits_minor"]
+        - parsed["gross_bank_debits_minor"] != parsed["closing_minor"]):
+        raise ValueError()
+    if (type(parsed["statement_start"]) is not str
+        or type(parsed["statement_end"]) is not str):
+        raise ValueError()
+    start = date.fromisoformat(parsed["statement_start"])
+    end = date.fromisoformat(parsed["statement_end"])
+    if (start.isoformat() != parsed["statement_start"]
+        or end.isoformat() != parsed["statement_end"]
+        or start > end or (end - start).days > 366):
+        raise ValueError()
+    return parsed
+
 def _limits():
     import resource
     resource.setrlimit(resource.RLIMIT_CPU,(8,8))
@@ -121,25 +199,7 @@ def inspect_private_bahl_pdf(
             )
         if result.returncode != 0 or len(result.stdout)>_MAX_JSON:
             raise ValueError()
-        parsed=json.loads(result.stdout)
-        if type(parsed) is not dict:
-            raise ValueError()
-        status=parsed.get("status")
-        if status in ("PASSWORD_REQUIRED","PASSWORD_REJECTED"):
-            if set(parsed)!={"status","financial_values_verified"} or parsed["financial_values_verified"] is not False:
-                raise ValueError()
-            return parsed
-        if (status!="SOURCE_STATEMENT_RECONCILED"
-            or parsed.get("contract")!="personal_cfo_bahl_reconciled_statement_v1"
-            or parsed.get("financial_values_verified") is not False
-            or parsed.get("gross_bank_movements_only") is not True
-            or parsed.get("owner_review_required") is not True
-            or parsed.get("income_minor") is not None
-            or parsed.get("expenses_minor") is not None
-            or parsed.get("current_available_balance_minor") is not None
-            or parsed.get("real_file_sha256_bound_by_caller") is not False):
-            raise ValueError()
-        return parsed
+        return _validate_child_result(json.loads(result.stdout))
     except Exception:
         raise PrivateBahlPdfWorkerBlocked(
             "Bank PDF requires isolated password, format or reconciliation review"
