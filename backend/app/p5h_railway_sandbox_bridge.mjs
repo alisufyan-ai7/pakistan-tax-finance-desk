@@ -158,6 +158,23 @@ export async function runIsolatedSandbox(envelope, Sandbox, {probeOnly = false} 
       );
     }
     await sandbox.files.write("/srv/backend/app/__init__.py", "", {mode: 0o444});
+    // Each step uses the SAME full no-network, read-only bwrap policy.
+    // Fixed output markers distinguish OS namespace launch failure from
+    // Python/pypdf startup without printing host/VM stderr or secrets.
+    stage = "GUEST_JAIL_BOOT";
+    const boot = requireResult(await sandbox.exec(
+      "bash /srv/backend/p5h_vm_launcher.sh jail-boot",
+      {timeoutSec: 16, ephemeral: true, maxOutputBytes: 64},
+    ), 64);
+    if (boot !== "P5H_JAIL_BOOTED\n") throw new Error("Jail boot contract failed");
+    stage = "GUEST_PYTHON_IMPORT";
+    const imported = requireResult(await sandbox.exec(
+      "bash /srv/backend/p5h_vm_launcher.sh python-import",
+      {timeoutSec: 16, ephemeral: true, maxOutputBytes: 64},
+    ), 64);
+    if (imported !== "P5H_PYPDF_IMPORTED\n") {
+      throw new Error("In-jail pypdf import contract failed");
+    }
     stage = "GUEST_PROBE";
     const probeText = requireResult(await sandbox.exec(
       "bash /srv/backend/p5h_vm_launcher.sh probe",
