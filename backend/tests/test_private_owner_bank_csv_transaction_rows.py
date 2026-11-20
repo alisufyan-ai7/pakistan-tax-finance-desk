@@ -28,11 +28,13 @@ def private_fixture():
 def synthetic_hash(kind,text):
     return hashlib.sha256((kind+":"+text).encode()).hexdigest()
 
-def project(raw=None,report=None):
+def project(raw=None,report=None,expected_sha=None):
     raw=raw if raw is not None else private_fixture()
     proof=report if report is not None else reconcile_private_bank_csv(raw)
+    expected_sha=expected_sha or hashlib.sha256(private_fixture()).hexdigest()
     return project_reconciled_bank_csv_transactions(
-        raw,report=proof,source_hmac=SOURCE,hmac_index=synthetic_hash)
+        raw,report=proof,source_hmac=SOURCE,
+        expected_source_sha256=expected_sha,hmac_index=synthetic_hash)
 
 def test_owner_rows_are_exact_reconciled_and_masked_with_stable_source_id():
     x=project()
@@ -79,10 +81,13 @@ def test_source_proof_and_hmac_are_required():
         project(data,{**proof,"all_running_balances_reconciled":False})
     with pytest.raises(PrivateBankCsvBlocked):
         project_reconciled_bank_csv_transactions(
-            data,report=proof,source_hmac="INVALID",hmac_index=synthetic_hash)
+            data,report=proof,source_hmac="INVALID",
+            expected_source_sha256=hashlib.sha256(data).hexdigest(),hmac_index=synthetic_hash)
     with pytest.raises(PrivateBankCsvBlocked):
         project_reconciled_bank_csv_transactions(
-            data,report=proof,source_hmac=SOURCE,hmac_index=lambda a,b:"NOT-HMAC")
+            data,report=proof,source_hmac=SOURCE,
+            expected_source_sha256=hashlib.sha256(data).hexdigest(),
+            hmac_index=lambda a,b:"NOT-HMAC")
 
 def test_bounded_projection_rejects_instead_of_silently_truncating():
     data=private_fixture()
