@@ -26,6 +26,7 @@ jobs:
           node --check frontend/demo-data.mjs
           node --check frontend/owner-login.mjs
           node --check frontend/app.mjs
+          node --check frontend/finance-period.mjs
           node --check frontend/document-review-summary.mjs
       - name: Test synthetic owner dashboard contracts
         run: node --test frontend/tests/*.test.mjs
