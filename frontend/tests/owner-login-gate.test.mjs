@@ -22,7 +22,7 @@ test("exact three public login routes are disabled unless independently enabled"
   assert.ok(conf.includes('set $p1ak_owner_ingress "${P1AK_OWNER_INGRESS_ENABLED}";'));
   assert.ok(conf.includes('set $p1ak_gateway_token "${P1Q_PRIVATE_GATEWAY_SHARED_TOKEN}";'));
   assert.ok(!conf.includes('location /api/'));
-  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 15); // review status/comment/history gated by owner MFA // approved owner-only source SHA preflight is a separately gated 11th exact route // 8 existing + 2 separately gated content OAuth
+  assert.equal([...blocks.keys()].filter(k => k.startsWith("/api/")).length, 16); // review status/comment/history gated by owner MFA // approved owner-only source SHA preflight is a separately gated 11th exact route // 8 existing + 2 separately gated content OAuth
   for (const [path, [method, internal]] of publicRoutes) {
     const b = blocks.get(path);
     assert.ok(b, path);
