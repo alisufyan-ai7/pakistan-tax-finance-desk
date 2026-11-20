@@ -100,12 +100,14 @@ def reconcile_property_inventory_xlsx(data: bytes) -> dict:
             cells[key]=(value,formula)
         def value(key):
             return cells.get(key,(None,None))[0]
-        if (value("A1")!="Inventories Purchase/Sales for Ali Sufyan Sb"
+        if (not isinstance(value("A1"),str)
+            or not value("A1").startswith("Inventories Purchase/Sales for ")
+            or not 35<=len(value("A1"))<=120
             or value("A2")!="Ser. #" or value("B2")!="Buying"
             or value("D2")!="Selling" or value("B125")!="Available Investment"
             or value("C125")!="Total Profit Earned Yet"
-            or value("D125")!="60% Ali Sufyan Sb"
-            or value("E125")!="40% Shahid Swati"):
+            or not isinstance(value("D125"),str) or not value("D125").startswith("60% ")
+            or not isinstance(value("E125"),str) or not value("E125").startswith("40% ")):
             raise ValueError()
         assets=[]
         held_cost=profit_all=profit_owner=profit_partner=0
