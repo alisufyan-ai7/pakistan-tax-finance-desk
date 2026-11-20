@@ -22,6 +22,13 @@ const historicalReportList = byId("historical-bahl-reports");
 const historicalReadiness = byId("historical-bahl-readiness");
 const historicalBankReports = new Map();
 let nextSourceBatch = 0;
+let sourceCheckedCount = 0;
+let sourceExpectedTotal = null;
+let sourceScanActive = false;
+let sourceScanCancelled = false;
+let sourceScanVersion = 0;
+const seenSourceHmacs = new Set();
+const MAX_SOURCE_BATCHES_PER_CLICK = 12; // up to 36 sources, avoid unbounded Drive traffic
 let ownerReviewEnabled = false;
 let reviewEditorNumber = 0;
 const reviewReadiness = byId("owner-review-readiness");
@@ -63,6 +70,12 @@ function rejectSession() {
   csrfToken = null;
   items = [];
   nextSourceBatch = 0;
+  sourceCheckedCount = 0;
+  sourceExpectedTotal = null;
+  seenSourceHmacs.clear();
+  sourceScanCancelled = true;
+  sourceScanVersion += 1;
+  byId("cancel-original-check").hidden = true;
   ownerReviewEnabled = false;
   hashResults.replaceChildren();
   historicalBankReports.clear();
@@ -250,6 +263,20 @@ async function refreshMetadata() {
     const validated = validateSnapshot(data);
     // Validate all classifications before replacing a previously good view.
     const review = summarizeSourceReview(validated);
+    // A newly accepted inventory may have changed source identities/versions.
+    // Never leave old pinned bytes or historical figures visible after refresh.
+    nextSourceBatch = 0;
+    sourceCheckedCount = 0;
+    sourceExpectedTotal = null;
+    seenSourceHmacs.clear();
+    sourceScanVersion += 1;
+    sourceScanCancelled = true;
+    hashResults.replaceChildren();
+    historicalBankReports.clear();
+    renderHistoricalBankReports();
+    hashStatus.textContent =
+      "Drive metadata refreshed. Recheck original documents to verify current file bytes.";
+    checkOriginals.textContent = "Check original documents";
     items = validated;
     loadedAt = new Date();
     renderDocuments();
@@ -666,55 +693,108 @@ function buildHistoricalBankAction(entry) {
   frame.append(run,feedback,passwordArea);
   return frame;
 }
+// One owner action verifies up to 36 originals sequentially. Server decides
+// which 3 sources to read in each batch; browser sends ONLY an ordinal index.
+// Every read re-verifies the pinned original, and nothing is cached persistently.
+byId("cancel-original-check").addEventListener("click",()=>{
+  sourceScanCancelled = true;
+  byId("cancel-original-check").disabled = true;
+  hashStatus.textContent = "Stopping after the current private file batch…";
+});
 checkOriginals.addEventListener("click",async()=>{
-  if (!safeToken(csrfToken) || checkOriginals.hidden) return;
+  if (!safeToken(csrfToken) || checkOriginals.hidden || sourceScanActive) return;
+  sourceScanActive=true;
+  sourceScanCancelled=false;
+  const version=sourceScanVersion;
   checkOriginals.disabled = true;
+  refreshButton.disabled = true;
+  const cancel=byId("cancel-original-check");
+  cancel.hidden=false;
+  cancel.disabled=false;
   hashStatus.textContent = "Checking original bytes in the approved Drive folder…";
   try {
-    const batch=nextSourceBatch;
-    const response=await fetch("/api/drive/content/source/preflight",{
-      ...requestOptions,mode:"cors",method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
-      body:JSON.stringify({batch_index:batch}),
-    });
-    if (response.status===401) { rejectSession(); return; }
-    if (!response.ok) throw Error("Private original preflight unavailable");
-    const data=await response.json();
-    if (!validSourcePreflightResult(data,batch)) throw Error("Invalid source proof");
-    if (batch===0) {
-      hashResults.replaceChildren();
-      historicalBankReports.clear();
-      renderHistoricalBankReports();
-    }
-    for (const entry of data.results) {
-      const li=document.createElement("li");
-      const name=document.createElement("strong");
-      name.textContent=entry.source_name;
-      const state=document.createElement("small");
-      state.textContent=entry.byte_hash_verified
-        ? "Original bytes SHA-256 verified · document analysis pending"
-        : ({
-            NEEDS_SIZE_REVIEW:"Size unavailable; manual review",
-            OVERSIZED_ISOLATED_REVIEW:"Exceeds current safe importer limit",
-            UNSUPPORTED_FORMAT_REVIEW:"Unsupported file type; manual review",
-            READ_OR_REVISION_REVIEW:"Source version/authorization requires review",
-          }[entry.state] || "Original requires format review");
-      li.append(name,state);
-      if (entry.byte_hash_verified && BAHL_FILE.test(entry.source_name)) {
-        li.appendChild(buildHistoricalBankAction(entry));
+    for (let n=0; n<MAX_SOURCE_BATCHES_PER_CLICK; n++) {
+      if(sourceScanCancelled) break;
+      const batch=nextSourceBatch;
+      const response=await fetch("/api/drive/content/source/preflight",{
+        ...requestOptions,mode:"cors",method:"POST",
+        headers:{"Content-Type":"application/json","X-CSRF-Token":csrfToken},
+        body:JSON.stringify({batch_index:batch}),
+      });
+      if (version!==sourceScanVersion) return;
+      if (response.status===401) { rejectSession(); return; }
+      if (!response.ok) throw Error("Private original preflight unavailable");
+      const data=await response.json();
+      if (version!==sourceScanVersion || !safeToken(csrfToken)) return;
+      if (!validSourcePreflightResult(data,batch) ||
+          (data.next_batch!==null && data.results.length===0))
+        throw Error("Invalid source proof");
+      if (batch===0) {
+        hashResults.replaceChildren();
+        historicalBankReports.clear();
+        renderHistoricalBankReports();
+        seenSourceHmacs.clear();
+        sourceExpectedTotal=data.total_source_files;
+        sourceCheckedCount=0;
       }
-      if (ownerReviewEnabled) li.appendChild(buildPrivateReviewEditor(entry.source_hmac));
-      hashResults.appendChild(li);
+      if (data.total_source_files!==sourceExpectedTotal ||
+          data.results.some(entry=>seenSourceHmacs.has(entry.source_hmac))) {
+        throw Error("Folder inventory changed during verification");
+      }
+      for (const entry of data.results) {
+        seenSourceHmacs.add(entry.source_hmac);
+        const li=document.createElement("li");
+        const name=document.createElement("strong");
+        name.textContent=entry.source_name;
+        const state=document.createElement("small");
+        state.textContent=entry.byte_hash_verified
+          ? "Original bytes SHA-256 verified · document analysis pending"
+          : ({
+              NEEDS_SIZE_REVIEW:"Size unavailable; manual review",
+              OVERSIZED_ISOLATED_REVIEW:"Exceeds current safe importer limit",
+              UNSUPPORTED_FORMAT_REVIEW:"Unsupported file type; manual review",
+              READ_OR_REVISION_REVIEW:"Source version/authorization requires review",
+            }[entry.state] || "Original requires format review");
+        li.append(name,state);
+        if (entry.byte_hash_verified && BAHL_FILE.test(entry.source_name)) {
+          li.appendChild(buildHistoricalBankAction(entry));
+        }
+        if (ownerReviewEnabled) li.appendChild(buildPrivateReviewEditor(entry.source_hmac));
+        hashResults.appendChild(li);
+      }
+      sourceCheckedCount+=data.results.length;
+      nextSourceBatch=data.next_batch===null?0:data.next_batch;
+      // Individual source receipts, NOT an atomic whole-folder financial audit.
+      hashStatus.textContent="Checked "+sourceCheckedCount+" of "+
+        data.total_source_files+
+        " originals in this session. No file bytes or financial amounts returned to the browser.";
+      if(data.next_batch===null) {
+        hashStatus.textContent+=" All available batches visited; source versions may change between checks.";
+        break;
+      }
     }
-    nextSourceBatch=data.next_batch===null?0:data.next_batch;
-    checkOriginals.textContent=data.next_batch===null
-      ? "Recheck original documents":"Check next source batch";
-    hashStatus.textContent="Checked "+data.results.length+
-      " originals from a complete "+data.total_source_files+
-      "-file inventory. No private document bytes or financial amounts were returned.";
+    if(sourceScanCancelled && version===sourceScanVersion)
+      hashStatus.textContent="Paused after "+sourceCheckedCount+
+        " original-file checks. Select Continue to resume; no data was stored.";
+    if(version===sourceScanVersion)
+      checkOriginals.textContent=nextSourceBatch===0
+        ? "Recheck original documents" : "Continue original-file verification";
   } catch {
-    hashStatus.textContent="Original-file verification unavailable. Existing Drive metadata and consent remain unchanged.";
-  } finally {checkOriginals.disabled=false;}
+    if(version===sourceScanVersion) {
+      hashStatus.textContent="Original-file verification stopped after "+
+        sourceCheckedCount+" checks; retry the current batch or review your source connection. Results on screen are only individual receipts.";
+      checkOriginals.textContent=nextSourceBatch===0
+        ? "Check original documents" : "Continue original-file verification";
+    }
+  } finally {
+    if(version===sourceScanVersion) {
+      sourceScanActive=false;
+      checkOriginals.disabled=false;
+      refreshButton.disabled=false;
+      cancel.hidden=true;
+      cancel.disabled=false;
+    }
+  }
 });
 
 async function start() {
