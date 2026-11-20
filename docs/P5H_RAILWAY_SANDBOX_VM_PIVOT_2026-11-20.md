@@ -37,3 +37,20 @@ A new Railway Sandbox is metered at VM rates, **$50/GB RAM-month + $50/vCPU-mont
 ## Ownership
 
 Track operational outcome in [GitHub issue #222](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/222) and [lean P6 release plan](P6_PRIVATE_OWNER_MVP_MINIMUM_RELEASE_2026-11-20.md). Do not ask the owner to repeat the failed standard-container probe. Bank reader is **not live** until later explicit acceptance.
+
+## First approved metered VM — executed and deleted; result is a script preflight failure
+
+**20 November 2026, operator-provided authenticated Railway CLI output.** Under explicit approval for exactly one metered test VM, a local Mac operator ran `personal_cfo_railway_sandbox_once.sh` against Personal CFO `development`. A VM was actually created with ID `4bd59b74-8849-4c65-b8ab-cf90ba5d78f1` (ID is not a secret). The tool reported:
+
+```json
+{"contract":"personal_cfo_one_time_railway_vm_isolation_v1","sandbox_synthetic_smoke_passed":false,"reason":"UNSUPPORTED_PYTHON_PATH"}
+{"sandbox_destroyed_verified":true}
+```
+
+**Precise finding:** The v1 shell checked `PYTHON_BIN="$(command -v python3)"` and unconditionally rejected a Python executable that does not begin with `/usr/` or `/bin/`. Railway's isolated VM **did provide** a `python3` executable (otherwise it would emit `PYTHON_UNAVAILABLE`), but its chosen executable path did not satisfy that v1 allowlist. The test **stopped before bubblewrap ran**, so it is **not evidence** that VM kernel user/network namespaces are unavailable. The actual executable location and symlink target were neither captured nor required. No owner PDFs, bank passwords, Drive credentials, database credentials or source files were processed. Destruction was explicitly requested by the script and its absence from the active VM list was verified. No VM is running as part of this attempt.
+
+**Corrected v2**: The test is now interpreter-path-independent for the **OS-jail kernel smoke**. It uses a fixed trusted `/usr/bin/bash` ELF (or a `/bin/bash` symlink resolving into `/usr`) and runs fixed synthetic Bash-only checks within the **unchanged, fully enforced** `bwrap --unshare-all` jail; `/usr` and libraries mounted read-only, ephemeral root and procfs, **no** `/etc`, `/home`, `/root`, `/var`, `/opt` or project secret mount, `--clearenv`. Checks in the child include failed `/dev/tcp` connection, only loopback interfaces in the fresh `/proc/net/dev`, host-path concealment, attempted `/usr` write denial **plus** read-only `/proc/self/mountinfo` record, and absence of known sensitive environment names. All six constant booleans must be true. `python3` runs **outside** the jailed subprocess only to validate fixed JSON, so an arbitrary VM Python alias cannot block testing Linux sandbox compatibility. This **does not yet prove the PDF worker Python environment or pypdf import**; those remain separate gates. When unsupported, fail closed with `TRUSTED_SHELL_UNAVAILABLE` or `JAIL_CANNOT_START`, not an unjailed fallback.
+
+Verified offline (NO VM created): `bash -n` for both shell files, plus a synthetic mocked `railway` CLI and `bwrap` running the full one-VM cleanup script: both success and intentional jailed-launch failure returned the expected **fixed JSON**, called exact-ID destroy and verified deletion. These are **mock tests**, not a live guest kernel security attestation. SHA256 of the distributed v2 shell is `a2cba2783e2c5c6ec648431f7aa5e71c51c7aa70b10269307e62d3bd5a27167f` and its output contract is `personal_cfo_one_time_railway_vm_isolation_v2`.
+
+**Authorization boundary:** The owner's first authorization was for **exactly one** metered VM, now consumed. Do not run v2, create/retry/fork a VM or incur another charge until the owner separately authorizes **one additional** short-lived metered synthetic-only VM. A new successful OS-jail smoke does **not** authorize real PDF import or change production flags. Keep read-only Drive originals unchanged and all live historical bank processing OFF.
