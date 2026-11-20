@@ -4,7 +4,7 @@ What changed, why it matters for the owner's smallest real financial use case, a
 
 ## Lessons learned — mandatory check
 
-- [ ] Read [docs/LESSONS_LEARNED.md](../blob/main/docs/LESSONS_LEARNED.md) before this change; relevant LL rules applied.
+- [ ] Read [docs/LESSONS_LEARNED.md](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/blob/main/docs/LESSONS_LEARNED.md) before this change; relevant LL rules applied.
 - [ ] This PR contains a new reusable lesson or corrects an existing one: updated the canonical LL entry and linked its evidence **OR** write **"No new lesson"** with a short reason in this PR.
 - [ ] No unnecessary owner Terminal tasks, non-consented billable resources, weakened source privacy or inaccurate financial claims.
 
