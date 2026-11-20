@@ -11,6 +11,7 @@ sensitive owner-only evidence; never log or expose this payload anonymously.
 from __future__ import annotations
 
 import csv
+import hashlib
 from datetime import datetime
 import io
 import re
@@ -53,7 +54,8 @@ def _kind(text, credit, debit):
     return "NEEDS_REVIEW"
 
 def project_reconciled_bank_csv_transactions(
-    data: bytes, *, report: dict, source_hmac: str, hmac_index,
+    data: bytes, *, report: dict, source_hmac: str,
+    expected_source_sha256: str, hmac_index,
 ) -> dict:
     """Return 1–600 dated rows ONLY after independent source proof.
 
@@ -68,9 +70,16 @@ def project_reconciled_bank_csv_transactions(
         or report.get("all_running_balances_reconciled") is not True
         or report.get("printed_closing_reconciled") is not True
         or type(source_hmac) is not str or _HMAC.fullmatch(source_hmac) is None
+        or type(expected_source_sha256) is not str or
+          _HMAC.fullmatch(expected_source_sha256) is None
         or not callable(hmac_index)):
         raise PrivateBankCsvBlocked("Source proof required before owner row view")
     try:
+        # A historical arithmetic proof alone cannot prove an unchanged
+        # transaction narration. Bind projection to the exact byte-level
+        # original pinned by the authenticated Google Drive adapter.
+        if hashlib.sha256(data).hexdigest()!=expected_source_sha256:
+            raise ValueError()
         rows=list(csv.reader(io.StringIO(data.decode("utf-8-sig"),
                                          newline=""),strict=True))
         count=report["transaction_count"]
