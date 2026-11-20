@@ -121,3 +121,21 @@
 .investment-venture-list small{color:#63778b;font-size:11px}
 .investment-position-card summary{cursor:pointer;color:#24537d;font-weight:700;min-height:44px;display:flex;align-items:center}
 @media(max-width:720px){.investment-position-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* P7 source-only month-by-month cash-movement trend with explicit unknown gaps. */
+.monthly-trend-controls{display:flex;align-items:end;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.monthly-trend-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:650;color:#586d7f;max-width:400px;min-width:210px}
+.monthly-trend-controls select{min-height:44px;border:1px solid #b9cdd8;border-radius:9px;background:#fff;color:#24435b;padding:10px 12px;font-size:13px;max-width:100%}
+.monthly-trend-controls select:focus-visible{outline:3px solid #88bdc0}
+.monthly-trend-controls p{margin:0;min-width:200px;flex:1}
+.monthly-trend-rows{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.monthly-trend-entry{border:1px solid #e2eaf0;border-radius:11px;padding:12px;display:grid;gap:6px;background:#fcfdff}
+.monthly-trend-entry strong{font-size:13px;color:#27465c}
+.monthly-trend-entry small{font-size:11px;color:#667d91;line-height:1.5}
+.monthly-trend-entry.missing{border-style:dashed;background:#fafbfc}
+.monthly-trend-entry.missing small{color:#876c46}
+.monthly-trend-line{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) minmax(0,140px);align-items:center;gap:10px}
+.monthly-trend-line span{font-size:12px;color:#50657b}
+.monthly-trend-line span:last-child{text-align:right;font-weight:650}
+.monthly-trend-line meter{width:100%;height:17px;min-width:0}
+@media(max-width:720px){.monthly-trend-controls{align-items:stretch;gap:9px}.monthly-trend-controls label,.monthly-trend-controls p{min-width:0;width:100%;max-width:none}.monthly-trend-controls select{width:100%}.monthly-trend-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px}.monthly-trend-line meter{grid-column:1 / 3;grid-row:2}.monthly-trend-line span:last-child{grid-column:2;grid-row:1}}

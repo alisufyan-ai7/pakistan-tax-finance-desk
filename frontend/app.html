@@ -70,6 +70,22 @@
           <p id="home-financial-period-coverage" class="muted">Checking verified monthly source evidence…</p>
           <ul id="home-financial-period-list" class="document-list" aria-label="Bank movement summaries for the selected period"></ul>
         </section>
+        <section id="home-bank-monthly-trend" class="panel" aria-labelledby="home-bank-trend-heading">
+          <div class="panel-heading">
+            <div><span class="micro">MONTH BY MONTH · REAL BANK DATA</span><h3 id="home-bank-trend-heading">How money moved through your bank</h3></div>
+            <button type="button" class="text-button" data-go="transactions">Explore entries</button>
+          </div>
+          <div class="monthly-trend-controls">
+            <label for="monthly-trend-source">Bank statement
+              <select id="monthly-trend-source" aria-label="Choose a reconciled bank statement for monthly history">
+                <option value="">Checking supported statement sources</option>
+              </select>
+            </label>
+            <p id="monthly-trend-coverage" class="muted" aria-live="polite">Only reconciled statement months are charted. Missing months stay unknown.</p>
+          </div>
+          <p class="muted">Gross bank credits and debits are transfers and other movements, not your classified income or household spending. Each chart belongs to one source; it never combines overlapping statements.</p>
+          <ul id="monthly-trend-rows" class="monthly-trend-rows" aria-label="Supported bank monthly credit and debit flows with coverage gaps"></ul>
+        </section>
         <section id="home-owner-review" class="panel" aria-labelledby="home-review-heading">
           <div class="panel-heading">
             <div><span class="micro">YOUR NEXT DECISIONS</span><h3 id="home-review-heading">Transactions needing your attention</h3></div>
