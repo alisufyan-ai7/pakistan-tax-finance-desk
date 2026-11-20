@@ -61,39 +61,19 @@ def test_default_empty_private_config_is_safe(monkeypatch):
     lambda o:o.update(property_register_group_id="missing_group"),
     lambda o:o["groups"][1].update(id="property_group"),
     lambda o:o["groups"][1]["ventures"][0].update(id="book_venture"),
-    lambda o:o["groups"][0]["ventures"][0].update(category="unverified_currency"),
+    lambda o:o["groups"][0]["ventures"][0].update(category="fictional_currency"),
     lambda o:o["groups"][0]["ventures"][0].update(confirmed_invested_principal_minor=100),
-    lambda o:o["groups"][0].update(title="<fake>\nheader"),
+    lambda o:o["groups"][0].update(title="Fake\\nheader"),
     lambda o:o.update(groups=[]),
-    lambda o:o["groups"][1]["ventures"].append({
-        "id":"another_property","title":"Extra property","category":"property"}),
+    lambda o:o["groups"][0]["ventures"].append({
+        "id":"second_property","title":"Unreconciled property","category":"property"}),
 ])
 def test_malformed_owner_context_fails_closed(monkeypatch,mutate):
     data=fixture()
     mutate(data)
-    if data["groups"][0]["ventures"][0].get("confirmed_invested_principal_minor"):
-        # Reject unknown, user-supplied monetary amounts rather than trusting env.
-        pass
     monkeypatch.setenv("P6B_PRIVATE_RELATIONSHIPS_JSON",json.dumps(data))
-    if "confirmed_invested_principal_minor" in str(data):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
-    elif data["groups"][0]["ventures"][0].get("title","").startswith("Extra"):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
-    elif data["property_register_group_id"]=="missing_group" or data["groups"]==[] or (
-        len({g["id"] for g in data["groups"]})!=len(data["groups"])):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
-    elif any(len({v["id"] for v in g["ventures"]})!=len(g["ventures"]) for g in data["groups"]):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
-    elif any(v["category"] not in ("property","business","education","other") for g in data["groups"] for v in g["ventures"]):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
-    elif "\n" in str(data):
-        with pytest.raises(PrivateInvestmentRegistryBlocked):
-            private_investment_relationships(property_verified=True)
+    with pytest.raises(PrivateInvestmentRegistryBlocked):
+        private_investment_relationships(property_verified=True)
 
 
 def test_duplicate_keys_fail_closed(monkeypatch):
