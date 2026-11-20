@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
+import {readFileSync} from "node:fs";
 import {runIsolatedSandbox, inspectSandboxInventory, SandboxBridgeBlocked, safeFailureReport} from "../app/p5h_railway_sandbox_bridge.mjs";
 
 const GOOD_PROBE = {
@@ -254,4 +256,22 @@ test("successful probe executes both synthetic preflights before actual parser",
   assert.ok(actions.indexOf(actions.find(x => x.endsWith(" python-import"))) <
             actions.indexOf(actions.find(x => x.endsWith(" probe"))));
   assert.equal(state.destroyed, 1);
+});
+
+
+test("guest launcher Bash syntax and mandatory unchanged isolation contract", () => {
+  const launcher = new URL("../app/p5h_vm_launcher.sh", import.meta.url);
+  execFileSync("bash", ["-n", launcher], {stdio: "ignore"});
+  const script = readFileSync(launcher, "utf8");
+  for (const invariant of [
+    "--die-with-parent", "--unshare-all", "--cap-drop ALL",
+    "--clearenv", "--tmpfs /", "--ro-bind /usr /usr",
+    "--ro-bind /srv/backend/app /srv/backend/app",
+  ]) {
+    assert.ok(script.includes(invariant), "Missing guest boundary: " + invariant);
+  }
+  for (const mode of ["jail-boot", "python-import", "probe", "parse"]) {
+    assert.ok(script.includes(mode + ") set --"));
+  }
+  assert.equal((script.match(/exec \/usr\/bin\/bwrap/g) || []).length, 1);
 });
