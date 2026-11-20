@@ -126,6 +126,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         "/api/finance/review/history": ("POST", "/internal/finance/review/history"),
         "/api/finance/historical/bahl": ("POST", "/internal/finance/historical/bahl"),
         "/api/finance/bank/csv-overview": ("GET", "/internal/finance/bank/csv-overview"),
+        "/api/finance/investments/overview": ("GET", "/internal/finance/investments/overview"),
     }
     discovered = re.findall(
         r"^\s*location = (/api/finance[^ ]*) \{",
@@ -149,6 +150,8 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
              if path == "/api/finance/historical/bahl" else
              'if ($p6a_bank_csv_ingress != "1") { return 404; }'
              if path == "/api/finance/bank/csv-overview" else
+             'if ($p6b_property_ingress != "1") { return 404; }'
+             if path == "/api/finance/investments/overview" else
              'if ($p5d_review_ingress != "1") { return 404; }'),
             'if ($request_method != "' + method + '") { return 405; }',
             'proxy_pass http://$private_google_upstream' + internal + ';',
