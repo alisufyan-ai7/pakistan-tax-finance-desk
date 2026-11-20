@@ -35,6 +35,16 @@ function fakeSdk({fail = "", mode = "ISOLATED"} = {}) {
             return {exitCode: fail === "setup" ? 1 : 0,
               stdout: "", timedOut: false, truncated: false};
           }
+          if (command.endsWith(" jail-boot")) {
+            return {exitCode: fail === "jail" ? 1 : 0,
+              stdout: "P5H_JAIL_BOOTED\\n".replace("\\\\n", "\\n"),
+              timedOut: false, truncated: false};
+          }
+          if (command.endsWith(" python-import")) {
+            return {exitCode: fail === "python" ? 1 : 0,
+              stdout: "P5H_PYPDF_IMPORTED\\n".replace("\\\\n", "\\n"),
+              timedOut: false, truncated: false};
+          }
           if (command.endsWith(" probe")) {
             const data = {...GOOD_PROBE};
             if (fail === "probe") data.network_denied = false;
@@ -209,4 +219,39 @@ test("safe failure JSON does not leak upstream errors or misstate PDF read", () 
   assert.equal(safeFailureReport(parseError).original_document_read, null);
   assert.equal(safeFailureReport(new Error("SYNTHETIC_SECRET")).stage, "PRE_REQUEST_UNKNOWN");
   assert.ok(!JSON.stringify(safeFailureReport(new Error("SYNTHETIC_SECRET"))).includes("SECRET"));
+});
+
+
+test("synthetic probe separates jailed shell from jailed Python failures", async () => {
+  for (const [fail, expectedStage] of [
+    ["jail", "GUEST_JAIL_BOOT"],
+    ["python", "GUEST_PYTHON_IMPORT"],
+  ]) {
+    const {Sandbox, state} = fakeSdk({fail});
+    await assert.rejects(
+      runIsolatedSandbox(null, Sandbox, {probeOnly: true}),
+      error => error instanceof SandboxBridgeBlocked &&
+        error.stage === expectedStage &&
+        error.createdConfirmed === true &&
+        error.destroyedVerified === true,
+    );
+    assert.equal(state.created, 1);
+    assert.equal(state.destroyed, 1);
+    assert.equal(state.parsed, false);
+    assert.equal(state.stdin.length, 0);
+    if (fail === "jail") {
+      assert.equal(state.commands.some(x => x.command.endsWith(" python-import")), false);
+    }
+  }
+});
+
+test("successful probe executes both synthetic preflights before actual parser", async () => {
+  const {Sandbox, state} = fakeSdk();
+  await runIsolatedSandbox(null, Sandbox, {probeOnly: true});
+  const actions = state.commands.map(x => x.command);
+  assert.ok(actions.indexOf(actions.find(x => x.endsWith(" jail-boot"))) <
+            actions.indexOf(actions.find(x => x.endsWith(" python-import"))));
+  assert.ok(actions.indexOf(actions.find(x => x.endsWith(" python-import"))) <
+            actions.indexOf(actions.find(x => x.endsWith(" probe"))));
+  assert.equal(state.destroyed, 1);
 });
