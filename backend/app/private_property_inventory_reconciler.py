@@ -123,6 +123,12 @@ def reconcile_property_inventory_xlsx(data: bytes) -> dict:
             sale_date=value(f"E{start+1}")
             bought=_whole(value(f"C{start+6}"))
             sold=_whole(value(f"E{start+6}"))
+            purchase_breakdown=sum(_whole(value(f"C{start+i}")) for i in range(2,6))
+            sale_gross=_whole(value(f"E{start+2}"))
+            sale_expenses=sum(_whole(value(f"E{start+i}")) for i in range(3,6))
+            if purchase_breakdown!=bought or sale_gross<sale_expenses or (
+                sale_gross-sale_expenses!=sold):
+                raise ValueError()
             gross_profit=_whole(value(f"C{start+7}"))
             owner=_whole(value(f"C{start+8}"))
             partner=_whole(value(f"C{start+9}"))
