@@ -19,7 +19,6 @@ from .private_bank_csv_reconciler import _amount, PrivateBankCsvBlocked
 
 _KNOWN_CONTRACT="personal_cfo_p6_reconciled_bank_csv_v1"
 _SELF_CONTRACT="personal_cfo_p6_bank_cashflow_classification_v1"
-_WHT=re.compile(r"^Withholding Tax Debit AC-[0-9]{6,20}$")
 _TRANSACTION_CHARGE=re.compile(r"^Charges Taxes Plus FED STAN\([0-9]{1,16}\)$")
 _TRANSFER_LABEL=re.compile(
     r"^(?:Raast P2P Fund transfer(?:\s|$)|Money Transferred to(?:\s|$)"
@@ -95,7 +94,7 @@ def classify_reconciled_private_bank_csv(data:bytes, *, report:dict)->dict:
             if desc=="Payment of Profit" and credit:
                 kind="bank_profit_received_minor"
                 value=credit
-            elif _WHT.fullmatch(desc) and debit:
+            elif desc.startswith("Withholding Tax Debit") and debit:
                 kind="bank_profit_withholding_tax_minor"
                 value=debit
             elif debit and (desc in _BANK_FEE_EXACT or
