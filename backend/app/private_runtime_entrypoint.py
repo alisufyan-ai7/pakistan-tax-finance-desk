@@ -199,7 +199,6 @@ def create_private_runtime_entrypoint():
             google_metadata=True, google_content=True,
             source_preflight=preflight_on, review_comments=review_on,
             historical_bahl=historical_on, bank_csv=csv_on,
-        property_inventory=property_on,
             property_inventory=property_on)
         if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
@@ -210,6 +209,7 @@ def create_private_runtime_entrypoint():
         google_content=content_on,
         source_preflight=preflight_on, review_comments=review_on,
         historical_bahl=historical_on, bank_csv=csv_on,
+        property_inventory=property_on,
     )
 
 
