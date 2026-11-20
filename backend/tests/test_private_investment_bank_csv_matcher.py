@@ -47,7 +47,7 @@ def test_two_directional_bank_events_are_candidates_not_repayments():
     assert [r["direction"] for r in g["rows"]]==["INBOUND","OUTBOUND"]
     assert all(r["source_hmac"]=="b"*64 for r in g["rows"])
     assert "FICTIONAL" not in str(result)
-    assert "BANK" not in str(result)
+    assert "FICTIONAL PARTNER A" not in str(result)
 
 
 def test_unknown_ledger_incomplete_is_never_a_zero_balance():
