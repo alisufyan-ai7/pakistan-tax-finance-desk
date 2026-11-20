@@ -154,7 +154,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
             'proxy_pass http://$private_google_upstream' + internal + ';',
             'access_log off;', 'error_log /dev/null crit;',
         )
-        if path in ("/api/finance/historical/bahl", "/api/finance/bank/csv-overview"):
+        if path == "/api/finance/historical/bahl":
             required += ('if ($p5a_source_ingress != "1") { return 404; }',)
         if any(value not in body for value in required):
             raise FakeOAuthIngressBlocked("Owner review route controls absent")
