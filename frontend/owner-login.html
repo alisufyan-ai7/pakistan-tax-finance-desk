@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#102c38">
   <meta name="referrer" content="no-referrer">
   <title>Personal CFO · Private owner sign in</title>
   <link rel="stylesheet" href="/owner-login.css">
@@ -11,9 +12,13 @@
 </head>
 <body>
   <main class="panel" aria-labelledby="title">
-    <div class="eyebrow">PERSONAL CFO · PRIVATE OWNER</div>
-    <h1 id="title">Secure sign in</h1>
-    <p class="intro">Use the Personal CFO password and six-digit authenticator code you already enrolled. One owner account only.</p>
+    <div class="auth-brand" aria-label="Personal CFO private finance">
+      <span class="auth-brand-mark" aria-hidden="true">◈</span>
+      <div><strong>Personal CFO</strong><small>One owner. One clear financial picture.</small></div>
+    </div>
+    <div class="eyebrow"><span class="auth-lock" aria-hidden="true">●</span> PRIVATE & SECURE WORKSPACE</div>
+    <h1 id="title">Welcome back.</h1>
+    <p class="intro">Sign in to your private financial dashboard. Enter your password and the six-digit code from your authenticator app.</p>
     <form id="owner-login-form" autocomplete="on">
       <label for="owner-password">Password</label>
       <input id="owner-password" name="password" type="password" minlength="16" maxlength="256" autocomplete="current-password" required>
@@ -41,7 +46,7 @@
     </section>
     <p class="feedback" id="owner-feedback" role="status" aria-live="polite"></p>
     <p class="note">Your password and authenticator code go only to this application's private sign-in service. Never share them in a support chat or upload financial statements on this screen.</p>
-    <a href="/app" class="back">Return to Personal CFO</a>
+    <p class="auth-footnote">Your financial information stays in your private workspace. Original documents remain read-only.</p>
   </main>
 </body>
 </html>
