@@ -52,3 +52,7 @@
 .bank-statement-facts dt{font-size:13px;color:#415a6a}
 .bank-statement-facts dd{font-weight:750;font-variant-numeric:tabular-nums;text-align:right;margin:0;white-space:nowrap}
 @media(max-width:400px){.bank-statement-facts{grid-template-columns:1fr}.bank-statement-facts dd{text-align:left;margin-top:-5px}}
+
+/* Owner-only actionable Drive metadata review; no financial values or cache. */
+.home-file-action{align-self:flex-start;padding:5px 0;text-align:left}
+#home-document-priority-summary{margin:0 0 12px}
