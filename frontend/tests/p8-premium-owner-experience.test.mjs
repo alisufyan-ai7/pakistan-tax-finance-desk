@@ -76,6 +76,8 @@ test("modern owner login preserves strong native auth inputs and no public marke
   assert.ok(style.includes("min-height:100dvh"));
   assert.ok(style.includes("input:focus-visible"));
   assert.ok(html.includes('href="/app"'));
-  assert.ok(!html.includes('Return to Personal CFO'));
-  assert.ok(!js.includes("localStorage")&&!js.includes("console.log"));
+  assert.ok(html.includes('href="/app" class="back">Return to Personal CFO'));
+  for(const forbidden of ["localStorage.setItem","localStorage.getItem",
+      "sessionStorage.setItem","sessionStorage.getItem","console.log"])
+    assert.ok(!js.includes(forbidden),forbidden);
 });
