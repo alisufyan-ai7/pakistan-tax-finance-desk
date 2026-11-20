@@ -76,8 +76,6 @@ def test_real_original_reader_default_off(monkeypatch):
     for key in (
         "P6A_OWNER_BANK_CSV_RUNTIME",
         "P6A_G3_BANK_CSV_RECONCILIATION_ACCEPTED",
-        "P5A_ORIGINAL_HASH_PILOT",
-        "P5A_G3_SINGLE_FOLDER_BYTES_REVIEWED",
         "P3A_PRIVATE_SOURCE_MEDIA_ENABLED",
         "P3A_G3_RESTRICTED_SCOPE_REVIEWED",
         "P3A_OWNER_CONTENT_CONSENT_ACCEPTED",
@@ -97,8 +95,6 @@ def test_pinned_approved_folder_report_reconciles_only_csv(monkeypatch):
     for key in (
         "P6A_OWNER_BANK_CSV_RUNTIME",
         "P6A_G3_BANK_CSV_RECONCILIATION_ACCEPTED",
-        "P5A_ORIGINAL_HASH_PILOT",
-        "P5A_G3_SINGLE_FOLDER_BYTES_REVIEWED",
         "P3A_PRIVATE_SOURCE_MEDIA_ENABLED",
         "P3A_G3_RESTRICTED_SCOPE_REVIEWED",
         "P3A_OWNER_CONTENT_CONSENT_ACCEPTED",
@@ -152,7 +148,7 @@ def test_unsupported_csv_quarantined_without_false_money(monkeypatch):
     monkeypatch.setenv("P1W_OWNER_REF","owner-fake-123456789012345")
     for key in (
         "P6A_OWNER_BANK_CSV_RUNTIME","P6A_G3_BANK_CSV_RECONCILIATION_ACCEPTED",
-        "P5A_ORIGINAL_HASH_PILOT","P5A_G3_SINGLE_FOLDER_BYTES_REVIEWED",
+
         "P3A_PRIVATE_SOURCE_MEDIA_ENABLED","P3A_G3_RESTRICTED_SCOPE_REVIEWED",
         "P3A_OWNER_CONTENT_CONSENT_ACCEPTED",
     ):
