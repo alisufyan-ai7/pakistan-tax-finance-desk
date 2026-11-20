@@ -124,7 +124,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
                                                    google_content: bool = False,
                                                    source_preflight: bool = False,
                                                    review_comments: bool = False,
-                                                   historical_bahl: bool = False) -> FastAPI:
+                                                   historical_bahl: bool = False,
+                                                   bank_csv: bool = False) -> FastAPI:
     """Factory only: deliberately NOT a module-global app or public endpoint.
 
     The returned ASGI service contains only the existing three MFA
