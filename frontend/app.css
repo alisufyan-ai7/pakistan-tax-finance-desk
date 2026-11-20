@@ -139,3 +139,15 @@
 .monthly-trend-line span:last-child{text-align:right;font-weight:650}
 .monthly-trend-line meter{width:100%;height:17px;min-width:0}
 @media(max-width:720px){.monthly-trend-controls{align-items:stretch;gap:9px}.monthly-trend-controls label,.monthly-trend-controls p{min-width:0;width:100%;max-width:none}.monthly-trend-controls select{width:100%}.monthly-trend-line{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px}.monthly-trend-line meter{grid-column:1 / 3;grid-row:2}.monthly-trend-line span:last-child{grid-column:2;grid-row:1}}
+
+/* Seven core mobile destinations remain reachable without a hidden menu.
+   Financial decisions before document-management mechanics. */
+@media(max-width:720px){
+.bottom-nav{gap:0;overflow-x:auto;scrollbar-width:thin}
+.bottom-nav button{min-width:44px;min-height:44px;flex:1 1 0;white-space:nowrap}
+.bottom-nav button span{font-size:9px}
+}
+@media(max-width:350px){
+.bottom-nav button{font-size:17px;min-width:43px}
+.bottom-nav button span{font-size:8px}
+}
