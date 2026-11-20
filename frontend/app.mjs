@@ -2,7 +2,7 @@
  * real one-folder Drive metadata only. NO demo financial figures or local storage.
  * Every provider filename becomes textContent, never HTML. */
 import { summarizeSourceReview } from "./document-review-summary.mjs";
-import {safePeriod,periodContainsDate,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
+import {safePeriod,periodContainsDate,periodContainsMonth,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
 const byId = id => document.getElementById(id);
 const allowedViews = new Set(["home","documents","accounts","transactions","spending","investments","tax"]);
 const viewTitles = {
@@ -200,6 +200,92 @@ function renderFinancialPeriodEvidence(){
     "The period applies to dated bank candidates and recorded property sales. "+
     "Held-property costs and all-time partner/venture records below are not period market values.";
   renderTransactionExplorer();
+  renderOwnerReviewQueue();
+  renderSourceSpendingAndTax();
+}
+
+function renderOwnerReviewQueue(){
+  const list=byId("home-review-list");
+  list.replaceChildren();
+  const pending=periodEvidence.transactionSources.flatMap(r=>
+    r.transactions.rows.filter(row=>
+      row.review_required && periodContainsDate(row.date,financialPeriod))
+    .map(row=>({...row,source_name:r.source_name})));
+  pending.sort((a,b)=>b.date.localeCompare(a.date) ||
+    a.source_hmac.localeCompare(b.source_hmac) || b.ordinal-a.ordinal);
+  byId("home-review-coverage").textContent=pending.length+
+    " source-verified CSV entries need purpose clarification for "+
+    periodTitle(financialPeriod)+
+    ". Other bank statements may contain additional pending transactions. "+
+    "Classifications are not saved until encrypted transaction review is accepted.";
+  if(!pending.length){
+    const li=document.createElement("li");
+    li.textContent="No pending entries in the currently supported rows for this selection; missing records are not cleared.";
+    list.appendChild(li);
+    return;
+  }
+  for(const row of pending.slice(0,5)){
+    const li=document.createElement("li");
+    const title=document.createElement("strong");
+    title.textContent=row.date+" · "+(row.direction==="INBOUND"?"Money in ":"Money out ")+
+      historicalMoney.format(row.amount_minor/100);
+    const details=document.createElement("small");
+    details.textContent=row.description+" · "+row.source_name+
+      " · "+(row.category==="TRANSFER_CANDIDATE"?"possible transfer":"purpose unknown");
+    li.append(title,details);list.appendChild(li);
+  }
+}
+function renderSourceSpendingAndTax(){
+  const spending=byId("spending-source-list");
+  const tax=byId("tax-source-list");
+  spending.replaceChildren();tax.replaceChildren();
+  const heading=periodTitle(financialPeriod);
+  byId("spending-observation-heading").textContent=heading+" · what the bank confirms";
+  byId("tax-period-heading").textContent=heading+" · bank withholding evidence";
+  let sources=0,months=0;
+  for(const r of periodEvidence.bankReports){
+    if(!r.classification)continue;
+    const rows=r.classification.months.filter(m=>
+      periodContainsMonth(m.month,financialPeriod));
+    if(!rows.length)continue;
+    sources++;months+=rows.length;
+    const sum=key=>rows.reduce((n,item)=>n+item[key],0);
+    const fees=sum("bank_fees_and_combined_levies_minor"),
+      profit=sum("bank_profit_received_minor"),
+      withholding=sum("bank_profit_withholding_tax_minor"),
+      pending=sum("pending_review_count");
+    const card=document.createElement("li");
+    const title=document.createElement("strong");title.textContent=r.source_name;
+    const line=document.createElement("small");
+    line.textContent="Bank-labelled profit "+historicalMoney.format(profit/100)+
+      " · bank fees/levies "+historicalMoney.format(fees/100)+
+      " · profit withholding "+historicalMoney.format(withholding/100);
+    const foot=document.createElement("small");
+    foot.textContent=pending+" entries still unclassified · "+
+      rows.length+" source month(s) covered. These figures do not establish personal income or spending.";
+    card.append(title,line,foot);spending.appendChild(card);
+    const taxRow=document.createElement("li");
+    const h=document.createElement("strong");h.textContent=r.source_name;
+    const t=document.createElement("small");
+    t.textContent="Exact bank-labelled profit withholding "+
+      historicalMoney.format(withholding/100)+
+      " · "+rows.length+" observed month(s), not an income-tax liability or filed return.";
+    taxRow.append(h,t);tax.appendChild(taxRow);
+  }
+  const text=months+" verified source-month observation(s) across "+sources+
+    " CSV statement(s) in "+heading+
+    ". Missing accounts/months are excluded, not treated as zeros.";
+  byId("spending-source-coverage").textContent=text+
+    " Household expenses and upcoming bills require classification.";
+  byId("tax-source-coverage").textContent=text+
+    " Bank withholding alone does not determine your FBR tax position.";
+  if(!sources){
+    for(const ul of [spending,tax]){
+      const li=document.createElement("li");
+      li.textContent="No exact bank-labelled observations for this selection. This is not zero expenses, tax or income.";
+      ul.appendChild(li);
+    }
+  }
 }
 function go(view) {
   if (!allowedViews.has(view)) return;
@@ -895,6 +981,73 @@ function renderInvestmentRelationshipRegistry(reg, evidence) {
     source.title+" · property register breakdown";
 }
 
+// P7: partner/venture hierarchy; unknown capital, repayment and expected
+// profits are deliberately not estimated from unclassified bank transfers.
+function renderInvestmentPositionCards(reg,evidence){
+  const list=byId("investment-position-list");
+  list.replaceChildren();
+  const candidates=new Map((evidence?.groups||[]).map(g=>[g.group_id,g]));
+  for(const group of reg.groups){
+    const card=document.createElement("li");
+    card.className="investment-position-card";
+    const title=document.createElement("h4");
+    title.textContent=group.title+" · "+group.ventures.length+
+      " distinct venture"+(group.ventures.length===1?"":"s");
+    const note=document.createElement("p");
+    note.textContent="Your declared relationship. Bank candidates need venture and repayment-purpose confirmation.";
+    card.append(title,note);
+    const position=document.createElement("dl");
+    position.className="investment-position-facts";
+    for(const label of ["Principal invested","Capital repaid","Profit received",
+      "Outstanding principal","Expected returns / due date"]){
+      const cell=document.createElement("div");
+      const term=document.createElement("dt");term.textContent=label;
+      const value=document.createElement("dd");value.textContent="Not verified";
+      cell.append(term,value);
+      position.appendChild(cell);
+    }
+    card.appendChild(position);
+    const matched=candidates.get(group.id);
+    const statement=document.createElement("p");
+    statement.textContent=matched && matched.candidate_count>0
+      ? "Bank candidates: "+matched.candidate_count+" · sent "+
+        historicalMoney.format(matched.outgoing_bank_movements_minor/100)+
+        " · received "+historicalMoney.format(matched.incoming_bank_movements_minor/100)+
+        ". These are cash movements, NOT confirmed capital or repayment."
+      : "No candidate bank movement in the currently supported CSV. Other banks and statements may be missing.";
+    card.appendChild(statement);
+    const ventures=document.createElement("ul");
+    ventures.className="investment-venture-list";
+    for(const venture of group.ventures){
+      const row=document.createElement("li");
+      const title=document.createElement("strong");title.textContent=venture.title;
+      const status=document.createElement("small");
+      status.textContent=venture.property_register_linked
+        ?"Property purchase/sale register linked; cash settlement and current valuation not verified."
+        :"Venture allocation, principal, profits, repayment and dates need source/owner review.";
+      row.append(title,status);ventures.appendChild(row);
+    }
+    card.appendChild(ventures);
+    if(matched?.candidate_count){
+      const details=document.createElement("details");
+      const summary=document.createElement("summary");
+      summary.textContent="Inspect "+matched.candidate_count+" dated candidate bank entries";
+      details.appendChild(summary);
+      const events=document.createElement("ul");
+      for(const row of matched.rows){
+        const li=document.createElement("li");
+        li.textContent=row.date+" · "+(row.direction==="INBOUND"?"Incoming ":"Outgoing ")+
+          historicalMoney.format(row.amount_minor/100)+
+          " · purpose needs classification; not a verified repayment";
+        events.appendChild(li);
+      }
+      details.appendChild(events);
+      card.appendChild(details);
+    }
+    list.appendChild(card);
+  }
+  byId("investment-position-panel").hidden=reg.groups.length===0;
+}
 function validPrivatePropertyOverview(data) {
   if(!data || data.contract!=="personal_cfo_owner_property_inventory_overview_v1" ||
      data.approved_source_folder!==true || data.inventory_complete!==true ||
@@ -973,6 +1126,8 @@ function clearPropertyInvestmentEvidence(){
   byId("home-held-property-context").textContent="No source-reconciled property register currently available.";
   byId("home-property-profit-share").textContent="PKR —";
   byId("home-property-profit-context").textContent="Recorded sale profits require original source verification.";
+  byId("investment-position-list").replaceChildren();
+  byId("investment-position-panel").hidden=true;
 }
 function renderPropertyInvestments(report){
   clearPropertyInvestmentEvidence();
@@ -1047,9 +1202,12 @@ async function loadPropertyInvestments(){
     if(epoch!==propertyRefreshEpoch || !safeToken(csrfToken))return;
     if(!validPrivatePropertyOverview(data))throw Error("Untrusted property evidence");
     if(data.reports.length)renderPropertyInvestments(data.reports[0]);
-    if(data.owner_relationships?.groups?.length)
+    if(data.owner_relationships?.groups?.length){
       renderInvestmentRelationshipRegistry(
         data.owner_relationships,data.candidate_bank_movements);
+      renderInvestmentPositionCards(
+        data.owner_relationships,data.candidate_bank_movements);
+    }
     periodEvidence.properties=data.reports[0]?.properties||[];
     periodEvidence.registryGroups=data.owner_relationships?.groups||[];
     periodEvidence.candidateGroups=data.candidate_bank_movements?.groups||[];

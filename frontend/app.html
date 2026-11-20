@@ -70,6 +70,14 @@
           <p id="home-financial-period-coverage" class="muted">Checking verified monthly source evidence…</p>
           <ul id="home-financial-period-list" class="document-list" aria-label="Bank movement summaries for the selected period"></ul>
         </section>
+        <section id="home-owner-review" class="panel" aria-labelledby="home-review-heading">
+          <div class="panel-heading">
+            <div><span class="micro">YOUR NEXT DECISIONS</span><h3 id="home-review-heading">Transactions needing your attention</h3></div>
+            <button type="button" class="text-button" data-go="transactions">Open Activity</button>
+          </div>
+          <p class="muted" id="home-review-coverage">Checking supported source transactions for items needing classification.</p>
+          <ul id="home-review-list" class="document-list" aria-label="Recent source-backed transactions needing your review"></ul>
+        </section>
         <section id="home-historical-evidence" class="panel" hidden aria-labelledby="home-historical-title">
           <div class="panel-heading">
             <div><span class="micro">VERIFIED SOURCE OBSERVATIONS</span><h3 id="home-historical-title">Historical bank statements</h3></div>
@@ -196,8 +204,24 @@
           <button type="button" id="transaction-show-more" class="manage" hidden>Show 200 more verified transactions</button>
         </section>
       </section>
-      <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
+      <section id="view-spending" class="view" hidden>
+        <section class="panel" aria-labelledby="spending-observation-heading">
+          <div class="panel-heading"><h3 id="spending-observation-heading">Source-verified bank charges and income clues</h3><button type="button" class="text-button" data-go="transactions">Review Activity</button></div>
+          <p id="spending-source-coverage" class="muted">Bank-labelled events will appear for the selected month or year after source verification. Personal spending is not yet fully classified.</p>
+          <ul id="spending-source-list" class="document-list" aria-label="Bank profit, withholding, fees and unclassified source movements"></ul>
+        </section>
+        <section class="panel">
+          <h3>Actual household spending and upcoming bills</h3>
+          <p>There is not yet enough confirmed category evidence to calculate total household spending or which recurring bills are due. Transfers to other accounts, investments and repayments must first be distinguished from spending. Select Activity to review them.</p>
+          <button type="button" class="text-button" data-go="transactions">Review transactions requiring classification</button>
+        </section>
+      </section>
       <section id="view-investments" class="view" hidden>
+        <section id="investment-position-panel" class="panel" hidden aria-labelledby="investment-position-title">
+          <div class="panel-heading"><div><span class="micro">PARTNER-BY-PARTNER POSITION</span><h3 id="investment-position-title">Your investment partners and ventures</h3></div><button type="button" class="text-button" data-go="transactions">Review bank entries</button></div>
+          <p class="muted">Each venture is kept separate. Sent money and incoming transfers are candidates until you confirm whether they are capital, repayment or actual profit. Unknown is not zero.</p>
+          <ul id="investment-position-list" class="investment-position-list" aria-label="Investment partner and venture evidence positions"></ul>
+        </section>
         <section class="panel period-evidence" aria-labelledby="investment-period-heading">
           <div class="panel-heading"><h3 id="investment-period-heading">Investment-related bank activity</h3><span class="label-neutral">Purpose needs confirmation</span></div>
           <p id="investment-period-coverage" class="muted">Show dated candidate transfers for the chosen period. These are not verified investments, repayments or returns.</p>
@@ -217,7 +241,18 @@
             <ul id="property-investment-detail-list" class="document-list" aria-label="Verified property records from original investment workbook"></ul>
           </div>
         </section></section>
-      <section id="view-tax" class="view" hidden><section class="panel"><h3>Tax & wealth</h3><p>Filed FBR records, accountant drafts and supported year-specific tax estimates must be reconciled before personal values appear.</p></section></section>
+      <section id="view-tax" class="view" hidden>
+        <section class="panel">
+          <div class="panel-heading"><h3 id="tax-period-heading">Tax-year evidence</h3><span class="label-neutral">Source-backed only</span></div>
+          <p id="tax-source-coverage" class="muted">Select a Pakistan tax year above to inspect verified bank withholding and profit records.</p>
+          <ul id="tax-source-list" class="document-list" aria-label="Source-backed bank tax withholding by period"></ul>
+        </section>
+        <section class="panel">
+          <h3>Filed return vs accountant working draft</h3>
+          <p>The filed 2024–25 return and unfinished 2025–26 working paper must be reconciled against their original files and all relevant bank accounts before tax liabilities or net worth are stated. They are not interchangeable.</p>
+          <button type="button" class="text-button" data-go="documents">Review tax evidence in Documents</button>
+        </section>
+      </section>
       <footer class="footer">Personal CFO · One-owner private workspace · No original source content imported</footer>
     </main>
   </div>
