@@ -116,9 +116,17 @@
       </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
       <section id="view-investments" class="view" hidden>
+        <section id="investment-partner-groups" class="panel" hidden>
+          <div class="panel-heading"><h3>Investment partners & ventures</h3><span class="label-neutral">Your declared relationships</span></div>
+          <p class="muted">Partners are grouped once; separate ventures stay separate. A bank payment is not automatically capital invested, and unverified balances and returns remain unknown.</p>
+          <ul id="investment-partner-list" class="document-list" aria-label="Owner-declared private investment partners and their ventures"></ul>
+        </section>
         <section class="panel"><h3>Investments & expected returns</h3>
           <p>Recorded property acquisition costs, sales and owner profit shares appear when their original workbook reconciles. Current market values, unsold-property returns and investment income not independently verified remain unknown.</p>
           <div id="property-investment-detail" hidden>
+            <h4 id="property-investment-detail-heading">Source-verified property register breakdown</h4>
+            <p class="muted">The chart compares recorded purchase costs of held properties in this workbook only—not your whole portfolio or current market values.</p>
+            <ul id="property-cost-chart" class="investment-cost-chart" aria-label="Recorded held property cost comparison"></ul>
             <ul id="property-investment-detail-list" class="document-list" aria-label="Verified property records from original investment workbook"></ul>
           </div>
         </section></section>
