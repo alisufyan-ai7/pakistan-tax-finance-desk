@@ -150,3 +150,53 @@ def test_tampered_child_json_never_enters_historical_report(monkeypatch):
             inspect_private_bahl_pdf(
                 raw_pdf=raw, approved_isolated_read=True,
             )
+
+
+
+def test_vm_sdk_command_selected_only_with_separate_g3_acceptance(monkeypatch):
+    """No Sandbox is created by these tests; the subprocess is a fake."""
+    import json
+    from types import SimpleNamespace
+    from app import private_bahl_pdf_worker as worker
+
+    raw=fakepdf()
+    known=worker.inspect_private_bahl_pdf(raw_pdf=raw,approved_isolated_read=True)
+    monkeypatch.setenv("APP_DATA_MODE","synthetic")
+    monkeypatch.setenv("P5E_OWNER_HISTORICAL_REPORT_PILOT","1")
+    monkeypatch.setenv("P5H_REMOTE_VM_WORKER_ACTIVE","1")
+    monkeypatch.setenv("P5H_REMOTE_VM_G3_REVIEWED","1")
+    monkeypatch.setenv("RAILWAY_API_TOKEN","FICTIONAL_CI_TOKEN_ONLY")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID","SYNTHETIC_ENV_ID")
+    calls=[]
+    def fake_remote(cmd,**kwargs):
+        calls.append((cmd,kwargs))
+        assert cmd[0]=="/usr/local/bin/node"
+        assert cmd[1].endswith("p5h_railway_sandbox_bridge.mjs")
+        assert kwargs["env"]["RAILWAY_API_TOKEN"]=="FICTIONAL_CI_TOKEN_ONLY"
+        assert "DATABASE_URL" not in kwargs["env"]
+        assert "GOOGLE_CLIENT_SECRET" not in kwargs["env"]
+        assert kwargs["timeout"]==235
+        assert json.loads(kwargs["input"])["document_password"]==""
+        return SimpleNamespace(returncode=0,stdout=json.dumps(known).encode())
+    monkeypatch.setattr(worker.subprocess,"run",fake_remote)
+    actual=worker.inspect_private_bahl_pdf(raw_pdf=raw,approved_isolated_read=True)
+    assert actual==known
+    assert len(calls)==1
+
+
+def test_vm_sdk_flag_or_token_missing_fails_closed_without_unjailed_fallback(monkeypatch):
+    from app import private_bahl_pdf_worker as worker
+    monkeypatch.setenv("APP_DATA_MODE","synthetic")
+    monkeypatch.setenv("P5H_REMOTE_VM_WORKER_ACTIVE","1")
+    monkeypatch.delenv("P5H_REMOTE_VM_G3_REVIEWED",raising=False)
+    monkeypatch.setenv("RAILWAY_API_TOKEN","FICTIONAL_CI_TOKEN_ONLY")
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID","SYNTHETIC_ENV_ID")
+    monkeypatch.setattr(worker.subprocess,"run",
+                        lambda *a,**kw:pytest.fail("No unreviewed PDF subprocess"))
+    raw=b"%PDF-1.7\n"+b"x"*120
+    with pytest.raises(PrivateBahlPdfWorkerBlocked):
+        worker.inspect_private_bahl_pdf(raw_pdf=raw,approved_isolated_read=True)
+    monkeypatch.setenv("P5H_REMOTE_VM_G3_REVIEWED","1")
+    monkeypatch.delenv("RAILWAY_API_TOKEN")
+    with pytest.raises(PrivateBahlPdfWorkerBlocked):
+        worker.inspect_private_bahl_pdf(raw_pdf=raw,approved_isolated_read=True)
