@@ -19,6 +19,7 @@ from .private_google_content_consent import GOOGLE_CONTENT_READ_SCOPE, refresh_g
 from .private_original_source_preflight import _inventory
 from .private_owner_google_media_read import read_pinned_google_source_once, _bounded_google_media
 from .private_bank_csv_reconciler import reconcile_private_bank_csv, PrivateBankCsvBlocked
+from .private_bank_csv_transaction_classifier import classify_reconciled_private_bank_csv
 
 _OWNER = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _MAX_SOURCE_CSV = 10
@@ -93,11 +94,13 @@ def get_private_bank_csv_overview(
                 if blob.extension != ".csv":
                     raise ValueError()
                 parsed = reconcile_private_bank_csv(blob.data)
+                classification = classify_reconciled_private_bank_csv(blob.data, report=parsed)
             except (PrivateBankCsvBlocked, ValueError, Exception):
                 needs_review_count += 1
                 continue
             reports.append({
                 **parsed,
+                "classification":classification,
                 "source_hmac": _index("file", item.id),
                 "source_content_hmac": blob.content_hmac,
                 "source_name": item.name,

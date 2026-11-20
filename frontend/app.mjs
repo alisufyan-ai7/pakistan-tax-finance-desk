@@ -707,6 +707,64 @@ async function loadPropertyInvestments(){
 // Private, no-cache source-backed CSV bank observations, not personal income
 // or expenses. Exact schema/amount continuity is validated again in browser.
 const CSV_BANK_CONTRACT="personal_cfo_owner_bank_csv_overview_v1";
+// Only bank-labeled profit, withholding and fee/tax charges are confirmed.
+// A source credit is not automatically income; a debit is not automatically an expense.
+function validBankCsvClassification(data,report) {
+  if(!data || data.contract!=="personal_cfo_p6_bank_cashflow_classification_v1" ||
+     data.classification_basis!=="EXACT_BANK_LABELS_AFTER_FULL_BALANCE_RECONCILIATION" ||
+     data.all_movements_accounted_for!==true ||
+     data.all_personal_income_classified!==false ||
+     data.all_personal_expenses_classified!==false ||
+     data.all_account_coverage_verified!==false ||
+     data.personal_monthly_income_minor!==null ||
+     data.personal_monthly_expenses_minor!==null ||
+     data.owner_review_required!==true ||
+     data.original_source_modified!==false ||
+     data.transaction_count!==report.transaction_count ||
+     !Array.isArray(data.months) ||
+     data.months.length!==report.months.length)return false;
+  const money=["bank_profit_received_minor","bank_profit_withholding_tax_minor",
+    "bank_fees_and_combined_levies_minor","unclassified_credit_minor",
+    "unclassified_debit_minor"];
+  const counts=["pending_review_count","transfer_candidate_count",
+    "confirmed_bank_event_count"];
+  const sums=Object.fromEntries([...money,...counts].map(k=>[k,0]));
+  for(const k of money)
+    if(!Number.isSafeInteger(data[k]) || data[k]<0 ||
+       data[k]>1000000000000000)return false;
+  for(const k of counts)
+    if(!Number.isInteger(data[k]) || data[k]<0 ||
+       data[k]>report.transaction_count)return false;
+  if(data.confirmed_bank_event_count+data.pending_review_count!==data.transaction_count ||
+     data.transfer_candidate_count>data.pending_review_count ||
+     data.bank_profit_received_minor+data.unclassified_credit_minor!==report.gross_bank_credits_minor ||
+     data.bank_profit_withholding_tax_minor+data.bank_fees_and_combined_levies_minor+
+       data.unclassified_debit_minor!==report.gross_bank_debits_minor)return false;
+  for(const [i,row] of data.months.entries()){
+    const original=report.months[i];
+    if(!row || row.month!==original.month ||
+       row.source_transaction_count!==original.transaction_count)return false;
+    for(const k of money) {
+      if(!Number.isSafeInteger(row[k]) || row[k]<0 ||
+         row[k]>1000000000000000)return false;
+      sums[k]+=row[k];
+    }
+    for(const k of counts){
+      if(!Number.isInteger(row[k]) || row[k]<0 ||
+         row[k]>original.transaction_count)return false;
+      sums[k]+=row[k];
+    }
+    if(row.bank_profit_received_minor!==original.bank_labelled_profit_minor ||
+       row.bank_profit_withholding_tax_minor!==original.bank_labelled_profit_tax_minor ||
+       row.bank_profit_received_minor+row.unclassified_credit_minor!==original.gross_bank_credits_minor ||
+       row.bank_profit_withholding_tax_minor+row.bank_fees_and_combined_levies_minor+
+         row.unclassified_debit_minor!==original.gross_bank_debits_minor ||
+       row.confirmed_bank_event_count+row.pending_review_count!==original.transaction_count ||
+       row.transfer_candidate_count>row.pending_review_count)return false;
+  }
+  return [...money,...counts].every(k=>sums[k]===data[k]);
+}
+
 function validBankCsvSource(result) {
   if (!result || result.contract!=="personal_cfo_p6_reconciled_bank_csv_v1" ||
       result.source_type!=="BANK_CSV_EXACT_RUNNING_BALANCES" ||
@@ -749,7 +807,9 @@ function validBankCsvSource(result) {
   return debit===result.gross_bank_debits_minor &&
     credit===result.gross_bank_credits_minor &&
     count===result.transaction_count && lastBalance===result.closing_minor &&
-    result.statement_end.startsWith(last);
+    result.statement_end.startsWith(last) &&
+    (result.classification===undefined ||
+      validBankCsvClassification(result.classification,result));
 }
 function validBankCsvOverview(data) {
   return !!(data && data.contract===CSV_BANK_CONTRACT &&
@@ -789,15 +849,22 @@ function renderBankCsvReportList(id,reports) {
       historicalMoney.format(report.closing_minor/100)+" as of "+report.statement_end+
       " · "+report.transaction_count+" reconciled transactions · source SHA-256 verified";
     const summary=document.createElement("small");
+    const classified=report.classification;
     summary.textContent="Entire statement: gross credits "+
       historicalMoney.format(report.gross_bank_credits_minor/100)+
       "; gross debits "+historicalMoney.format(report.gross_bank_debits_minor/100)+
-      ". These are bank movements, not classified income or expenses.";
+      ". These are bank movements, not classified income or expenses."+
+      (classified ? " Verified bank profit "+historicalMoney.format(classified.bank_profit_received_minor/100)+
+      "; profit withholding "+historicalMoney.format(classified.bank_profit_withholding_tax_minor/100)+
+      "; bank fees and levies "+historicalMoney.format(classified.bank_fees_and_combined_levies_minor/100)+
+      ". "+classified.pending_review_count+" transactions still need classification." : "");
     const table=document.createElement("table");
     table.className="bank-csv-monthly";
     const head=document.createElement("thead");
     const heading=document.createElement("tr");
-    for(const label of ["Month","Gross credits","Gross debits","Last observed in month"]) {
+    const columns=["Month","Gross credits","Gross debits","Last observed in month"];
+    if(classified)columns.push("Verified bank profit","Profit withholding","Bank fees / levies");
+    for(const label of columns) {
       const th=document.createElement("th");th.scope="col";th.textContent=label;
       heading.appendChild(th);
     }
@@ -805,9 +872,16 @@ function renderBankCsvReportList(id,reports) {
     const body=document.createElement("tbody");
     for(const month of report.months){
       const tr=document.createElement("tr");
-      for(const value of [month.month, historicalMoney.format(month.gross_bank_credits_minor/100),
-          historicalMoney.format(month.gross_bank_debits_minor/100),
-          historicalMoney.format(month.last_reported_balance_minor/100)]){
+      const amounts=[month.month, historicalMoney.format(month.gross_bank_credits_minor/100),
+        historicalMoney.format(month.gross_bank_debits_minor/100),
+        historicalMoney.format(month.last_reported_balance_minor/100)];
+      if(classified){
+        const item=classified.months.find(x=>x.month===month.month);
+        amounts.push(historicalMoney.format(item.bank_profit_received_minor/100),
+          historicalMoney.format(item.bank_profit_withholding_tax_minor/100),
+          historicalMoney.format(item.bank_fees_and_combined_levies_minor/100));
+      }
+      for(const value of amounts){
         const td=document.createElement("td");td.textContent=value;tr.appendChild(td);
       }
       body.appendChild(tr);
