@@ -19,6 +19,7 @@ from .private_google_content_consent import GOOGLE_CONTENT_READ_SCOPE,refresh_go
 from .private_original_source_preflight import _inventory
 from .private_owner_google_media_read import read_pinned_google_source_once,_bounded_google_media
 from .private_property_inventory_reconciler import reconcile_property_inventory_xlsx,PrivatePropertyRegisterBlocked
+from .private_investment_relationships import private_investment_relationships
 
 _OWNER=re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 
@@ -91,6 +92,8 @@ def get_private_property_inventory_overview(
         return {
             "contract":"personal_cfo_owner_property_inventory_overview_v1",
             "reports":accepted,
+            "owner_relationships":private_investment_relationships(
+                property_verified=bool(accepted)),
             "property_register_sources_verified":len(accepted),
             "xlsx_sources_examined":len(choices),
             "approved_source_folder":True,"inventory_complete":True,
