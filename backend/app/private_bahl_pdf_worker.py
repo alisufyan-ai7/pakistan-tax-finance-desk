@@ -200,7 +200,7 @@ def inspect_private_bahl_pdf(
                 # Never fall back to in-process parsing on VM/SDK failure.
                 if (os.getenv("P5H_REMOTE_VM_G3_REVIEWED") != "1"
                     or os.getenv("APP_DATA_MODE") != "synthetic"
-                    or not os.getenv("RAILWAY_API_TOKEN")
+                    or not os.getenv("RAILWAY_TOKEN")
                     or not os.getenv("RAILWAY_ENVIRONMENT_ID")):
                     raise ValueError()
                 command=[
@@ -211,7 +211,7 @@ def inspect_private_bahl_pdf(
                     "PATH":"/usr/local/bin:/usr/bin:/bin",
                     "P5H_REMOTE_VM_WORKER_ACTIVE":"1",
                     "P5H_REMOTE_VM_G3_REVIEWED":"1",
-                    "RAILWAY_API_TOKEN":os.environ["RAILWAY_API_TOKEN"],
+                    "RAILWAY_TOKEN":os.environ["RAILWAY_TOKEN"],
                     "RAILWAY_ENVIRONMENT_ID":os.environ["RAILWAY_ENVIRONMENT_ID"],
                 }
                 worker_timeout=235
