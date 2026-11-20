@@ -1008,6 +1008,81 @@ function validBankCsvSource(result) {
     (result.classification===undefined ||
       validBankCsvClassification(result.classification,result));
 }
+
+function validOfflineBahlPdfOverview(bundle){
+  if(!bundle || bundle.contract!=="personal_cfo_p6d_offline_pdf_overview_v1" ||
+     bundle.all_account_coverage_verified!==false ||
+     bundle.current_available_balance_minor!==null ||
+     bundle.personal_income_minor!==null || bundle.personal_expenses_minor!==null ||
+     !Array.isArray(bundle.reports) || bundle.reports.length>3 ||
+     !Number.isInteger(bundle.sources_configured) || bundle.sources_configured<0 ||
+     bundle.sources_configured>3 ||
+     !Number.isInteger(bundle.sources_requiring_review) ||
+     bundle.sources_requiring_review<0 ||
+     bundle.sources_configured!==bundle.reports.length+bundle.sources_requiring_review)
+    return false;
+  const seen=new Set();
+  for(const r of bundle.reports){
+    if(!r || r.contract!=="personal_cfo_p6d_offline_pdf_observation_v1" ||
+       !/^SI-[0-9]{9} BAH eStatement\([0-9]{8}\)\.pdf$/.test(r.source_name) ||
+       !HMAC_SHA.test(r.source_hmac) || !HMAC_SHA.test(r.source_content_hmac) ||
+       seen.has(r.source_hmac) ||
+       !/^20[0-4][0-9]-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$/.test(r.statement_start) ||
+       !/^20[0-4][0-9]-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$/.test(r.statement_end) ||
+       r.statement_start>r.statement_end ||
+       r.source_sha256_verified!==true ||
+       r.offline_reconciliation_attested!==true ||
+       r.automatic_pdf_parsing_performed!==false ||
+       r.isolation_runtime_accepted!==false ||
+       r.historical_only!==true ||
+       r.current_available_balance_minor!==null ||
+       r.personal_income_minor!==null || r.personal_expenses_minor!==null ||
+       r.owner_review_required!==true ||
+       !Number.isInteger(r.transaction_count) || r.transaction_count<1 ||
+       r.transaction_count>5000 ||
+       !Number.isInteger(r.page_count) || r.page_count<1 || r.page_count>100)
+      return false;
+    const monetary=["opening_minor","closing_minor",
+      "gross_bank_credits_minor","gross_bank_debits_minor"];
+    if(monetary.some(k=>!Number.isSafeInteger(r[k]) || r[k]<0 ||
+       r[k]>1000000000000000))return false;
+    if(r.opening_minor+r.gross_bank_credits_minor-
+       r.gross_bank_debits_minor!==r.closing_minor)return false;
+    seen.add(r.source_hmac);
+  }
+  return true;
+}
+function renderOfflineBahlPdfEvidence(bundle){
+  const home=byId("home-attested-bahl-list");
+  const account=byId("account-attested-bahl-list");
+  const note=byId("home-attested-bahl-review");
+  home.replaceChildren();account.replaceChildren();
+  const reports=[...bundle.reports].sort((a,b)=>
+    b.statement_end.localeCompare(a.statement_end) ||
+    a.source_name.localeCompare(b.source_name));
+  for(const report of reports){
+    for(const list of [home,account]){
+      const li=document.createElement("li");
+      const title=document.createElement("strong");
+      title.textContent=report.source_name;
+      const date=document.createElement("small");
+      date.textContent="Historical closing "+historicalMoney.format(report.closing_minor/100)+
+        " as of "+report.statement_end+" · "+report.transaction_count+
+        " independently reconciled entries · current original Drive SHA verified";
+      const gross=document.createElement("small");
+      gross.textContent="Gross credits "+historicalMoney.format(report.gross_bank_credits_minor/100)+
+        " · gross debits "+historicalMoney.format(report.gross_bank_debits_minor/100)+
+        " · offline-reviewed, not automatically parsed or classified as income/expenses";
+      li.append(title,date,gross);
+      list.appendChild(li);
+    }
+  }
+  byId("home-attested-bahl-pdf").hidden=reports.length===0;
+  byId("account-attested-bahl-pdf").hidden=reports.length===0;
+  note.hidden=bundle.sources_requiring_review===0;
+  note.textContent=bundle.sources_requiring_review+
+    " offline observations withheld: current source SHA/version needs review.";
+}
 function validBankCsvOverview(data) {
   return !!(data && data.contract===CSV_BANK_CONTRACT &&
     data.source_inventory_complete===true &&
@@ -1024,6 +1099,7 @@ function validBankCsvOverview(data) {
     Number.isInteger(data.csv_sources_requiring_review) &&
     data.csv_sources_requiring_review>=0 &&
     Array.isArray(data.reports) && data.reports.length<=10 &&
+    (data.offline_pdf===undefined || validOfflineBahlPdfOverview(data.offline_pdf)) &&
     data.reports.length+data.csv_sources_requiring_review===data.csv_sources_found &&
     data.reports.every(validBankCsvSource) &&
     new Set(data.reports.map(x=>x.source_hmac)).size===data.reports.length);
@@ -1037,6 +1113,10 @@ function clearBankCsvEvidence() {
   byId("home-latest-bank-context").textContent="No verified source statement available; current cash is unknown.";
   byId("home-bank-profit").textContent="PKR —";
   byId("home-bank-profit-context").textContent="No reconciled bank profit observation available.";
+  for(const id of ["home-attested-bahl-list","account-attested-bahl-list"])
+    byId(id).replaceChildren();
+  for(const id of ["home-attested-bahl-pdf","account-attested-bahl-pdf",
+      "home-attested-bahl-review"])byId(id).hidden=true;
 }
 function renderHomeBankCsvMetrics(reports) {
   // The newest source is shown, never sum possibly overlapping statements.
@@ -1118,6 +1198,8 @@ async function loadBankCsvOverview() {
     const data=await get("/api/finance/bank/csv-overview");
     if(epoch!==bankCsvRefreshEpoch || !safeToken(csrfToken))return;
     if(!validBankCsvOverview(data))throw Error("Untrusted source-backed bank overview");
+    if(data.offline_pdf && data.offline_pdf.reports.length)
+      renderOfflineBahlPdfEvidence(data.offline_pdf);
     if(!data.reports.length)return;
     renderBankCsvReportList("home-bank-csv-list",data.reports);
     renderBankCsvReportList("account-bank-csv-list",data.reports);
