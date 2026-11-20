@@ -93,3 +93,45 @@ test("redacted private source metadata never enters HTML, storage or script cons
   assert.match(ng,/access_log off;/);
   assert.match(docker,/P6A_BANK_CSV_PUBLIC_INGRESS_ENABLED=0/);
 });
+
+test("strict source classifier distinguishes unknown transfers from actual bank fees, no invented P&L",()=>{
+  const x=harness(),source=report();
+  const c={
+    contract:"personal_cfo_p6_bank_cashflow_classification_v1",
+    classification_basis:"EXACT_BANK_LABELS_AFTER_FULL_BALANCE_RECONCILIATION",
+    transaction_count:2,
+    bank_profit_received_minor:0,
+    bank_profit_withholding_tax_minor:0,
+    bank_fees_and_combined_levies_minor:0,
+    unclassified_credit_minor:5000,
+    unclassified_debit_minor:2500,
+    pending_review_count:2,
+    transfer_candidate_count:2,
+    confirmed_bank_event_count:0,
+    all_movements_accounted_for:true,all_personal_income_classified:false,
+    all_personal_expenses_classified:false,all_account_coverage_verified:false,
+    personal_monthly_income_minor:null,personal_monthly_expenses_minor:null,
+    original_source_modified:false,owner_review_required:true,
+    months:[{month:"2026-01",source_transaction_count:2,
+      bank_profit_received_minor:0,bank_profit_withholding_tax_minor:0,
+      bank_fees_and_combined_levies_minor:0,
+      unclassified_credit_minor:5000,unclassified_debit_minor:2500,
+      confirmed_bank_event_count:0,pending_review_count:2,transfer_candidate_count:2}]
+  };
+  assert.equal(x.ctx.validBankCsvClassification(c,source),true);
+  const classified={...source,classification:c};
+  assert.equal(x.ctx.validBankCsvSource(classified),true);
+  x.ctx.renderBankCsvReportList("home-bank-csv-list",[classified]);
+  const entry=x.lookup.get("home-bank-csv-list").children[0];
+  assert.match(entry.children[2].textContent,/2 transactions still need classification/);
+  assert.match(entry.children[2].textContent,/not classified income or expenses/);
+  assert.equal(entry.children[3].children[0].children[0].children.length,7);
+  assert.equal(x.ctx.validBankCsvSource({...classified,classification:{...c,
+    unclassified_credit_minor:4999}}),false);
+  assert.equal(x.ctx.validBankCsvSource({...classified,classification:{...c,
+    personal_monthly_income_minor:5000}}),false);
+  assert.equal(x.ctx.validBankCsvSource({...classified,classification:{...c,
+    pending_review_count:0}}),false);
+  assert.equal(x.ctx.validBankCsvSource({...classified,classification:{...c,
+    months:[{...c.months[0],unclassified_debit_minor:0}]}}),false);
+});
