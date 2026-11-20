@@ -23,6 +23,7 @@ test("three distinct statement months give only a candidate, never a due bill",(
   assert.equal(out.length,1);
   assert.equal(out[0].observed_month_count,3);
   assert.equal(out[0].amount_minor,5500);
+  assert.equal(out[0].source_hmac,ha);
   assert.equal(out[0].first_observed,"2025-07-11");
   assert.equal(out[0].last_observed,"2025-09-13");
   assert.equal(out[0].purpose_verified,false);
@@ -79,6 +80,8 @@ test("new recurring section and one-tap review are read only, accessible and sou
   assert.ok(html.includes('value="REVIEW_REQUIRED"'));
   assert.ok(html.includes("A repeated bank debit is not necessarily a household bill"));
   assert.ok(js.includes("repeatingBankCandidates("));
+  assert.ok(js.includes("View matching bank entries"));
+  assert.ok(js.includes('byId("transaction-source-filter").value=item.source_hmac'));
   assert.ok(js.includes('byId("home-review-open-all").addEventListener("click"'));
   assert.ok(js.includes('byId("transaction-category-filter").value="REVIEW_REQUIRED"'));
   assert.ok(docker.includes("finance-patterns.mjs"));
