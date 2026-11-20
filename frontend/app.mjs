@@ -679,7 +679,7 @@ function renderBankCsvReportList(id,reports) {
     table.className="bank-csv-monthly";
     const head=document.createElement("thead");
     const heading=document.createElement("tr");
-    for(const label of ["Month","Gross credits","Gross debits","Month-end observed"]) {
+    for(const label of ["Month","Gross credits","Gross debits","Last observed in month"]) {
       const th=document.createElement("th");th.scope="col";th.textContent=label;
       heading.appendChild(th);
     }
