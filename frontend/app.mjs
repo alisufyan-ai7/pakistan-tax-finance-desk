@@ -2,6 +2,7 @@
  * real one-folder Drive metadata only. NO demo financial figures or local storage.
  * Every provider filename becomes textContent, never HTML. */
 import { summarizeSourceReview } from "./document-review-summary.mjs";
+import {safePeriod,periodContainsDate,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
 const byId = id => document.getElementById(id);
 const allowedViews = new Set(["home","documents","accounts","spending","investments","tax"]);
 const viewTitles = {
@@ -35,6 +36,9 @@ let ownerReviewEnabled = false;
 let reviewEditorNumber = 0;
 const reviewReadiness = byId("owner-review-readiness");
 
+// Owner-private evidence is held in RAM only and never survives session expiry.
+const periodEvidence = {bankReports:[],candidateGroups:[],registryGroups:[],properties:[]};
+let financialPeriod = {mode:"all",value:"all"};
 let csrfToken = null;
 let connected = false;
 let items = [];
@@ -53,6 +57,144 @@ function safeToken(token) {
 }
 function toLabel(value) {
   return value.replaceAll("_"," ").replace(/\b\w/g, c => c.toUpperCase());
+}
+// P7: source-bound, shared reporting period for Home/Accounts/Investments.
+// Broad statement PDF receipts are historical snapshots, not monthly rows.
+function resetFinancialPeriodEvidence(){
+  periodEvidence.bankReports=[];
+  periodEvidence.candidateGroups=[];
+  periodEvidence.registryGroups=[];
+  periodEvidence.properties=[];
+  updateFinancialPeriod();
+}
+function periodOptions(){
+  return observedPeriods({
+    reports:periodEvidence.bankReports,
+    candidates:periodEvidence.candidateGroups.flatMap(g=>g.rows||[]),
+    properties:periodEvidence.properties,
+  });
+}
+function updateFinancialPeriod(){
+  const types=periodOptions(),mode=byId("finance-period-mode").value;
+  const valueSelect=byId("finance-period-value");
+  const field=byId("finance-period-value-label");
+  const choices=mode==="month"?types.month:
+    mode==="year"?types.year:mode==="tax-year"?types.taxYear:[];
+  valueSelect.replaceChildren();
+  const needChoice=mode!=="all";
+  field.hidden=!needChoice;
+  valueSelect.disabled=!needChoice || !choices.length;
+  if(needChoice && choices.length){
+    for(const value of choices){
+      const option=document.createElement("option");
+      option.value=value;
+      option.textContent=periodTitle({mode,value});
+      valueSelect.appendChild(option);
+    }
+    const selected=financialPeriod.mode===mode&&choices.includes(financialPeriod.value)
+      ?financialPeriod.value:choices[0];
+    valueSelect.value=selected;
+    financialPeriod={mode,value:selected};
+  } else {
+    financialPeriod={mode:"all",value:"all"};
+    if(needChoice)byId("finance-period-status").textContent=
+      "No verified dated observations available for that period type.";
+  }
+  renderFinancialPeriodEvidence();
+}
+function renderFinancialPeriodEvidence(){
+  const period=financialPeriod;
+  const title=periodTitle(period);
+  const snapshots=sourcePeriodSummary(periodEvidence.bankReports,period);
+  const selectedMonths=periodMonths(period);
+  const monthsSeen=new Set(snapshots.flatMap(s=>s.covered_months));
+  const coverage=selectedMonths.length
+    ? monthsSeen.size+" of "+selectedMonths.length+" selected months have verified CSV movements."
+    : monthsSeen.size+" distinct months of available verified CSV bank movements.";
+  const summary=coverage+" Bank accounts and missing dates are not fully covered. Gross movements are not personal income/expenses.";
+  byId("finance-period-status").textContent=title+" · "+coverage+
+    " Historical source evidence only.";
+  byId("home-financial-period-heading").textContent=title+" · bank activity";
+  byId("account-period-heading").textContent=title+" · accounts";
+  for(const id of ["home-financial-period-coverage","account-period-coverage"])
+    byId(id).textContent=summary;
+  for(const id of ["home-financial-period-list","account-period-list"]){
+    const list=byId(id);
+    list.replaceChildren();
+    for(const source of snapshots){
+      const row=document.createElement("li");
+      const heading=document.createElement("strong");
+      heading.textContent=source.source_name+" · "+source.covered_months.length+
+        " observed month"+(source.covered_months.length===1?"":"s");
+      const movement=document.createElement("small");
+      movement.textContent="Gross bank credits "+historicalMoney.format(source.credits_minor/100)+
+        " · gross bank debits "+historicalMoney.format(source.debits_minor/100)+
+        " · "+source.movements+" reconciled transactions";
+      const dates=document.createElement("small");
+      dates.textContent="Bank-labelled profit "+historicalMoney.format(source.bank_profit_minor/100)+
+        " · last observed month-end/transaction balance "+
+        historicalMoney.format(source.last_observed_balance_minor/100)+
+        " (historical, not today's cash) · "+"source dated "+source.statement_end;
+      row.append(heading,movement,dates);
+      list.appendChild(row);
+    }
+    if(!snapshots.length){
+      const no=document.createElement("li");
+      no.textContent="No reconciled CSV bank activity for "+title+
+        ". Missing evidence is not zero income, zero spending or a current balance.";
+      list.appendChild(no);
+    }
+  }
+  const invest=byId("investment-period-list");
+  invest.replaceChildren();
+  byId("investment-period-heading").textContent=title+" · investment-related candidates";
+  const candidates=candidatePeriodEvidence(periodEvidence.candidateGroups,period);
+  const names=new Map(periodEvidence.registryGroups.map(g=>[g.id,g.title]));
+  for(const group of candidates){
+    const li=document.createElement("li");
+    const header=document.createElement("strong");
+    header.textContent=(names.get(group.group_id)||"Declared investment partner")+
+      " · "+group.rows.length+" candidate movements";
+    const details=document.createElement("small");
+    details.textContent="Outgoing "+historicalMoney.format(group.outgoing_minor/100)+
+      " · incoming "+historicalMoney.format(group.incoming_minor/100)+
+      ". Neither principal invested nor repaid/profit is confirmed.";
+    li.append(header,details);
+    const events=document.createElement("ul");
+    for(const item of group.rows){
+      const row=document.createElement("li");
+      row.textContent=item.date+" · "+(item.direction==="INBOUND"?"Incoming ":"Outgoing ")+
+        historicalMoney.format(item.amount_minor/100)+
+        " · transaction purpose awaiting review";
+      events.appendChild(row);
+    }
+    li.appendChild(events);
+    invest.appendChild(li);
+  }
+  if(!candidates.length){
+    const no=document.createElement("li");
+    no.textContent="No candidate investment transfers recorded for "+title+
+      " in supported CSV sources. No conclusion about complete investment activity.";
+    invest.appendChild(no);
+  }
+  const saleRows=periodEvidence.properties.filter(p=>
+    p.source_status==="SOLD_IN_SOURCE_REGISTER" &&
+    periodContainsDate(p.sale_date,period));
+  if(saleRows.length){
+    const li=document.createElement("li");
+    const head=document.createElement("strong");
+    head.textContent="Property register · "+saleRows.length+" recorded sale(s)";
+    const details=document.createElement("small");
+    const amount=saleRows.reduce((n,p)=>n+p.recorded_owner_profit_share_minor,0);
+    details.textContent="Owner's allocated register profit "+
+      historicalMoney.format(amount/100)+
+      " · accounting record only, not confirmed cash receipt";
+    li.append(head,details);
+    invest.appendChild(li);
+  }
+  byId("investment-period-coverage").textContent=
+    "The period applies to dated bank candidates and recorded property sales. "+
+    "Held-property costs and all-time partner/venture records below are not period market values.";
 }
 function go(view) {
   if (!allowedViews.has(view)) return;
@@ -90,6 +232,7 @@ function rejectSession() {
   clearBankCsvEvidence();
   propertyRefreshEpoch++;
   clearPropertyInvestmentEvidence();
+  resetFinancialPeriodEvidence();
   // Source inventory is owner-private: drop every filename from the Home queue
   // when the MFA session is no longer authorized.
   byId("home-document-priority-list").replaceChildren();
@@ -284,6 +427,7 @@ async function refreshMetadata() {
     clearBankCsvEvidence();
     propertyRefreshEpoch++;
     clearPropertyInvestmentEvidence();
+    resetFinancialPeriodEvidence();
     hashStatus.textContent =
       "Drive metadata refreshed. Recheck original documents to verify current file bytes.";
     checkOriginals.textContent = "Check original documents";
@@ -889,6 +1033,9 @@ function renderPropertyInvestments(report){
 async function loadPropertyInvestments(){
   const epoch=++propertyRefreshEpoch;
   clearPropertyInvestmentEvidence();
+  periodEvidence.properties=[];
+  periodEvidence.candidateGroups=[];
+  periodEvidence.registryGroups=[];
   if(!safeToken(csrfToken))return;
   try{
     const data=await get("/api/finance/investments/overview");
@@ -898,7 +1045,17 @@ async function loadPropertyInvestments(){
     if(data.owner_relationships?.groups?.length)
       renderInvestmentRelationshipRegistry(
         data.owner_relationships,data.candidate_bank_movements);
-  }catch{clearPropertyInvestmentEvidence();}
+    periodEvidence.properties=data.reports[0]?.properties||[];
+    periodEvidence.registryGroups=data.owner_relationships?.groups||[];
+    periodEvidence.candidateGroups=data.candidate_bank_movements?.groups||[];
+    updateFinancialPeriod();
+  }catch{
+    clearPropertyInvestmentEvidence();
+    periodEvidence.properties=[];
+    periodEvidence.registryGroups=[];
+    periodEvidence.candidateGroups=[];
+    updateFinancialPeriod();
+  }
 }
 
 // Private, no-cache source-backed CSV bank observations, not personal income
@@ -1193,11 +1350,15 @@ function renderBankCsvReportList(id,reports) {
 async function loadBankCsvOverview() {
   const epoch=++bankCsvRefreshEpoch;
   clearBankCsvEvidence();
+  periodEvidence.bankReports=[];
+  updateFinancialPeriod();
   if(!safeToken(csrfToken))return;
   try {
     const data=await get("/api/finance/bank/csv-overview");
     if(epoch!==bankCsvRefreshEpoch || !safeToken(csrfToken))return;
     if(!validBankCsvOverview(data))throw Error("Untrusted source-backed bank overview");
+    periodEvidence.bankReports=data.reports;
+    updateFinancialPeriod();
     if(data.offline_pdf && data.offline_pdf.reports.length)
       renderOfflineBahlPdfEvidence(data.offline_pdf);
     if(!data.reports.length)return;
@@ -1475,6 +1636,18 @@ async function start() {
 for (const btn of document.querySelectorAll("[data-view], [data-go]")) {
   btn.addEventListener("click",()=>go(btn.dataset.view || btn.dataset.go));
 }
+byId("finance-period-mode").addEventListener("change",()=>{
+  updateFinancialPeriod();
+});
+byId("finance-period-value").addEventListener("change",()=>{
+  const mode=byId("finance-period-mode").value;
+  const value=byId("finance-period-value").value;
+  if(safePeriod(mode,value)){
+    financialPeriod={mode,value};
+    renderFinancialPeriodEvidence();
+  }
+});
+updateFinancialPeriod();
 byId("document-search").addEventListener("input",renderDocuments);
 refreshButton.addEventListener("click",async()=>{
   await refreshMetadata();

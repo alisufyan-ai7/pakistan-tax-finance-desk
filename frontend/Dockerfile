@@ -13,7 +13,7 @@ ENV P1AK_OWNER_INGRESS_ENABLED=0 P1AO_GOOGLE_INGRESS_ENABLED=0 P1Q_PRIVATE_GATEW
 COPY nginx.railway.conf /etc/nginx/templates/default.conf.template
 COPY nginx.owner-rate-zones.conf /etc/nginx/conf.d/00-personal-cfo-rates.conf
 COPY owner-login.html owner-login.mjs owner-login.css /usr/share/nginx/html/
-COPY app.html app.mjs app.css document-review-summary.mjs owner-pwa.mjs owner-manifest.webmanifest /usr/share/nginx/html/
+COPY app.html app.mjs app.css document-review-summary.mjs finance-period.mjs owner-pwa.mjs owner-manifest.webmanifest /usr/share/nginx/html/
 COPY index.html ui.css ui.mjs demo-data.mjs document-inbox.mjs owner-setup.mjs /usr/share/nginx/html/
 COPY manifest.webmanifest sw.js pwa.mjs pwa.css /usr/share/nginx/html/
 COPY icons/ /usr/share/nginx/html/icons/

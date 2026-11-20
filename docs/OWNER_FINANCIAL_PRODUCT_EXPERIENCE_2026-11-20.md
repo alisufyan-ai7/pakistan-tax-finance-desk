@@ -1,0 +1,54 @@
+# Personal CFO — End-user experience and priority roadmap
+
+Date: 20 November 2026. Status: binding product specification. Owner: one authenticated individual. This replaces the document-verification portal as the primary experience. The existing source-first security rules remain in force.
+
+## What success means to the owner
+
+Within ten seconds of signing in, understand: money across bank accounts (only as of a supported date), where money came from and went this month or year, actual personal income/spending (not own transfers), capital invested with each person and venture, repayments and profit actually received, outstanding obligations, upcoming bills, tax-year position, and what needs clarification. Every meaningful financial figure opens dated supporting transactions and original-source evidence.
+
+Current reality: there is an authenticated mobile PWA and connected read-only Google Drive. SHA-verified monthly bank CSV flows, historical offline PDF statement receipts, dated investment payment candidates and verified property-register costs/sale-profit allocations exist. But source coverage is incomplete; the current Home is technical; Spending, Bills and Tax are placeholders. Current cash, classified income/expenses, full outstanding capital and verified ROI remain unknown. A deployed source feature is not proof that the signed-in user sees it.
+
+## Main navigation
+
+**Home:** clear selected period, four core money answers, financial movement trends only where proven, investments due, recurring bills and a prioritized review inbox. A small provenance note under figures; document processing belongs in secondary pages. Missing ≠ zero, stale ≠ current.
+
+**Accounts:** bank/account picker, historical balance and statement date, coverage/gap warnings, source-backed month/year movement details, transfers, individual rows. Do not combine overlapping statements, mix bank accounts, or call gross debits expenses. Any balance is historical until all relevant recent accounts have reconciled coverage.
+
+**Transactions:** searchable/filterable rows by month, year, Pakistani tax year, person/description, bank source, direction, amount, category and review state. Each event traces to SHA-verified source and stable HMAC without leaking source references. Mobile stacked rows, desktop table, owner review action. Intra-owner transfers excluded from income/spending until independently matched.
+
+**Spending & bills:** real categorized monthly spend, income, recurring bill due dates, expense changes, comparisons and follow-up. Display unknown when coverage/transfer classification missing. Bank-labelled profit, tax and fees can be shown as narrowly verified separate categories.
+
+**Investments:** partner → distinct ventures → dated bank candidate movements → principal invested, capital repaid, profit received, outstanding principal and future expected payment. These last fields must stay unknown until individually verified; candidate outgoing/incoming transfers and workbook sale-profit share are NOT automatically returns or cash. Preserve distinct ventures with a common person.
+
+**Tax & wealth:** Pakistan tax year 1 July–30 June, year-on-year filed-versus-accountant-draft comparisons, bank withholding and source evidence, wealth register and accountant review. The filed 2024–25 return is not the unfinished 2025–26 working paper; do not claim an unverified tax amount.
+
+**Review inbox:** ambiguous transactions, unmatched own transfers, missing periods, changes to Drive documents, expected repayments, accountant questions. Open original evidence, choose purpose and add a note. Persistent append-only encrypted comments require independent contemporary full encrypted off-device database backup + disposable restore and migration acceptance; UI must never falsely claim a note was saved before activation.
+
+**Documents:** original files remain read-only. Display exact source revision/SHA, coverage, gaps/duplicates and review. A separate organized copy folder, if authorized, never changes the originals.
+
+## Global date context and financial semantics
+
+One consistent control for **month (YYYY-MM), calendar year (January–December), Pakistan tax year (July–June), all available evidence**. Where useful, a **latest verified historical snapshot** may remain independently labelled as-of. Period switches filter real dated CSV month records, dated candidate payment rows and dated property-sale evidence; a whole-year statement PDF cannot be apportioned into unverified monthly rows. A property currently held in the register cannot be assigned a market value in an earlier month. Show covered months and missing months; zero coverage is not a zero transaction amount. No chart or year-over-year claim without sufficient data. Client keeps period context in memory only and clears sensitive observations at session expiry/source invalidation.
+
+## Visual and interactive definition of done
+
+Mobile-first tap targets >=44px, readable PKR and dates, bottom navigation and desktop sidebar, source coverage/date under figures, accessible labels and keyboard navigation. Home amount → account/person → source row → evidence/review. A period switch updates every supported view without making unverified amounts current. No decorative synthetic graph in production. Loading, source stale, partial coverage and missing evidence must be visible and distinct. No private info in public code/CI, logs or untrusted HTML; render all Drive text as textContent. Original content not stored in browser persistent storage.
+
+## Implementation order — tracked and dependency aware
+
+| Priority | GitHub issue | First meaningful user-visible acceptance | Constraint |
+|---|---|---|---|
+| P0 | [#265](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/265) | Shared month/year/Jul–Jun tax-year selection, source-scoped monthly bank activity, historical account drilldown, dated investment candidate filtering | No invented complete-year income or current cash |
+| P1 | [#266](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/266) | Real source-reconciled CSV transactions, search and filters, review state | Pinned source SHA, every running balance checked, no unsupported PDF parsing |
+| P2 | [#267](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/267) | Partner/venture evidence ledger with dates and distinctions between candidate money, principal, repayments, profits and outstanding | Actual purpose/repayment still needs confirmation |
+| P3 | [#268](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/268) | One-screen ambiguous event review and persistent encrypted notes when safe | Full off-device database backup/disposable restore and live schema gate |
+| P4 | [#269](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/269) | Classified spend, recurring bills, real charts, tax-year/wealth comparison and follow-ups | Multiple complete bank histories and accountant evidence |
+| P5 | [#270](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/issues/270) | All-bank account-opening history, WhatsApp conversation evidence, source/transaction/venture matching | Additional original statements/screenshots arrive incrementally; messages are claims not settlement |
+
+P0–P2 can deliver partial factual results now; P5 is not an artificial prerequisite. Do not create more VMs or ask for repeated OAuth, token, owner Terminal commands or new paid services to complete the UI.
+
+## Release gates
+
+Source-supported money only, full strict frontend/backend CI, zero fabricated figures, guard missing/duplicate years and June 30/July 1 tax boundary, stale session/source invalidation, owner MFA same-origin no-store endpoints, mobile/desktop legibility, existing Railway services online. Distinguish **code merged**, **deployed**, **authenticated owner UI observed**, and **complete financial evidence**. Mark individual tasks complete only when proven, and keep unknown answers explicit.
+
+Keep prior source-first lessons LL-01, LL-05, LL-08, LL-09 and LL-11. This document is the canonical UX roadmap and should not be duplicated into another giant dated handoff.
