@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {runIsolatedSandbox, inspectSandboxInventory, SandboxBridgeBlocked} from "../app/p5h_railway_sandbox_bridge.mjs";
+import {runIsolatedSandbox, inspectSandboxInventory, SandboxBridgeBlocked, safeFailureReport} from "../app/p5h_railway_sandbox_bridge.mjs";
 
 const GOOD_PROBE = {
   network_denied: true,
@@ -190,4 +190,23 @@ test("cleanup uncertainty overrides successful synthetic proof", async () => {
       error.destroyedVerified === false,
   );
   assert.equal(state.created, 1);
+});
+
+
+test("safe failure JSON does not leak upstream errors or misstate PDF read", () => {
+  const createError = new SandboxBridgeBlocked("SANDBOX_CREATE", true, false, false);
+  assert.deepEqual(safeFailureReport(createError), {
+    contract: "personal_cfo_p5h_sandbox_safe_failure_v1",
+    status: "BLOCKED",
+    stage: "SANDBOX_CREATE",
+    vm_create_attempted: true,
+    vm_creation_confirmed: false,
+    vm_destruction_verified: false,
+    original_document_read: false,
+    bank_runtime_activated: false,
+  });
+  const parseError = new SandboxBridgeBlocked("GUEST_PARSE", true, true, true);
+  assert.equal(safeFailureReport(parseError).original_document_read, null);
+  assert.equal(safeFailureReport(new Error("SYNTHETIC_SECRET")).stage, "PRE_REQUEST_UNKNOWN");
+  assert.ok(!JSON.stringify(safeFailureReport(new Error("SYNTHETIC_SECRET"))).includes("SECRET"));
 });
