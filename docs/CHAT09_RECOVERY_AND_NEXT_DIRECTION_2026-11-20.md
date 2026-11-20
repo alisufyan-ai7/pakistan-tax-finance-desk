@@ -36,3 +36,10 @@
 - Do not mark a feature active based solely on merge, simulation or Railway SUCCESS. Run exact-head tests, verify deployment, independently test live authenticated output where authorized, and report what was not observed.
 - The owner has **no immediate repeated Google or local terminal setup** to perform for the recovery itself. Raise a specific request only when an actual decision/permission is the limiting dependency (a new metered disposable PDF worker test, safe restore acceptance, or eventually explicit owner-purpose classifications).
 - Future Chat 9 changes belong in focused PRs with references to relevant issues and a single updated current handoff. New lessons only when an actual novel failure occurs; do not rewrite historical files or duplicate mega-prefixes.
+
+
+## Chat 9 next smallest engineering step (post-recovery)
+
+- Strengthen the existing P5H PDF-worker **parent-side** JSON acceptance contract before any future short-lived guest/VM handoff. Accept only the reconciler's exact historical-output fields, bounded typed integer bank amounts/page/transaction counts, valid source-period dates, arithmetic identity (opening + credits - debits = closing), explicit false current-cash/income/expense/principal claims, and the existing transient password-required/rejected statuses. Synthetic malicious child-result tests cover injected investment profit, forged booleans, changed balances and unsupported periods.
+- **Boundary:** This is source-only parent validation with existing fixture tests, not a Python/pypdf isolated VM acceptance, genuine BAHL source reconciliation, source-bound repayment, owner-session result verification or a release flag change. The standard API container remains unsuitable for untrusted PDFs. No new metered resources or owner terminal steps.
+- Next dependency after green CI and merge: compatible no-network jailed Python process **in an explicitly approved future ephemeral execution environment** plus app→guest source-version/SHA-handoff verification and authenticated genuine source check. Do not turn on P5E/P5G/P5H from this change.

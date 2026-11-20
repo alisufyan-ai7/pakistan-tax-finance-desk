@@ -106,3 +106,47 @@ def test_corrupt_statement_totals_fail_closed_without_untrusted_error():
       inspect_private_bahl_pdf(raw_pdf=raw,approved_isolated_read=True)
     assert "25.01" not in str(exc.value)
     assert "SYNTHETIC CREDIT" not in str(exc.value)
+
+
+def test_tampered_child_json_never_enters_historical_report(monkeypatch):
+    """Future VM replies must meet the exact same closed evidence contract."""
+    import copy
+    import json
+    from types import SimpleNamespace
+    from app import private_bahl_pdf_worker as worker
+
+    raw = fakepdf()
+    valid = inspect_private_bahl_pdf(
+        raw_pdf=raw, approved_isolated_read=True,
+    )
+    assert worker._validate_child_result(valid) == valid
+
+    corrupt = []
+    for field, replacement in (
+        ("closing_minor", valid["closing_minor"] + 1),
+        ("opening_minor", -100),
+        ("transaction_count", True),
+        ("page_count", 101),
+        ("statement_end", "2030-01-01"),
+        ("financial_values_verified", True),
+        ("all_account_coverage_verified", True),
+        ("bank", "SYNTHETIC IMPOSTOR"),
+        ("gross_bank_debits_minor", "2500"),
+    ):
+        altered = copy.deepcopy(valid)
+        altered[field] = replacement
+        corrupt.append(altered)
+    unknown = copy.deepcopy(valid)
+    unknown["investment_return_minor"] = 100
+    corrupt.append(unknown)
+    for forged in corrupt:
+        monkeypatch.setattr(
+            worker.subprocess, "run",
+            lambda *a, **kw: SimpleNamespace(
+                returncode=0, stdout=json.dumps(forged).encode("utf-8"),
+            ),
+        )
+        with pytest.raises(PrivateBahlPdfWorkerBlocked):
+            inspect_private_bahl_pdf(
+                raw_pdf=raw, approved_isolated_read=True,
+            )
