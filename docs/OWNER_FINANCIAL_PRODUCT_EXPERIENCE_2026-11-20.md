@@ -52,3 +52,18 @@ P0–P2 can deliver partial factual results now; P5 is not an artificial prerequ
 Source-supported money only, full strict frontend/backend CI, zero fabricated figures, guard missing/duplicate years and June 30/July 1 tax boundary, stale session/source invalidation, owner MFA same-origin no-store endpoints, mobile/desktop legibility, existing Railway services online. Distinguish **code merged**, **deployed**, **authenticated owner UI observed**, and **complete financial evidence**. Mark individual tasks complete only when proven, and keep unknown answers explicit.
 
 Keep prior source-first lessons LL-01, LL-05, LL-08, LL-09 and LL-11. This document is the canonical UX roadmap and should not be duplicated into another giant dated handoff.
+
+## Verified implementation checkpoint — 20 November 2026
+
+**Product work deployed to the existing Railway frontend/API, with no extra VM or new permanent service:**
+
+- [#271](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/271) **P0:** global month, calendar year, Pakistan tax year (July–June), all available; RAM-only source evidence and clear missing-month coverage, Home/Accounts/Investments period panels.
+- [#272](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/272) **P1:** owner-MFA and current original SHA-bound bank CSV row projection, stable HMAC, masked account references, exact running balances, private activation flag P7_OWNER_TRANSACTION_ROWS_ENABLED=1, searchable mobile Activity with bank/period/direction/status filters.
+- [#273](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/273) **P2/P3/P4 factual slices:** grouped partner → ventures, unverified principal/repayment/profit/outstanding fields, source-backed review queue, exact bank-labelled charges/profit/tax withholding for selected period. Persistent owner transaction classifications/notes **NOT active**.
+- [#274](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/274) **P4 trend:** one-source-at-a-time monthly gross bank movement chart for selected period; missing months explicitly UNKNOWN and no double-counted across accounts.
+- [#275](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/275) **UX correctness:** Home bank profit and recorded property-sale share follow selected source-supported period. Dated historical closing balance and latest property purchase-cost basis are explicitly not current cash/historic valuation.
+- [#276](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/276) **Mobile navigation:** financial-first order and reachable Tax & Wealth / Documents with 44px tap targets.
+
+All six PRs merged with exact-head green applicable GitHub Actions; latest frontend deployment SUCCESS at `d79c4e700eae3c8dee88aa3ffe3a666fe8977927`, backend source/row projection at `dfb6d15e92cfe924aa9eda5eb91a58e3ea0321fa` SUCCESS, existing Postgres ONLINE. No additional VM/cost-bearing service and approved original Drive files unchanged.
+
+**Not completed and kept OPEN in tracking issues:** full all-bank/current balance, true monthly household income/expenses/bills, venture-specific verified principal/repayments/realized ROI, transaction-level saved notes and category corrections (need restored encrypted full DB backup and reviewed schema), verified filed-vs-accountant-draft tax analysis, all-bank history and WhatsApp contextual matching. Data for future bank periods and people may be uploaded later; supported source gaps must remain explicit. **Actual signed-in owner browser interaction has not been observed by tools**, so these are CI+deployed features, not final end-to-end personal acceptance. Do not invent a completion claim or schedule more VM tests.
