@@ -641,7 +641,51 @@ function validInvestmentRelationshipRegistry(reg, hasPropertyReport) {
   }
   return sourceFound===1;
 }
-function renderInvestmentRelationshipRegistry(reg) {
+// Private server-matched bank transfers are CANDIDATES, never classified
+// capital, repayments, realized profit, or outstanding investment value.
+function validInvestmentBankCandidates(evidence,registry){
+  if(!evidence || evidence.contract!=="personal_cfo_p6_investment_bank_candidates_v1" ||
+     evidence.all_investment_sources_covered!==false ||
+     evidence.personal_investment_principal_verified!==false ||
+     evidence.repayments_verified!==false ||
+     evidence.outstanding_investment_balance_minor!==null ||
+     evidence.realized_investment_return_minor!==null ||
+     evidence.source_data_retained!==false ||
+     evidence.owner_review_required!==true ||
+     typeof evidence.source_reconciliation_verified!=="boolean" ||
+     !Array.isArray(evidence.groups) ||
+     evidence.groups.length>registry.groups.length ||
+     (!evidence.source_reconciliation_verified && evidence.groups.length!==0))return false;
+  const groups=new Set(registry.groups.map(g=>g.id)),seen=new Set(),ids=new Set();
+  for(const item of evidence.groups){
+    if(!item || typeof item.group_id!=="string" || !groups.has(item.group_id) ||
+       seen.has(item.group_id) || !Number.isInteger(item.candidate_count) ||
+       item.candidate_count<0 || item.candidate_count>100 ||
+       !Number.isSafeInteger(item.incoming_bank_movements_minor) ||
+       !Number.isSafeInteger(item.outgoing_bank_movements_minor) ||
+       item.incoming_bank_movements_minor<0 || item.outgoing_bank_movements_minor<0 ||
+       !Array.isArray(item.rows) || item.rows.length!==item.candidate_count)return false;
+    seen.add(item.group_id);
+    let incoming=0,outgoing=0,last="";
+    for(const row of item.rows){
+      if(!row || !HMAC_SHA.test(row.event_hmac) ||
+         !HMAC_SHA.test(row.source_hmac) || ids.has(row.event_hmac) ||
+         !/^20[0-4][0-9]-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$/.test(row.date) ||
+         (last && row.date<last) ||
+         !["INBOUND","OUTBOUND"].includes(row.direction) ||
+         !Number.isSafeInteger(row.amount_minor) ||
+         row.amount_minor<=0 || row.amount_minor>1000000000000000 ||
+         row.interpretation!=="COUNTERPARTY_BANK_MOVEMENT_NEEDS_PURPOSE_REVIEW")return false;
+      ids.add(row.event_hmac);last=row.date;
+      if(row.direction==="INBOUND")incoming+=row.amount_minor;
+      else outgoing+=row.amount_minor;
+    }
+    if(incoming!==item.incoming_bank_movements_minor ||
+       outgoing!==item.outgoing_bank_movements_minor)return false;
+  }
+  return true;
+}
+function renderInvestmentRelationshipRegistry(reg, evidence) {
   byId("investment-partner-list").replaceChildren();
   for(const group of reg.groups){
     const li=document.createElement("li");
@@ -661,6 +705,37 @@ function renderInvestmentRelationshipRegistry(reg) {
       list.appendChild(entry);
     }
     li.appendChild(list);
+    const matched=evidence?.groups?.find(g=>g.group_id===group.id);
+    if(matched && matched.candidate_count>0){
+      const note=document.createElement("small");
+      note.textContent="Potential bank matches: "+
+        matched.candidate_count+" · outgoing "+
+        historicalMoney.format(matched.outgoing_bank_movements_minor/100)+
+        " · incoming "+
+        historicalMoney.format(matched.incoming_bank_movements_minor/100)+
+        ". Source-reconciled bank movements, NOT verified invested capital or repayments.";
+      li.appendChild(note);
+      const details=document.createElement("details");
+      const summary=document.createElement("summary");
+      summary.textContent="Review dated bank movements ("+matched.candidate_count+")";
+      details.appendChild(summary);
+      const sub=document.createElement("ul");
+      for(const event of matched.rows){
+        const row=document.createElement("li");
+        row.textContent=event.date+" · "+
+          (event.direction==="OUTBOUND"?"Outgoing":"Incoming")+" "+
+          historicalMoney.format(event.amount_minor/100)+
+          " · investment purpose/repayment not established";
+        sub.appendChild(row);
+      }
+      details.appendChild(sub);
+      li.appendChild(details);
+    }else{
+      const note=document.createElement("small");
+      note.textContent="No match established in the currently supported bank CSV. "+
+        "PDF statements and other accounts are not yet included in this view.";
+      li.appendChild(note);
+    }
     byId("investment-partner-list").appendChild(li);
   }
   byId("investment-partner-groups").hidden=reg.groups.length===0;
@@ -680,7 +755,10 @@ function validPrivatePropertyOverview(data) {
      !Array.isArray(data.reports) || data.reports.length>1 ||
      data.property_register_sources_verified!==data.reports.length ||
     (data.owner_relationships!==undefined &&
-      !validInvestmentRelationshipRegistry(data.owner_relationships,data.reports.length===1)))
+      !validInvestmentRelationshipRegistry(data.owner_relationships,data.reports.length===1)) ||
+    (data.candidate_bank_movements!==undefined &&
+      (!data.owner_relationships ||
+       !validInvestmentBankCandidates(data.candidate_bank_movements,data.owner_relationships))))
     return false;
   for(const report of data.reports){
     if(report.contract!=="personal_cfo_p6_property_inventory_v1" ||
@@ -804,7 +882,8 @@ async function loadPropertyInvestments(){
     if(!validPrivatePropertyOverview(data))throw Error("Untrusted property evidence");
     if(data.reports.length)renderPropertyInvestments(data.reports[0]);
     if(data.owner_relationships?.groups?.length)
-      renderInvestmentRelationshipRegistry(data.owner_relationships);
+      renderInvestmentRelationshipRegistry(
+        data.owner_relationships,data.candidate_bank_movements);
   }catch{clearPropertyInvestmentEvidence();}
 }
 
