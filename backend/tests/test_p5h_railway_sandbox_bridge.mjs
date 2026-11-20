@@ -37,13 +37,11 @@ function fakeSdk({fail = "", mode = "ISOLATED"} = {}) {
           }
           if (command.endsWith(" jail-boot")) {
             return {exitCode: fail === "jail" ? 1 : 0,
-              stdout: "P5H_JAIL_BOOTED\\n".replace("\\\\n", "\\n"),
-              timedOut: false, truncated: false};
+              stdout: "P5H_JAIL_BOOTED\n",
           }
           if (command.endsWith(" python-import")) {
             return {exitCode: fail === "python" ? 1 : 0,
-              stdout: "P5H_PYPDF_IMPORTED\\n".replace("\\\\n", "\\n"),
-              timedOut: false, truncated: false};
+              stdout: "P5H_PYPDF_IMPORTED\n",
           }
           if (command.endsWith(" probe")) {
             const data = {...GOOD_PROBE};
