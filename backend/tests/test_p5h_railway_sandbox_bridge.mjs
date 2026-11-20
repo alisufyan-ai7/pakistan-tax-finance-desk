@@ -1,0 +1,120 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {runIsolatedSandbox} from "../app/p5h_railway_sandbox_bridge.mjs";
+
+const GOOD_PROBE = {
+  network_denied: true,
+  isolated_loopback_only: true,
+  host_hidden: true,
+  code_readonly: true,
+  secret_env_hidden: true,
+  python_pypdf_imported: true,
+};
+const ENVELOPE = {
+  document_b64: Buffer.from("%PDF-1.7 SYNTHETIC FIXTURE ONLY").toString("base64"),
+  document_password: "synthetic-only-password",
+};
+function fakeSdk({fail = "", mode = "ISOLATED"} = {}) {
+  const state = {created: 0, destroyed: 0, commands: [], files: [],
+    stdin: [], options: null, parsed: false, sourceReceivedBeforeProbe: false};
+  const Sandbox = {
+    async create(options) {
+      state.created++;
+      state.options = options;
+      return {
+        id: "synthetic-sandbox-id",
+        networkIsolation: mode,
+        files: {
+          async write(path, data, config) {
+            state.files.push({path, content: String(data), config});
+          },
+        },
+        async exec(command, options) {
+          state.commands.push({command, options});
+          if (command.startsWith("set -eu")) {
+            return {exitCode: fail === "setup" ? 1 : 0,
+              stdout: "", timedOut: false, truncated: false};
+          }
+          if (command.endsWith(" probe")) {
+            const data = {...GOOD_PROBE};
+            if (fail === "probe") data.network_denied = false;
+            return {exitCode: 0, stdout: JSON.stringify(data),
+              timedOut: false, truncated: false};
+          }
+          if (!command.endsWith(" parse")) throw Error("unexpected fake command");
+          state.parsed = true;
+          const handle = Promise.resolve({
+            exitCode: fail === "parse" ? 1 : 0,
+            stdout: '{"status":"PASSWORD_REQUIRED","financial_values_verified":false}',
+            timedOut: false, truncated: false,
+          });
+          handle.stdin = {
+            async write(chunk) {
+              state.stdin.push(Buffer.from(chunk));
+            },
+            async end() {},
+          };
+          return handle;
+        },
+        async destroy() { state.destroyed++; },
+      };
+    },
+    async list() { return []; },
+  };
+  return {Sandbox, state};
+}
+
+test("synthetic guest Python check requires OS denial and guaranteed destruction", async () => {
+  const {Sandbox, state} = fakeSdk();
+  const result = JSON.parse(await runIsolatedSandbox(null, Sandbox, {probeOnly: true}));
+  assert.equal(result.sandbox_synthetic_smoke_passed, true);
+  assert.equal(result.python_pdf_worker_verified, true);
+  assert.equal(result.owner_document_read, false);
+  assert.equal(state.created, 1);
+  assert.equal(state.destroyed, 1);
+  assert.equal(state.options.networkIsolation, "ISOLATED");
+  assert.deepEqual(state.options.env, {});
+  assert.equal(state.options.idleTimeoutMinutes, 5);
+  assert.equal(state.stdin.length, 0);
+  assert.equal(state.files.length, 5);
+  assert.ok(state.commands.every(c => !c.command.includes("document_password")));
+});
+
+test("sensitive PDF/passphrase go ONLY to ephemeral child stdin AFTER the probe", async () => {
+  const {Sandbox, state} = fakeSdk();
+  const result = JSON.parse(await runIsolatedSandbox(ENVELOPE, Sandbox));
+  assert.equal(result.status, "PASSWORD_REQUIRED");
+  assert.equal(state.created, 1);
+  assert.equal(state.destroyed, 1);
+  assert.equal(state.commands.filter(x => x.command.endsWith(" parse")).length, 1);
+  const invocation = state.commands.at(-1);
+  assert.equal(invocation.options.stdin, true);
+  assert.equal(invocation.options.ephemeral, true);
+  assert.ok(state.commands.every(x => !x.command.includes(ENVELOPE.document_password)));
+  assert.ok(state.files.every(x => !x.content.includes(ENVELOPE.document_password)));
+  assert.deepEqual(JSON.parse(Buffer.concat(state.stdin).toString("utf8")), ENVELOPE);
+});
+
+test("bad no-network proof means no payload ever enters the guest", async () => {
+  const {Sandbox, state} = fakeSdk({fail: "probe"});
+  await assert.rejects(runIsolatedSandbox(ENVELOPE, Sandbox));
+  assert.equal(state.destroyed, 1);
+  assert.equal(state.parsed, false);
+  assert.equal(state.stdin.length, 0);
+});
+
+test("setup, source, parse, missing isolation, and bad owner request fail closed", async () => {
+  for (const fail of ["setup", "parse"]) {
+    const {Sandbox, state} = fakeSdk({fail});
+    await assert.rejects(runIsolatedSandbox(ENVELOPE, Sandbox));
+    assert.equal(state.created, 1);
+    assert.equal(state.destroyed, 1);
+  }
+  const {Sandbox, state} = fakeSdk({mode: "PRIVATE"});
+  await assert.rejects(runIsolatedSandbox(ENVELOPE, Sandbox));
+  assert.equal(state.destroyed, 1);
+  assert.equal(state.parsed, false);
+  const invalid = {document_b64: "%%%/", document_password: "synthetic"};
+  await assert.rejects(runIsolatedSandbox(invalid, Sandbox));
+  assert.equal(state.created, 1); // prior rejected mode only
+});
