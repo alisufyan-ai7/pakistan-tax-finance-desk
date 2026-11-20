@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
 import {runIsolatedSandbox, inspectSandboxInventory, SandboxBridgeBlocked, safeFailureReport} from "../app/p5h_railway_sandbox_bridge.mjs";
 
 const GOOD_PROBE = {
@@ -261,7 +262,7 @@ test("successful probe executes both synthetic preflights before actual parser",
 
 test("guest launcher Bash syntax and mandatory unchanged isolation contract", () => {
   const launcher = new URL("../app/p5h_vm_launcher.sh", import.meta.url);
-  execFileSync("bash", ["-n", launcher], {stdio: "ignore"});
+  execFileSync("bash", ["-n", fileURLToPath(launcher)], {stdio: "ignore"});
   const script = readFileSync(launcher, "utf8");
   for (const invariant of [
     "--die-with-parent", "--unshare-all", "--cap-drop ALL",
