@@ -22,6 +22,7 @@ const historicalReportList = byId("historical-bahl-reports");
 const historicalReadiness = byId("historical-bahl-readiness");
 const historicalBankReports = new Map();
 let bankCsvRefreshEpoch = 0;
+let propertyRefreshEpoch = 0;
 let nextSourceBatch = 0;
 let sourceCheckedCount = 0;
 let sourceExpectedTotal = null;
@@ -87,6 +88,8 @@ function rejectSession() {
   byId("home-historical-evidence").hidden = true;
   bankCsvRefreshEpoch++;
   clearBankCsvEvidence();
+  propertyRefreshEpoch++;
+  clearPropertyInvestmentEvidence();
   // Source inventory is owner-private: drop every filename from the Home queue
   // when the MFA session is no longer authorized.
   byId("home-document-priority-list").replaceChildren();
@@ -586,6 +589,121 @@ function renderHistoricalBankReports() {
 // Home uses ONLY the existing strict verifiedHistoricalBahl-accepted results.
 // Never sum dated statements (period overlap/ownership may be unresolved),
 // label historical closing as current cash, or cache values in browser storage.
+// Source-backed investment costs and realized sales: never inferred market value
+// or cash earnings. Strict client response contract for authenticated-only values.
+function validPrivatePropertyOverview(data) {
+  if(!data || data.contract!=="personal_cfo_owner_property_inventory_overview_v1" ||
+     data.approved_source_folder!==true || data.inventory_complete!==true ||
+     data.originals_modified!==false || data.content_retained_on_server!==false ||
+     data.current_market_values_verified!==false ||
+     data.owner_review_required!==true ||
+     !Number.isInteger(data.xlsx_sources_examined) ||
+     data.xlsx_sources_examined<0 || data.xlsx_sources_examined>10 ||
+     !Array.isArray(data.reports) || data.reports.length>1 ||
+     data.property_register_sources_verified!==data.reports.length)return false;
+  for(const report of data.reports){
+    if(report.contract!=="personal_cfo_p6_property_inventory_v1" ||
+       report.source_type!=="PROPERTY_COST_AND_SALES_REGISTER" ||
+       !HMAC_SHA.test(report.source_hmac) || !HMAC_SHA.test(report.source_content_hmac) ||
+       report.source_sha256_verified!==true ||
+       report.content_retained_on_server!==false ||
+       report.original_source_modified!==false ||
+       report.owner_review_required!==true ||
+       report.market_value_minor!==null ||
+       report.owner_total_net_worth_minor!==null ||
+       report.cash_proceeds_verified!==false ||
+       report.property_count!==12 ||
+       !Array.isArray(report.properties) || report.properties.length!==12)return false;
+    const keys=["held_recorded_investment_cost_minor","all_recorded_sale_profit_minor",
+      "owner_recorded_sale_profit_share_minor","other_party_recorded_share_minor"];
+    if(!keys.every(k=>Number.isSafeInteger(report[k]) && report[k]>=0))return false;
+    if(report.owner_recorded_sale_profit_share_minor+
+       report.other_party_recorded_share_minor!==report.all_recorded_sale_profit_minor)return false;
+    let held=0,sold=0,heldCost=0,profit=0,ownerProfit=0;
+    for(const [i,p] of report.properties.entries()){
+      if(!p || p.ordinal!==i+1 || typeof p.property_label!=="string" ||
+         p.property_label.length<1 || p.property_label.length>100 ||
+         typeof p.purchase_date!=="string" ||
+         !/^20[0-4][0-9]-[01][0-9]-[0-3][0-9]$/.test(p.purchase_date) ||
+         !Number.isSafeInteger(p.recorded_purchase_cost_minor) ||
+         p.recorded_purchase_cost_minor<=0)return false;
+      if(p.source_status==="HELD_COST_NOT_MARKET_VALUE"){
+        held++;heldCost+=p.recorded_purchase_cost_minor;
+        if(p.sale_date!==null || p.net_sale_proceeds_minor!==null ||
+           p.recorded_profit_minor!==null || p.recorded_owner_profit_share_minor!==null)return false;
+      }else if(p.source_status==="SOLD_IN_SOURCE_REGISTER"){
+        sold++;
+        for(const k of ["net_sale_proceeds_minor","recorded_profit_minor",
+          "recorded_owner_profit_share_minor"])
+          if(!Number.isSafeInteger(p[k]) || p[k]<0)return false;
+        if(p.sale_date===null || !/^20[0-4][0-9]-[01][0-9]-[0-3][0-9]$/.test(p.sale_date) ||
+           p.net_sale_proceeds_minor-p.recorded_purchase_cost_minor!==p.recorded_profit_minor ||
+           p.recorded_owner_profit_share_minor*5!==p.recorded_profit_minor*3)return false;
+        profit+=p.recorded_profit_minor;ownerProfit+=p.recorded_owner_profit_share_minor;
+      }else return false;
+    }
+    if(held!==report.held_property_count ||
+       sold!==report.sold_property_count ||
+       held+sold!==report.property_count ||
+       heldCost!==report.held_recorded_investment_cost_minor ||
+       profit!==report.all_recorded_sale_profit_minor ||
+       ownerProfit!==report.owner_recorded_sale_profit_share_minor)return false;
+  }
+  return true;
+}
+function clearPropertyInvestmentEvidence(){
+  for(const id of ["home-property-investment-list","property-investment-detail-list"])
+    byId(id).replaceChildren();
+  byId("home-property-investments").hidden=true;
+  byId("property-investment-detail").hidden=true;
+}
+function renderPropertyInvestments(report){
+  clearPropertyInvestmentEvidence();
+  const summary=document.createElement("li");
+  const title=document.createElement("strong");
+  title.textContent=String(report.held_property_count)+
+    " held properties · recorded purchase costs "+
+    historicalMoney.format(report.held_recorded_investment_cost_minor/100);
+  const gain=document.createElement("small");
+  gain.textContent=String(report.sold_property_count)+
+    " sold-property entries · recorded gross sale profit "+
+    historicalMoney.format(report.all_recorded_sale_profit_minor/100)+
+    " · owner's recorded share "+
+    historicalMoney.format(report.owner_recorded_sale_profit_share_minor/100);
+  const note=document.createElement("small");
+  note.textContent="Latest registered sale "+report.latest_sale_date+
+    " · Original SHA-256 verified · Market values and actual cash receipts not established";
+  summary.append(title,gain,note);
+  byId("home-property-investment-list").appendChild(summary);
+  for(const p of report.properties){
+    const li=document.createElement("li");
+    const name=document.createElement("strong");
+    name.textContent=p.property_label;
+    const state=document.createElement("small");
+    state.textContent=p.source_status==="SOLD_IN_SOURCE_REGISTER"
+      ? "Sold in register "+p.sale_date+" · cost "+historicalMoney.format(p.recorded_purchase_cost_minor/100)+
+        " · net proceeds "+historicalMoney.format(p.net_sale_proceeds_minor/100)+
+        " · recorded owner's profit share "+historicalMoney.format(p.recorded_owner_profit_share_minor/100)
+      : "Held in register · purchase cost "+historicalMoney.format(p.recorded_purchase_cost_minor/100)+
+        " · current market price unknown";
+    li.append(name,state);
+    byId("property-investment-detail-list").appendChild(li);
+  }
+  byId("home-property-investments").hidden=false;
+  byId("property-investment-detail").hidden=false;
+}
+async function loadPropertyInvestments(){
+  const epoch=++propertyRefreshEpoch;
+  clearPropertyInvestmentEvidence();
+  if(!safeToken(csrfToken))return;
+  try{
+    const data=await get("/api/finance/investments/overview");
+    if(epoch!==propertyRefreshEpoch || !safeToken(csrfToken))return;
+    if(!validPrivatePropertyOverview(data))throw Error("Untrusted property evidence");
+    if(data.reports.length)renderPropertyInvestments(data.reports[0]);
+  }catch{clearPropertyInvestmentEvidence();}
+}
+
 // Private, no-cache source-backed CSV bank observations, not personal income
 // or expenses. Exact schema/amount continuity is validated again in browser.
 const CSV_BANK_CONTRACT="personal_cfo_owner_bank_csv_overview_v1";
@@ -970,6 +1088,7 @@ async function start() {
     if (connected) {
       await refreshMetadata();
       await loadBankCsvOverview();
+      await loadPropertyInvestments();
     }
     else showStatus("Your owner session is active. Connect the approved Google Drive folder from Manage account.");
   } catch {
