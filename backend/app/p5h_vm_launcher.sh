@@ -2,8 +2,10 @@
 # Trusted, static guest launcher. No PDF/password is ever placed in argv/env/file.
 set -euo pipefail
 case "${1:-}" in
-  probe) script=/srv/backend/app/p5h_vm_guest_probe.py ;;
-  parse) script=/srv/backend/app/p5h_vm_guest_child.py ;;
+  jail-boot) set -- /usr/bin/bash -c 'printf "P5H_JAIL_BOOTED\\n"' ;;
+  python-import) set -- /usr/local/p5h-venv/bin/python -I -B -c 'import pypdf; print("P5H_PYPDF_IMPORTED")' ;;
+  probe) set -- /usr/local/p5h-venv/bin/python -I -B /srv/backend/app/p5h_vm_guest_probe.py ;;
+  parse) set -- /usr/local/p5h-venv/bin/python -I -B /srv/backend/app/p5h_vm_guest_child.py ;;
   *) exit 66 ;;
 esac
 exec /usr/bin/bwrap \
@@ -17,4 +19,4 @@ exec /usr/bin/bwrap \
   --ro-bind /srv/backend/app /srv/backend/app \
   --dir /tmp --tmpfs /tmp --dir /proc --proc /proc \
   --dir /dev --dev /dev --chdir /tmp \
-  -- /usr/local/p5h-venv/bin/python -I -B "$script"
+  -- "$@"
