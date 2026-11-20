@@ -50,7 +50,7 @@ test("private home shows no source data or invented balances before individual p
   assert.match(html,/id="home-historical-evidence"[^>]*hidden/);
   assert.match(html,/id="home-historical-evidence-list"/);
   assert.match(html,/not today's available cash, personal income or expenses/i);
-  for(const value of ["Latest CSV statement balance","Bank-labelled profit","Held property purchase cost"]){
+  for(const value of ["Latest available bank snapshot","Bank profit · chosen period","Recorded property cost"]){
     assert.ok(html.includes(value));
   }
   assert.ok(html.includes("PKR —"));
