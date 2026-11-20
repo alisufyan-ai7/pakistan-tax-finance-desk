@@ -156,6 +156,15 @@ def _limits():
     resource.setrlimit(resource.RLIMIT_NOFILE,(36,36))
 
 
+def _vm_bridge_limits():
+    """Trusted SDK host only; hostile PDF parses inside isolated VM child."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_CPU,(45,45))
+    resource.setrlimit(resource.RLIMIT_AS,(4*1024**3,4*1024**3))
+    resource.setrlimit(resource.RLIMIT_FSIZE,(0,0))
+    resource.setrlimit(resource.RLIMIT_NOFILE,(64,64))
+
+
 def inspect_private_bahl_pdf(
     *, raw_pdf: bytes, password: str | None = None,
     approved_isolated_read: bool = False,
@@ -182,20 +191,47 @@ def inspect_private_bahl_pdf(
     root=str(Path(__file__).resolve().parents[1])
     try:
         with tempfile.TemporaryDirectory(prefix="cfo-bahl-private-reader-") as cwd:
-            if os.getenv("P5E_OWNER_HISTORICAL_REPORT_PILOT") == "1":
-                # Live historical report ALWAYS requires an OS network/filesystem
-                # jail; missing bubblewrap or incompatible kernel fails CLOSED.
+            remote=os.getenv("P5H_REMOTE_VM_WORKER_ACTIVE") == "1"
+            if remote:
+                # This specific provider creates a disposable Railway VM with
+                # NO host credentials inside the guest. Actual PDF bytes and
+                # password travel from the owner API through ephemeral stdin
+                # ONLY after the trusted jailed Python runtime passes probe.
+                # Never fall back to in-process parsing on VM/SDK failure.
+                if (os.getenv("P5H_REMOTE_VM_G3_REVIEWED") != "1"
+                    or os.getenv("APP_DATA_MODE") != "synthetic"
+                    or not os.getenv("RAILWAY_TOKEN")
+                    or not os.getenv("RAILWAY_ENVIRONMENT_ID")):
+                    raise ValueError()
+                command=[
+                    "/usr/local/bin/node",
+                    str(Path(__file__).with_name("p5h_railway_sandbox_bridge.mjs")),
+                ]
+                env={
+                    "PATH":"/usr/local/bin:/usr/bin:/bin",
+                    "P5H_REMOTE_VM_WORKER_ACTIVE":"1",
+                    "P5H_REMOTE_VM_G3_REVIEWED":"1",
+                    "RAILWAY_TOKEN":os.environ["RAILWAY_TOKEN"],
+                    "RAILWAY_ENVIRONMENT_ID":os.environ["RAILWAY_ENVIRONMENT_ID"],
+                }
+                worker_timeout=235
+            elif os.getenv("P5E_OWNER_HISTORICAL_REPORT_PILOT") == "1":
+                # The known-to-fail ordinary Railway container remains
+                # fail-closed. This flag does not authorize an unjailed child.
                 command=jailed_bahl_python_command(
                     executable=sys.executable,root=root,child_script=_CHILD)
+                worker_timeout=14
             else:
-                # Preserved only for unexposed fixture-parser unit tests.
+                # Preserved only for unexposed fictional fixture unit tests.
                 command=[sys.executable,"-I","-B","-c",_CHILD,root]
+                worker_timeout=14
             result=subprocess.run(
                 command,
                 input=payload,stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                cwd=cwd,env=env,timeout=14,check=False,
-                preexec_fn=_limits,start_new_session=True,
+                cwd=cwd,env=env,timeout=worker_timeout,check=False,
+                preexec_fn=_vm_bridge_limits if remote else _limits,
+                start_new_session=True,
             )
         if result.returncode != 0 or len(result.stdout)>_MAX_JSON:
             raise ValueError()

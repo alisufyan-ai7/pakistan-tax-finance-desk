@@ -1,9 +1,16 @@
 # Restricted private-network synthetic read-only connectivity API, NOT
 # the legacy finance app. No real data uploads, no migrations and no public domain.\n# Optional P1AJ owner login paths are default-off and require independent G2\n# startup and exact-route ingress review before any operator activation.
+# Node 22 is required by the pinned Railway Sandbox SDK. No sandbox or
+# paid compute starts unless separately reviewed owner-only runtime flags exist.
+FROM node:22-bookworm-slim AS p5h-node
 FROM python:3.12-slim
+COPY --from=p5h-node /usr/local/bin/node /usr/local/bin/node
+COPY --from=p5h-node /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /srv/backend
 COPY pyproject.toml ./
+COPY package.json ./
+RUN node /usr/local/lib/node_modules/npm/bin/npm-cli.js install --omit=dev --ignore-scripts --no-audit --no-fund
 COPY app ./app
 # Candidate for default-off, OS-confined bank PDF reads. Merely installing
 # bubblewrap does not prove Railway user namespace support or G3 acceptance.

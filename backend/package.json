@@ -1,0 +1,8 @@
+{
+  "name": "personal-cfo-p5h-isolated-worker-bridge",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "railway": "3.17.0"
+  }
+}
