@@ -42,6 +42,7 @@ function harness(){
     ["home-bank-csv-evidence",node()],["account-bank-csv-section",node()],
     ["home-latest-bank-balance",node()],["home-latest-bank-context",node()],
     ["home-bank-profit",node()],["home-bank-profit-context",node()],
+    ["home-property-profit-share",node()],["home-property-profit-context",node()],
     ["home-attested-bahl-list",node()],["account-attested-bahl-list",node()],
     ["home-attested-bahl-pdf",node()],["account-attested-bahl-pdf",node()],
     ["home-attested-bahl-review",node()],
@@ -296,4 +297,29 @@ test("source-proved transaction rows stay distinct from expenses, with period/ac
   assert.match(html,/id="view-transactions"/);
   assert.match(html,/id="transaction-search"/);
   assert.match(html,/id="transaction-show-more"/);
+});
+
+
+test("registered sold-property profit is dated to selected year, not treated as current cash",()=>{
+  const {ctx,lookup}=harness();
+  ctx.periodEvidence.properties=[
+    {source_status:"SOLD_IN_SOURCE_REGISTER",sale_date:"2025-11-20",
+      recorded_owner_profit_share_minor:10000},
+    {source_status:"SOLD_IN_SOURCE_REGISTER",sale_date:"2026-03-10",
+      recorded_owner_profit_share_minor:30000},
+    {source_status:"HELD_COST_NOT_MARKET_VALUE",sale_date:null,
+      recorded_owner_profit_share_minor:null},
+  ];
+  ctx.financialPeriod={mode:"year",value:"2025"};
+  ctx.periodContainsDate=date=>typeof date==="string"&&date.startsWith("2025");
+  ctx.periodTitle=()=>"Calendar year 2025";
+  ctx.renderHomePropertyProfitPeriod();
+  assert.equal(lookup.get("home-property-profit-share").textContent,"PKR 100.00");
+  assert.match(lookup.get("home-property-profit-context").textContent,/not confirmed cash receipt/);
+  ctx.financialPeriod={mode:"year",value:"2024"};
+  ctx.periodContainsDate=date=>typeof date==="string"&&date.startsWith("2024");
+  ctx.periodTitle=()=>"Calendar year 2024";
+  ctx.renderHomePropertyProfitPeriod();
+  assert.equal(lookup.get("home-property-profit-share").textContent,"PKR —");
+  assert.match(lookup.get("home-property-profit-context").textContent,/not zero/);
 });
