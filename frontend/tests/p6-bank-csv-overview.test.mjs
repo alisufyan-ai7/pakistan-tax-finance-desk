@@ -42,6 +42,7 @@ function harness(){
     ["home-bank-csv-evidence",node()],["account-bank-csv-section",node()],
     ["home-latest-bank-balance",node()],["home-latest-bank-context",node()],
     ["home-bank-profit",node()],["home-bank-profit-context",node()],
+    ["home-property-profit-share",node()],["home-property-profit-context",node()],
     ["home-attested-bahl-list",node()],["account-attested-bahl-list",node()],
     ["home-attested-bahl-pdf",node()],["account-attested-bahl-pdf",node()],
     ["home-attested-bahl-review",node()],
@@ -55,6 +56,11 @@ function harness(){
     byId:id=>{assert.ok(lookup.has(id),id);return lookup.get(id);},
     document:{createElement:()=>node()},
     historicalMoney:{format:n=>"PKR "+n.toFixed(2)},
+    financialPeriod:{mode:"all",value:"all"},
+    periodContainsMonth:()=>true,
+    periodContainsDate:()=>true,
+    periodTitle:()=>"All available evidence",
+    periodEvidence:{properties:[]},
     periodEvidence:{transactionSources:[]},
     financialPeriod:{mode:"all",value:"all"},
     periodContainsDate:()=>true,
@@ -164,11 +170,23 @@ test("Home uses only latest reconciled statement, not an all-bank current balanc
   assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR 125.00");
   assert.match(lookup.get("home-latest-bank-context").textContent,/2026-01-02/);
   assert.match(lookup.get("home-latest-bank-context").textContent,/not today's cash/);
-  assert.equal(lookup.get("home-bank-profit").textContent,"");
-  const classified={...first,classification:{bank_profit_received_minor:321}};
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
+  const classified={...first,classification:{months:[{month:"2026-01",bank_profit_received_minor:321}]}};
   ctx.renderHomeBankCsvMetrics([classified]);
   assert.equal(lookup.get("home-bank-profit").textContent,"PKR 3.21");
   assert.match(lookup.get("home-bank-profit-context").textContent,/not total personal income/);
+  ctx.financialPeriod={mode:"month",value:"2025-07"};
+  ctx.periodContainsMonth=(m)=>m==="2025-07";
+  ctx.periodTitle=()=>"July 2025";
+  ctx.renderHomeBankCsvMetrics([classified]);
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
+  ctx.financialPeriod={mode:"month",value:"2026-01"};
+  ctx.periodContainsMonth=(m)=>m==="2026-01";
+  ctx.periodTitle=()=>"January 2026";
+  ctx.renderHomeBankCsvMetrics([classified]);
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR 3.21");
+  assert.match(lookup.get("home-bank-profit-context").textContent,/January 2026/);
+
   ctx.clearBankCsvEvidence();
   assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR —");
   assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
@@ -279,4 +297,29 @@ test("source-proved transaction rows stay distinct from expenses, with period/ac
   assert.match(html,/id="view-transactions"/);
   assert.match(html,/id="transaction-search"/);
   assert.match(html,/id="transaction-show-more"/);
+});
+
+
+test("registered sold-property profit is dated to selected year, not treated as current cash",()=>{
+  const {ctx,lookup}=harness();
+  ctx.periodEvidence.properties=[
+    {source_status:"SOLD_IN_SOURCE_REGISTER",sale_date:"2025-11-20",
+      recorded_owner_profit_share_minor:10000},
+    {source_status:"SOLD_IN_SOURCE_REGISTER",sale_date:"2026-03-10",
+      recorded_owner_profit_share_minor:30000},
+    {source_status:"HELD_COST_NOT_MARKET_VALUE",sale_date:null,
+      recorded_owner_profit_share_minor:null},
+  ];
+  ctx.financialPeriod={mode:"year",value:"2025"};
+  ctx.periodContainsDate=date=>typeof date==="string"&&date.startsWith("2025");
+  ctx.periodTitle=()=>"Calendar year 2025";
+  ctx.renderHomePropertyProfitPeriod();
+  assert.equal(lookup.get("home-property-profit-share").textContent,"PKR 100.00");
+  assert.match(lookup.get("home-property-profit-context").textContent,/not confirmed cash receipt/);
+  ctx.financialPeriod={mode:"year",value:"2024"};
+  ctx.periodContainsDate=date=>typeof date==="string"&&date.startsWith("2024");
+  ctx.periodTitle=()=>"Calendar year 2024";
+  ctx.renderHomePropertyProfitPeriod();
+  assert.equal(lookup.get("home-property-profit-share").textContent,"PKR —");
+  assert.match(lookup.get("home-property-profit-context").textContent,/not zero/);
 });

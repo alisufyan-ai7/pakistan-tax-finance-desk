@@ -274,6 +274,9 @@ function renderFinancialPeriodEvidence(){
   renderOwnerReviewQueue();
   renderSourceSpendingAndTax();
   renderMonthlyBankTrend();
+  if(periodEvidence.bankReports.length)
+    renderHomeBankCsvMetrics(periodEvidence.bankReports);
+  renderHomePropertyProfitPeriod();
 }
 
 function renderOwnerReviewQueue(){
@@ -1256,7 +1259,7 @@ function renderPropertyInvestments(report){
   byId("home-held-property-cost").textContent=
     historicalMoney.format(report.held_recorded_investment_cost_minor/100);
   byId("home-held-property-context").textContent=
-    report.held_property_count+" held entries · purchase-cost register, not market value.";
+    report.held_property_count+" held entries · latest register cost basis, not a historical valuation for the selected period.";
   byId("home-property-profit-share").textContent=
     historicalMoney.format(report.owner_recorded_sale_profit_share_minor/100);
   byId("home-property-profit-context").textContent=
@@ -1631,22 +1634,50 @@ function clearBankCsvEvidence() {
       "home-attested-bahl-review"])byId(id).hidden=true;
 }
 function renderHomeBankCsvMetrics(reports) {
-  // The newest source is shown, never sum possibly overlapping statements.
+  // Never sum overlapping CSV sources, and never call a dated closing
+  // balance the current account total. Profit follows the global period.
   const latest=[...reports].sort((a,b)=>
     b.statement_end.localeCompare(a.statement_end) ||
     a.source_hmac.localeCompare(b.source_hmac))[0];
-  if(!latest) return;
+  if(!latest)return;
   byId("home-latest-bank-balance").textContent=
     historicalMoney.format(latest.closing_minor/100);
   byId("home-latest-bank-context").textContent=
-    "As of "+latest.statement_end+" · most recent CSV statement only · not today's cash.";
+    "As of "+latest.statement_end+" · most recent single CSV statement, independent of the period selector · not today's cash.";
+  byId("home-bank-profit").textContent="PKR —";
+  byId("home-bank-profit-context").textContent=
+    "No exact bank-labelled profit observation in the selected supported period.";
   if(latest.classification){
-    byId("home-bank-profit").textContent=
-      historicalMoney.format(latest.classification.bank_profit_received_minor/100);
-    byId("home-bank-profit-context").textContent=
-      "Bank label in the "+latest.statement_start+"–"+latest.statement_end+
-      " statement · not total personal income.";
+    const period=financialPeriod;
+    const selected=latest.classification.months.filter(m=>
+      periodContainsMonth(m.month,period));
+    if(selected.length){
+      const profit=selected.reduce((n,m)=>n+m.bank_profit_received_minor,0);
+      byId("home-bank-profit").textContent=
+        historicalMoney.format(profit/100);
+      byId("home-bank-profit-context").textContent=
+        "For "+periodTitle(period)+" · "+selected.length+
+        " covered source month(s) · one verified CSV, not total personal income.";
+    }
   }
+}
+function renderHomePropertyProfitPeriod(){
+  const sales=periodEvidence.properties.filter(p=>
+    p.source_status==="SOLD_IN_SOURCE_REGISTER" &&
+    periodContainsDate(p.sale_date,financialPeriod));
+  if(!periodEvidence.properties.length)return;
+  if(!sales.length){
+    byId("home-property-profit-share").textContent="PKR —";
+    byId("home-property-profit-context").textContent=
+      "No sale recorded in this property register for "+periodTitle(financialPeriod)+
+      " · incomplete portfolio coverage, not zero.";
+    return;
+  }
+  const amount=sales.reduce((n,p)=>n+p.recorded_owner_profit_share_minor,0);
+  byId("home-property-profit-share").textContent=historicalMoney.format(amount/100);
+  byId("home-property-profit-context").textContent=
+    sales.length+" registered sale(s) in "+periodTitle(financialPeriod)+
+    " · owner allocation only, not confirmed cash receipt.";
 }
 function renderBankCsvReportList(id,reports) {
   const list=byId(id);
