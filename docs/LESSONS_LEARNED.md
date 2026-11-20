@@ -29,6 +29,7 @@
 | LL-07 | **Don't hardcode assumptions about a guest platform.** Prefer tested capability checks and documented fallback behavior; one sandbox test should be capable of reporting which stage failed. | Rejecting a valid sandbox VM solely because Python lived outside `/usr` or `/bin` |
 | LL-08 | **Keep original Google Drive folder immutable and financial labels honest.** Gross bank credits/debits are not income/expenses; a statement closing balance is historical, not today's available cash. Source SHA, date, completeness and review required. | Incorrect financial dashboard numbers or inadvertent source modification |
 | LL-09 | **One canonical lesson and one canonical current fact; link rather than duplicate.** The startup docs should contain short instructions and links; older checkpoints must be treated as historical, not as current active blockers. | Massive repetitive handoffs, contradictory "latest" notes and rediscovering past outcomes |
+| LL-11 | **Inspect the approved real source with the connected read-only provider before designing another generic data adapter.** Analyze actual file signatures, headers and reconciliation privately; never copy private contents into GitHub. | Building a series of synthetic-only adapters while genuine original layouts were already accessible through the connected Drive account |
 | LL-10 | **Investigate test failures before changing unrelated code.** Separate a real regression from transient CI infrastructure, retry the *same head* once where appropriate, and only merge after green evidence. | Treating a disposable PostgreSQL CI failure as a change in PDF security behavior |
 
 ## Incident evidence and the resulting change in practice
@@ -74,6 +75,13 @@
 - **Lesson:** Read failing test names/logs first. Never change safety code or relax tests to treat an unrelated environmental hiccup as solved.
 - **Prevention:** Investigate failure by name and stage, preserve full CI evidence, allow one justified same-head rerun, and do not merge while required checks are red.
 - **Status:** **Adopted; that PR subsequently merged with green CI.**
+
+### LL-11 — Source-first adapter design, not synthetic-first assumptions
+- **When/evidence:** 20 November 2026, Personal CFO owner request to consolidate actual Google Drive documents into the CFO dashboard; [P6 read-only CSV source pipeline PR #244](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/pull/244).
+- **Observed:** The already connected approved Personal CFO Drive folder was directly accessible with the live read-only Drive connector. It held actual bank CSVs, encrypted PDFs, tax returns and an inventory workbook. Real-source inspection immediately established a supported 7-column CSV bank layout and revealed that the previously assumed PDF layout might differ from a genuine owner bank file. No documents needed to be reuploaded.
+- **Root cause confidence / impact:** Repeated assumptions about source inaccessibility led to excessive infrastructure design and owner-visible empty dashboards. Direct connector access was tested; whether the existing app has all PDF execution gates remains separately unverified.
+- **Prevention:** In each new financial feature, first verify exact approved source inventory through authorized read-only tools, inspect representative real format privately, then implement only source-compatible bounded validators. Never put private amount/identifiers/filenames, source bytes, passwords or connector responses in public GitHub or CI. Keep bank debits/credits distinct from classified income/spend.
+- **Verification/status:** **Adopted** with one privately reconciled genuine bank CSV and a source-backed route candidate; production source ingestion must still be proven separately from a successful code merge.
 
 ## How to record the next lesson (copy this compact template)
 
