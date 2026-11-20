@@ -57,6 +57,9 @@ test("transaction detail sheet is source-only, never edits or stores money and i
   assert.ok(js.includes('inspect.addEventListener("click",()=>openTransactionDetail(tx))'));
   assert.ok(js.includes("dialog.showModal()"));
   assert.ok(js.includes("dialog.close()"));
+  assert.ok(js.includes('const sourceName=byId("transaction-detail-source").textContent'));
+  assert.ok(js.includes('byId("document-search").value=sourceName'));
+  assert.ok(js.includes('renderDocuments();\n  }\n  go("documents");'));
   assert.ok(js.includes('byId("transaction-detail-description").textContent=tx.description'));
   assert.ok(js.includes('closeTransactionDetail();\n  clearBankCsvEvidence();'));
   assert.ok(css.includes("dialog.transaction-dialog::backdrop"));
