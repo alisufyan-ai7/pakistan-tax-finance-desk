@@ -2,7 +2,7 @@
  * real one-folder Drive metadata only. NO demo financial figures or local storage.
  * Every provider filename becomes textContent, never HTML. */
 import { summarizeSourceReview } from "./document-review-summary.mjs";
-import {safePeriod,periodContainsDate,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
+import {safePeriod,periodContainsDate,periodContainsMonth,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
 const byId = id => document.getElementById(id);
 const allowedViews = new Set(["home","documents","accounts","transactions","spending","investments","tax"]);
 const viewTitles = {
