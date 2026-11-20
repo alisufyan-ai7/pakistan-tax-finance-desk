@@ -106,6 +106,77 @@ function updateFinancialPeriod(){
   }
   renderFinancialPeriodEvidence();
 }
+function renderMonthlyBankTrend(){
+  const sourcePicker=byId("monthly-trend-source");
+  const previous=sourcePicker.value;
+  const sources=[...periodEvidence.bankReports].sort((a,b)=>
+    b.statement_end.localeCompare(a.statement_end) ||
+    a.source_hmac.localeCompare(b.source_hmac));
+  sourcePicker.replaceChildren();
+  if(!sources.length){
+    const option=document.createElement("option");
+    option.value="";option.textContent="No reconciled CSV statements available";
+    sourcePicker.appendChild(option);sourcePicker.disabled=true;
+    byId("monthly-trend-rows").replaceChildren();
+    byId("monthly-trend-coverage").textContent=
+      "No verified monthly CSV transaction evidence is available in this owner session. No zero is inferred.";
+    return;
+  }
+  sourcePicker.disabled=false;
+  for(const report of sources){
+    const opt=document.createElement("option");
+    opt.value=report.source_hmac;opt.textContent=report.source_name;
+    sourcePicker.appendChild(opt);
+  }
+  const active=sources.find(r=>r.source_hmac===previous)||sources[0];
+  sourcePicker.value=active.source_hmac;
+  const all=financialPeriod.mode==="all";
+  const months=all
+    ?active.months.map(m=>m.month)
+    :periodMonths(financialPeriod);
+  const observed=new Map(active.months.map(m=>[m.month,m]));
+  const periodRows=months.map(key=>({key,item:observed.get(key)||null}));
+  const present=periodRows.filter(x=>x.item);
+  const maxValue=Math.max(1,...present.flatMap(x=>[
+    x.item.gross_bank_credits_minor,x.item.gross_bank_debits_minor]));
+  const target=byId("monthly-trend-rows");target.replaceChildren();
+  for(const {key,item} of periodRows){
+    const li=document.createElement("li");
+    li.className="monthly-trend-entry"+(item?"":" missing");
+    const title=document.createElement("strong");
+    title.textContent=periodTitle({mode:"month",value:key});
+    li.appendChild(title);
+    if(item){
+      for(const [metric,label] of [
+        ["gross_bank_credits_minor","Money in (bank credit)"],
+        ["gross_bank_debits_minor","Money out (bank debit)"]]){
+        const row=document.createElement("div");row.className="monthly-trend-line";
+        const name=document.createElement("span");name.textContent=label;
+        const bar=document.createElement("meter");
+        bar.min=0;bar.max=maxValue;bar.value=item[metric];
+        bar.setAttribute("aria-label",label+" for "+key);
+        const amount=document.createElement("span");
+        amount.textContent=historicalMoney.format(item[metric]/100);
+        row.append(name,bar,amount);li.appendChild(row);
+      }
+      const count=document.createElement("small");
+      count.textContent=item.transaction_count+" bank movements · historical ending "+
+        historicalMoney.format(item.last_reported_balance_minor/100)+
+        " · not current balance";
+      li.appendChild(count);
+    }else{
+      const missing=document.createElement("small");
+      missing.textContent="No source-reconciled transactions for this month. Unknown, not zero.";
+      li.appendChild(missing);
+    }
+    target.appendChild(li);
+  }
+  byId("monthly-trend-coverage").textContent=
+    active.source_name+" · "+present.length+" of "+periodRows.length+
+    " displayed month(s) covered by this statement in "+periodTitle(financialPeriod)+
+    ". A statement may omit inactive months; missing coverage remains unknown. "+
+    "Other banks are not included in this chart.";
+}
 function renderFinancialPeriodEvidence(){
   const period=financialPeriod;
   const title=periodTitle(period);
@@ -202,6 +273,7 @@ function renderFinancialPeriodEvidence(){
   renderTransactionExplorer();
   renderOwnerReviewQueue();
   renderSourceSpendingAndTax();
+  renderMonthlyBankTrend();
 }
 
 function renderOwnerReviewQueue(){
@@ -1947,6 +2019,7 @@ byId("transaction-show-more").addEventListener("click",()=>{
   transactionVisibleLimit+=200;
   renderTransactionExplorer();
 });
+byId("monthly-trend-source").addEventListener("change",renderMonthlyBankTrend);
 byId("document-search").addEventListener("input",renderDocuments);
 refreshButton.addEventListener("click",async()=>{
   await refreshMetadata();
