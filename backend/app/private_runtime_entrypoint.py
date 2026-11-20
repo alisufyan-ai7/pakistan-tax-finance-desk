@@ -31,6 +31,8 @@ _GOOGLE_ROUTES = frozenset({
 })
 
 
+_BANK_CSV_ROUTES = frozenset({"/internal/finance/bank/csv-overview"})
+
 _HISTORICAL_BANK_ROUTES = frozenset({
     "/internal/finance/historical/bahl",
 })
@@ -61,7 +63,8 @@ class _PrivatePreviewComposite:
                  google_metadata: bool = False, google_content: bool = False,
                  source_preflight: bool = False,
                  review_comments: bool = False,
-                 historical_bahl: bool = False):
+                 historical_bahl: bool = False,
+                 bank_csv: bool = False):
         self.preview = preview
         self.owner = owner
         self.owner_routes = (_OWNER_ROUTES
@@ -69,7 +72,8 @@ class _PrivatePreviewComposite:
             | (_GOOGLE_CONTENT_ROUTES if google_content else frozenset())
             | (_PRIVATE_SOURCE_ROUTES if source_preflight else frozenset())
             | (_OWNER_REVIEW_ROUTES if review_comments else frozenset())
-            | (_HISTORICAL_BANK_ROUTES if historical_bahl else frozenset()))
+            | (_HISTORICAL_BANK_ROUTES if historical_bahl else frozenset())
+            | (_BANK_CSV_ROUTES if bank_csv else frozenset()))
 
         @asynccontextmanager
         async def lifespan(_app):
@@ -133,6 +137,12 @@ def create_private_runtime_entrypoint():
     if review_mode not in ("","0","1"):
         raise PrivateRuntimeSwitchBlocked("Owner financial review route invalid")
     review_on = review_mode == "1"
+    csv_mode = os.getenv("P6A_OWNER_BANK_CSV_RUNTIME", "")
+    if csv_mode not in ("", "0", "1"):
+        raise PrivateRuntimeSwitchBlocked("Owner bank CSV mode invalid")
+    csv_on = csv_mode == "1"
+    if csv_on and (not content_on or not preflight_on):
+        raise PrivateRuntimeSwitchBlocked("Bank CSV requires authenticated original source verification")
     historical_mode = os.getenv("P5H_OWNER_HISTORICAL_BAHL_RUNTIME", "")
     if historical_mode not in ("", "0", "1"):
         raise PrivateRuntimeSwitchBlocked("Historical bank route mode invalid")
@@ -176,7 +186,7 @@ def create_private_runtime_entrypoint():
         create_review_only_private_owner_login_service(
             google_metadata=True, google_content=True,
             source_preflight=preflight_on, review_comments=review_on,
-            historical_bahl=historical_on)
+            historical_bahl=historical_on, bank_csv=csv_on)
         if content_on else
         create_review_only_private_owner_login_service(google_metadata=True)
         if google_on else create_review_only_private_owner_login_service()
@@ -185,7 +195,7 @@ def create_private_runtime_entrypoint():
         create_preview_app(), owner, google_metadata=google_on,
         google_content=content_on,
         source_preflight=preflight_on, review_comments=review_on,
-        historical_bahl=historical_on,
+        historical_bahl=historical_on, bank_csv=csv_on,
     )
 
 
