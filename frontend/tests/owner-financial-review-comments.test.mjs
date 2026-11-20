@@ -33,7 +33,7 @@ test("review note routes are separate exact paths disabled by default",()=>{
  }
  assert.match(ng,/set \$p5d_review_ingress "\$\{P5D_REVIEW_PUBLIC_INGRESS_ENABLED\}";/);
  assert.match(docker,/P5D_REVIEW_PUBLIC_INGRESS_ENABLED=0/);
- assert.match(docker,/P5D_REVIEW_PUBLIC_INGRESS_ENABLED\|P5H_BAHL_PUBLIC_INGRESS_ENABLED\|P6A_BANK_CSV_PUBLIC_INGRESS_ENABLED\)\$"/);
+ assert.match(docker,/P5D_REVIEW_PUBLIC_INGRESS_ENABLED\|P5H_BAHL_PUBLIC_INGRESS_ENABLED\|P6A_BANK_CSV_PUBLIC_INGRESS_ENABLED\|P6B_INVESTMENTS_PUBLIC_INGRESS_ENABLED\)\$"/);
  assert.doesNotMatch(ng,/\\n    location = \/api\/finance\/review/);
  assert.doesNotMatch(ng,/location \/api\//);
 });
