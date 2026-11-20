@@ -42,6 +42,9 @@ function harness(){
     ["home-bank-csv-evidence",node()],["account-bank-csv-section",node()],
     ["home-latest-bank-balance",node()],["home-latest-bank-context",node()],
     ["home-bank-profit",node()],["home-bank-profit-context",node()],
+    ["home-attested-bahl-list",node()],["account-attested-bahl-list",node()],
+    ["home-attested-bahl-pdf",node()],["account-attested-bahl-pdf",node()],
+    ["home-attested-bahl-review",node()],
   ]);
   const ctx={
     HMAC_SHA:/^[a-f0-9]{64}$/,
@@ -164,4 +167,54 @@ test("Home uses only latest reconciled statement, not an all-bank current balanc
   assert.match(html,/home-latest-bank-balance/);
   assert.match(html,/home-bank-profit/);
   assert.match(html,/today's total available cash/);
+});
+
+
+test("only privately validated original-SHA-bound historical PDF observations appear in Home/Accounts",()=>{
+  const {ctx,lookup}=harness();
+  const pdf={
+    contract:"personal_cfo_p6d_offline_pdf_observation_v1",
+    source_name:"SI-111222333 BAH eStatement(26092026).pdf",
+    source_hmac:"d".repeat(64),source_content_hmac:"e".repeat(64),
+    statement_start:"2025-07-01",statement_end:"2026-06-30",
+    opening_minor:1000,closing_minor:1500,
+    gross_bank_debits_minor:500,gross_bank_credits_minor:1000,
+    transaction_count:2,page_count:1,source_sha256_verified:true,
+    offline_reconciliation_attested:true,
+    automatic_pdf_parsing_performed:false,isolation_runtime_accepted:false,
+    historical_only:true,current_available_balance_minor:null,
+    personal_income_minor:null,personal_expenses_minor:null,
+    owner_review_required:true,
+  };
+  const source={
+    contract:"personal_cfo_p6d_offline_pdf_overview_v1",
+    reports:[pdf],sources_configured:1,sources_requiring_review:0,
+    all_account_coverage_verified:false,current_available_balance_minor:null,
+    personal_income_minor:null,personal_expenses_minor:null,
+  };
+  assert.equal(ctx.validOfflineBahlPdfOverview(source),true);
+  ctx.renderOfflineBahlPdfEvidence(source);
+  assert.equal(lookup.get("home-attested-bahl-pdf").hidden,false);
+  assert.equal(lookup.get("account-attested-bahl-pdf").hidden,false);
+  const row=lookup.get("home-attested-bahl-list").children[0];
+  assert.match(row.children[1].textContent,/PKR 15.00 as of 2026-06-30/);
+  assert.match(row.children[2].textContent,/not automatically parsed/);
+  assert.equal(ctx.validOfflineBahlPdfOverview({
+    ...source,reports:[{...pdf,closing_minor:1501}],
+  }),false);
+  assert.equal(ctx.validOfflineBahlPdfOverview({
+    ...source,reports:[{...pdf,source_sha256_verified:false}],
+  }),false);
+  assert.equal(ctx.validOfflineBahlPdfOverview({
+    ...source,reports:[{...pdf,isolation_runtime_accepted:true}],
+  }),false);
+  assert.equal(ctx.validOfflineBahlPdfOverview({
+    ...source,reports:[{...pdf,personal_income_minor:5}],
+  }),false);
+  ctx.clearBankCsvEvidence();
+  assert.equal(lookup.get("home-attested-bahl-pdf").hidden,true);
+  assert.equal(lookup.get("home-attested-bahl-list").children.length,0);
+  const html=read("app.html");
+  assert.match(html,/home-attested-bahl-pdf/);
+  assert.match(html,/account-attested-bahl-list/);
 });
