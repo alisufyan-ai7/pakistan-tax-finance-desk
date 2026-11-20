@@ -45,12 +45,21 @@ function harness(){
     ["home-attested-bahl-list",node()],["account-attested-bahl-list",node()],
     ["home-attested-bahl-pdf",node()],["account-attested-bahl-pdf",node()],
     ["home-attested-bahl-review",node()],
+    ["transaction-rows",node()],["transactions-coverage",node()],
+    ["transaction-search",node()],["transaction-source-filter",node()],
+    ["transaction-category-filter",node()],["transaction-direction-filter",node()],
+    ["transaction-show-more",node()],
   ]);
   const ctx={
     HMAC_SHA:/^[a-f0-9]{64}$/,
     byId:id=>{assert.ok(lookup.has(id),id);return lookup.get(id);},
     document:{createElement:()=>node()},
     historicalMoney:{format:n=>"PKR "+n.toFixed(2)},
+    periodEvidence:{transactionSources:[]},
+    financialPeriod:{mode:"all",value:"all"},
+    periodContainsDate:()=>true,
+    periodTitle:()=>"All available evidence",
+    transactionVisibleLimit:200,
     bankCsvRefreshEpoch:0,
     safeToken:()=>true,
     csrfToken:"x".repeat(50),
@@ -217,4 +226,57 @@ test("only privately validated original-SHA-bound historical PDF observations ap
   const html=read("app.html");
   assert.match(html,/home-attested-bahl-pdf/);
   assert.match(html,/account-attested-bahl-list/);
+});
+
+
+test("source-proved transaction rows stay distinct from expenses, with period/account filters",()=>{
+  const {ctx,lookup}=harness();
+  const data=report();
+  const rows=[
+    {event_hmac:"c".repeat(64),source_hmac:data.source_hmac,ordinal:1,
+      date:"2026-01-01",direction:"INBOUND",amount_minor:5000,
+      balance_after_minor:15000,description:"Money Received from Fictional [account]",
+      category:"TRANSFER_CANDIDATE",review_required:true,
+      classified_as_personal_income:false,classified_as_personal_expense:false,
+      investment_purpose_verified:false},
+    {event_hmac:"d".repeat(64),source_hmac:data.source_hmac,ordinal:2,
+      date:"2026-01-02",direction:"OUTBOUND",amount_minor:2500,
+      balance_after_minor:12500,description:"Fictional outward payment [account]",
+      category:"NEEDS_REVIEW",review_required:true,
+      classified_as_personal_income:false,classified_as_personal_expense:false,
+      investment_purpose_verified:false},
+  ];
+  const tx={contract:"personal_cfo_p7_reconciled_bank_csv_rows_v1",
+    source_hmac:data.source_hmac,transaction_count:2,
+    all_running_balances_reconciled:true,source_pinned_by_parent:true,
+    source_description_account_references_masked:true,historical_only:true,
+    current_available_balance_minor:null,personal_income_minor:null,
+    personal_expenses_minor:null,all_rows_returned:true,rows};
+  assert.equal(ctx.validBankCsvTransactionRows(tx,data),true);
+  assert.equal(ctx.validBankCsvSource({...data,transactions:tx}),true);
+  assert.equal(ctx.validBankCsvTransactionRows({...tx,rows:[
+    rows[0],{...rows[1],balance_after_minor:12501}]},data),false);
+  assert.equal(ctx.validBankCsvTransactionRows({...tx,rows:[
+    {...rows[0],classified_as_personal_income:true},rows[1]]},data),false);
+  assert.equal(ctx.validBankCsvTransactionRows({...tx,rows:[
+    {...rows[0],review_required:false},rows[1]]},data),false);
+  ctx.periodEvidence.transactionSources=[{...data,transactions:tx}];
+  lookup.get("transaction-search").value="";
+  for(const id of ["transaction-source-filter","transaction-category-filter",
+      "transaction-direction-filter"])lookup.get(id).value="all";
+  ctx.renderTransactionExplorer();
+  assert.equal(lookup.get("transaction-rows").children.length,2);
+  assert.match(lookup.get("transactions-coverage").textContent,/2 matching transactions/);
+  assert.match(lookup.get("transaction-rows").children[0].children[2].textContent,/SHA-verified/);
+  lookup.get("transaction-search").value="fictional outward";
+  ctx.renderTransactionExplorer();
+  assert.equal(lookup.get("transaction-rows").children.length,1);
+  assert.match(lookup.get("transaction-rows").children[0].children[0].textContent,/Money out/);
+  lookup.get("transaction-category-filter").value="BANK_PROFIT";
+  ctx.renderTransactionExplorer();
+  assert.match(lookup.get("transaction-rows").children[0].textContent,/No verified CSV rows/);
+  const html=read("app.html");
+  assert.match(html,/id="view-transactions"/);
+  assert.match(html,/id="transaction-search"/);
+  assert.match(html,/id="transaction-show-more"/);
 });

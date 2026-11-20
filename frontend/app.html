@@ -22,6 +22,7 @@
       <button type="button" data-view="home" class="selected">⌂ <span>Overview</span></button>
       <button type="button" data-view="documents">▤ <span>Documents</span></button>
       <button type="button" data-view="accounts">▦ <span>Accounts & balances</span></button>
+      <button type="button" data-view="transactions">⇅ <span>Transactions</span></button>
       <button type="button" data-view="spending">⇄ <span>Spending & bills</span></button>
       <button type="button" data-view="investments">◎ <span>Investments</span></button>
       <button type="button" data-view="tax">▧ <span>Tax & wealth</span></button>
@@ -64,7 +65,7 @@
         <section class="panel period-evidence" id="home-financial-period-panel" aria-labelledby="home-financial-period-heading">
           <div class="panel-heading">
             <div><span class="micro">SELECTED PERIOD · ORIGINAL BANK EVIDENCE</span><h3 id="home-financial-period-heading">Available bank activity</h3></div>
-            <button type="button" class="text-button" data-go="accounts">Explore accounts</button>
+            <button type="button" class="text-button" data-go="transactions">View transactions</button>
           </div>
           <p id="home-financial-period-coverage" class="muted">Checking verified monthly source evidence…</p>
           <ul id="home-financial-period-list" class="document-list" aria-label="Bank movement summaries for the selected period"></ul>
@@ -158,6 +159,43 @@
           <div id="account-bank-csv-section" hidden><h3>Verified CSV bank statements</h3><p class="muted">Each amount is dated to its supported source; no current cash or classified expenses are inferred.</p><ul id="account-bank-csv-list" class="document-list" aria-label="Verified CSV account statement details"></ul></div>
         </section>
       </section>
+      <section id="view-transactions" class="view" hidden>
+        <section class="panel" aria-labelledby="transactions-title">
+          <div class="panel-heading">
+            <div><span class="micro">REAL TRANSACTIONS · EXACT SOURCE VERIFIED</span><h3 id="transactions-title">Your bank activity</h3></div>
+            <button type="button" class="text-button" data-go="documents">Open source documents</button>
+          </div>
+          <p class="muted">Search individual records from fully reconciled bank CSV statements. Transfers are candidates, not confirmed personal expenses, investment principal or repayments. Original bank account numbers are masked. Other banks and PDF-only rows may still be missing.</p>
+          <div class="transaction-filters">
+            <label for="transaction-search">Find person, description or amount
+              <input type="search" id="transaction-search" autocomplete="off" placeholder="Search verified transactions">
+            </label>
+            <label for="transaction-source-filter">Bank statement
+              <select id="transaction-source-filter"><option value="all">All available CSV sources</option></select>
+            </label>
+            <label for="transaction-direction-filter">Money direction
+              <select id="transaction-direction-filter">
+                <option value="all">Both directions</option>
+                <option value="INBOUND">Money in</option>
+                <option value="OUTBOUND">Money out</option>
+              </select>
+            </label>
+            <label for="transaction-category-filter">Evidence status
+              <select id="transaction-category-filter">
+                <option value="all">All classifications</option>
+                <option value="BANK_PROFIT">Bank-labelled profit</option>
+                <option value="BANK_WITHHOLDING">Profit tax</option>
+                <option value="BANK_CHARGE">Bank fee / levy</option>
+                <option value="TRANSFER_CANDIDATE">Possible transfer</option>
+                <option value="NEEDS_REVIEW">Needs your review</option>
+              </select>
+            </label>
+          </div>
+          <p id="transactions-coverage" class="muted" aria-live="polite">Checking approved source transaction details…</p>
+          <ul id="transaction-rows" class="document-list transaction-cards" aria-label="Verified dated bank transactions"></ul>
+          <button type="button" id="transaction-show-more" class="manage" hidden>Show 200 more verified transactions</button>
+        </section>
+      </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
       <section id="view-investments" class="view" hidden>
         <section class="panel period-evidence" aria-labelledby="investment-period-heading">
@@ -188,6 +226,7 @@
   <button type="button" data-view="home" class="selected">⌂ <span>Home</span></button>
   <button type="button" data-view="documents">▤ <span>Docs</span></button>
   <button type="button" data-view="accounts">▦ <span>Accounts</span></button>
+  <button type="button" data-view="transactions">⇅ <span>Activity</span></button>
   <button type="button" data-view="spending">⇄ <span>Spending</span></button>
   <button type="button" data-view="investments">◎ <span>Invest</span></button>
 </nav>
