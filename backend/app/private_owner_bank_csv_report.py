@@ -20,6 +20,7 @@ from .private_original_source_preflight import _inventory
 from .private_owner_google_media_read import read_pinned_google_source_once, _bounded_google_media
 from .private_bank_csv_reconciler import reconcile_private_bank_csv, PrivateBankCsvBlocked
 from .private_bank_csv_transaction_classifier import classify_reconciled_private_bank_csv
+from .private_offline_bank_pdf_receipts import (verify_pinned_offline_receipts, PrivateOfflineBahlBlocked)
 
 _OWNER = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _MAX_SOURCE_CSV = 10
@@ -107,8 +108,25 @@ def get_private_bank_csv_overview(
                 "source_sha256_verified": True,
                 "content_retained_on_server": False,
             })
+        # P6D is optional, separately attested offline evidence. A stale
+        # or invalid PDF receipt NEVER blocks an already reconciled CSV and
+        # NEVER causes any PDF parser to run in the Railway API container.
+        offline_pdf = {
+            "contract":"personal_cfo_p6d_offline_pdf_overview_v1",
+            "reports":[], "sources_configured":0, "sources_requiring_review":0,
+            "all_account_coverage_verified":False,
+            "current_available_balance_minor":None,
+            "personal_income_minor":None, "personal_expenses_minor":None,
+        }
+        try:
+            offline_pdf=verify_pinned_offline_receipts(
+                files=files,folder_id=cfg.folder_id,access_token=access,
+                metadata_transport=transport,media_transport=media_transport)
+        except PrivateOfflineBahlBlocked:
+            pass
         return {
             "contract": "personal_cfo_owner_bank_csv_overview_v1",
+            "offline_pdf":offline_pdf,
             "reports": reports,
             "csv_sources_found": len(csvs),
             "csv_sources_requiring_review": needs_review_count,
