@@ -1,3 +1,5 @@
+> **START HERE IN EVERY NEW PERSONAL CFO CHAT:** Read [docs/LESSONS_LEARNED.md](docs/LESSONS_LEARNED.md) before any engineering, infrastructure or owner-action proposal. The lessons are *binding working rules*, not merely history: prevent repeated CLI loops, unsupported tool promises, premature paid resource use, false-positive script preflights, misleading "real data" claims and excessive architecture. Then verify the newest actual GitHub main/Railway state and read [P6 minimum MVP](docs/P6_PRIVATE_OWNER_MVP_MINIMUM_RELEASE_2026-11-20.md) for product priority. When a new lesson emerges, update its one canonical entry and link it from the PR/handoff; do not prepend long copies to every file.
+
 > **P6 OWNER-APPROVED SIMPLIFICATION (20 NOV 2026):** Read [docs/P6_PRIVATE_OWNER_MVP_MINIMUM_RELEASE_2026-11-20.md](docs/P6_PRIVATE_OWNER_MVP_MINIMUM_RELEASE_2026-11-20.md) before release work. Ship actual verified individual dated statement balances into existing private PWA Home + Accounts without waiting for comprehensive expense/investment/tax/auto-sync features. Keep current-vs-historical clear; bank route off until verified OS jail+source layout. Next encrypted owner comments after one full DB encrypted backup/disposable restore, then optional on-demand persisted source hashes. No unsupported feature flags/cost-bearing resources.
 
 > **FINAL VERIFIED CHAT8 20 NOV:** `main` includes merged PR #229 at `9df88dd6` after backend/PG18 [CI 44600562890 SUCCESS](https://github.com/alisufyan-ai7/pakistan-tax-finance-desk/actions/runs/44600562890); Railway API terminal SUCCESS same SHA, frontend remains prior SUCCESS. Previously merged #228/#230/#231/#232/#233 are source-only security/reconciliation scaffolding. **Do not enable real financial report, saved comments, Google content scanner or run live 0024/0025 migration** before independent PDF containment/authentic bank layout acceptance and independently verified encrypted owner full DB backup/disposable restore and least-privilege migration. Existing consent/MFA preserved. [Exact owner action and unblockers](docs/CHAT08_NOV20_LIVE_RELEASE_CONTINUATION.md).
@@ -115,7 +117,7 @@ Verified directly against GitHub: [#135](https://github.com/alisufyan-ai7/pakist
 
 ## Single authoritative context
 
-This repository is the project source of truth. Read `README.md`, `docs/CURRENT_HANDOFF.md`, `docs/DECISION_LOG.md`, `docs/ROADMAP_AND_ACCEPTANCE.md`, `docs/SECURITY_PRIVACY.md` and then the domain-specific document for your task. Do not transfer assumptions from unrelated repositories or chats.
+This repository is the project source of truth. First read `docs/LESSONS_LEARNED.md` and apply it throughout this task. Then read `README.md`, `docs/CURRENT_HANDOFF.md`, `docs/DECISION_LOG.md`, `docs/ROADMAP_AND_ACCEPTANCE.md`, `docs/SECURITY_PRIVACY.md` and the domain-specific document. Do not transfer assumptions from unrelated repositories or chats.
 
 ## Product identity and user intent
 
