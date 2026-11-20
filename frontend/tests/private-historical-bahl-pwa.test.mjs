@@ -34,7 +34,7 @@ test("historical BAHL original route is a single POST, default-off, no-log exact
  assert.equal(ng.split("location = "+path+" {").length-1,1);
  assert.match(ng,/set \$p5h_bahl_ingress "\$\{P5H_BAHL_PUBLIC_INGRESS_ENABLED\}";/);
  assert.match(d,/P5H_BAHL_PUBLIC_INGRESS_ENABLED=0/);
- assert.match(d,/P5H_BAHL_PUBLIC_INGRESS_ENABLED\)\$"/);
+ assert.match(d,/P5H_BAHL_PUBLIC_INGRESS_ENABLED\|P6A_BANK_CSV_PUBLIC_INGRESS_ENABLED\)\$"/);
  assert.doesNotMatch(ng,/\\n    location = \/api\/finance\/historical\/bahl/);
  assert.doesNotMatch(ng,/location \/api\//);
 });
