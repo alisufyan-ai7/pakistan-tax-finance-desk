@@ -124,3 +124,55 @@ test("partner names are owner-private and ventures stay distinct, no fabricated 
   assert.equal(ids.get("investment-partner-groups").hidden,true);
   assert.equal(ids.get("investment-partner-list").children.length,0);
 });
+
+test("matched original CSV bank movements appear under a partner but never as invested capital",()=>{
+  const {ctx,ids}=harness();
+  const group={id:"fictional_partner",title:"Fictional partner",owner_declared:true,ventures:[
+    {id:"fictional_venture",title:"Fictional venture",category:"property",
+     evidence_status:"PROPERTY_REGISTER_RECONCILED_HISTORICAL_COSTS_ONLY",
+     property_register_linked:true,confirmed_invested_principal_minor:null,
+     current_market_value_minor:null,realized_cash_return_minor:null,
+     expected_return_minor:null}]};
+  const registry={contract:"personal_cfo_p6_owner_investment_registry_v1",
+    groups:[group],source:"PRIVATE_OWNER_DECLARATION",
+    property_register_group_id:group.id,
+    current_market_values_verified:false,all_investment_contributions_reconciled:false};
+  const candidate={
+    group_id:group.id,candidate_count:2,
+    outgoing_bank_movements_minor:2000,incoming_bank_movements_minor:5000,
+    rows:[
+      {event_hmac:"c".repeat(64),source_hmac:"b".repeat(64),
+       date:"2026-01-01",direction:"INBOUND",amount_minor:5000,
+       interpretation:"COUNTERPARTY_BANK_MOVEMENT_NEEDS_PURPOSE_REVIEW"},
+      {event_hmac:"d".repeat(64),source_hmac:"b".repeat(64),
+       date:"2026-01-02",direction:"OUTBOUND",amount_minor:2000,
+       interpretation:"COUNTERPARTY_BANK_MOVEMENT_NEEDS_PURPOSE_REVIEW"}
+    ],
+  };
+  const evidence={
+    contract:"personal_cfo_p6_investment_bank_candidates_v1",
+    groups:[candidate],source_reconciliation_verified:true,
+    all_investment_sources_covered:false,
+    personal_investment_principal_verified:false,repayments_verified:false,
+    outstanding_investment_balance_minor:null,
+    realized_investment_return_minor:null,source_data_retained:false,
+    owner_review_required:true,
+  };
+  assert.equal(ctx.validInvestmentBankCandidates(evidence,registry),true);
+  ctx.renderInvestmentRelationshipRegistry(registry,evidence);
+  const node=ids.get("investment-partner-list").children[0];
+  assert.match(node.children[2].textContent,/NOT verified invested capital or repayments/);
+  assert.match(node.children[2].textContent,/PKR 20.00/);
+  assert.match(node.children[2].textContent,/PKR 50.00/);
+  assert.equal(node.children[3].children[1].children.length,2);
+  assert.equal(ctx.validInvestmentBankCandidates({...evidence,
+    groups:[{...candidate,incoming_bank_movements_minor:5001}]},registry),false);
+  assert.equal(ctx.validInvestmentBankCandidates({...evidence,
+    groups:[{...candidate,rows:[
+      candidate.rows[0],{...candidate.rows[1],event_hmac:candidate.rows[0].event_hmac}]}]},registry),false);
+  assert.equal(ctx.validInvestmentBankCandidates({...evidence,repayments_verified:true},registry),false);
+  assert.equal(ctx.validInvestmentBankCandidates({...evidence,outstanding_investment_balance_minor:3000},registry),false);
+  const copy={...evidence,source_reconciliation_verified:false,groups:[]};
+  assert.equal(ctx.validInvestmentBankCandidates(copy,registry),true);
+  assert.equal(ctx.validInvestmentBankCandidates({...copy,groups:[candidate]},registry),false);
+});
