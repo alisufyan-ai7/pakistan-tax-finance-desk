@@ -109,3 +109,77 @@ def test_no_unverified_source_proof_is_accepted():
             data,report=proof,source_hmac="b"*64,
             matching={"fictional_partner":["to FICTIONAL PARTNER A "]},
             hmac_index=lambda *a:"c"*64)
+
+def test_authenticated_owner_report_pins_source_and_does_not_ingest_pdf(monkeypatch):
+    from types import SimpleNamespace
+    import hashlib
+    from app import private_owner_property_inventory_report as owner_report
+
+    owner="synthetic-owner-123456789012345"
+    monkeypatch.setenv("APP_DATA_MODE","synthetic")
+    monkeypatch.setenv("P1W_OWNER_REF",owner)
+    for flag in (
+        "P6B_OWNER_INVESTMENT_RUNTIME",
+        "P6B_G3_PROPERTY_REGISTER_RECONCILIATION_ACCEPTED",
+        "P3A_PRIVATE_SOURCE_MEDIA_ENABLED",
+        "P3A_G3_RESTRICTED_SCOPE_REVIEWED",
+        "P3A_OWNER_CONTENT_CONSENT_ACCEPTED",
+    ):
+        monkeypatch.setenv(flag,"1")
+    groups={
+        "property_register_group_id":"property_group",
+        "groups":[
+            {"id":"property_group","title":"Fictional property partner",
+             "ventures":[{"id":"property_venture","title":"Fictional properties",
+                          "category":"property"}]},
+            {"id":"fictional_partner","title":"Fictional second partner",
+             "ventures":[{"id":"other_venture","title":"Fictional venture",
+                          "category":"business"}]},
+        ],
+    }
+    monkeypatch.setenv("P6B_PRIVATE_RELATIONSHIPS_JSON",json.dumps(groups))
+    monkeypatch.setenv("P6C_PRIVATE_BANK_MATCH_PHRASES_JSON",
+                       json.dumps({"fictional_partner":["to FICTIONAL PARTNER A "]}))
+    cfg=SimpleNamespace(folder_id="synthetic-approved-folder",
+                        client_id="synthetic-client")
+    monkeypatch.setattr(owner_report,"_guard_network",lambda:cfg)
+    monkeypatch.setattr(owner_report,"read_private_content_grant",
+                        lambda *args,**kwargs:"synthetic-private-refresh")
+    monkeypatch.setattr(owner_report,"refresh_google_content_token",
+                        lambda **kwargs:("synthetic-access",None))
+    csv_source=SimpleNamespace(
+        id="synthetic-file-a",name="synthetic.csv",
+        mime_type="text/csv",size_bytes=len(fixture_csv()),
+        parent_ids=(cfg.folder_id,),trashed=False)
+    pdf_source=SimpleNamespace(
+        id="synthetic-file-b",name="synthetic.pdf",
+        mime_type="application/pdf",size_bytes=1024,
+        parent_ids=(cfg.folder_id,),trashed=False)
+    monkeypatch.setattr(owner_report,"_inventory",
+                        lambda *a,**kw:[csv_source,pdf_source])
+    monkeypatch.setattr(owner_report,"_index",
+        lambda domain,value:hashlib.sha256(
+            (domain+":"+value).encode("utf8")).hexdigest())
+    monkeypatch.setattr(owner_report,"_version",lambda *a:"d"*64)
+    read=[]
+    def media(**kw):
+        read.append(kw)
+        return SimpleNamespace(data=fixture_csv(),extension=".csv",
+                               content_hmac="e"*64)
+    monkeypatch.setattr(owner_report,"read_pinned_google_source_once",media)
+    class DB:
+        def __enter__(self):return self
+        def __exit__(self,*args):return False
+    report=owner_report.get_private_property_inventory_overview(
+        session_factory=DB,owner_ref=owner,
+        transport=lambda *a,**kw:None,
+        media_transport=lambda *a,**kw:None)
+    assert report["property_register_sources_verified"]==0
+    assert len(read)==1
+    assert read[0]["file_id"]==csv_source.id
+    assert report["candidate_bank_movements"]["source_reconciliation_verified"] is True
+    assert len(report["candidate_bank_movements"]["groups"])==1
+    assert report["candidate_bank_movements"]["groups"][0]["candidate_count"]==1
+    assert report["candidate_bank_movements"]["groups"][0]["outgoing_bank_movements_minor"]==2000
+    assert report["candidate_bank_movements"]["outstanding_investment_balance_minor"] is None
+    assert report["owner_relationships"]["groups"][1]["ventures"][0]["confirmed_invested_principal_minor"] is None
