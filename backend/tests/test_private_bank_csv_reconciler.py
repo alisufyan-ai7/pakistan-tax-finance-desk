@@ -125,6 +125,7 @@ def test_pinned_approved_folder_report_reconciles_only_csv(monkeypatch):
         calls.append(kw)
         return SimpleNamespace(
             data=fixture_csv(),extension=".csv",
+            sha256=__import__("hashlib").sha256(fixture_csv()).hexdigest(),
             content_hmac="c"*64)
     monkeypatch.setattr(report,"read_pinned_google_source_once",media)
     class Session:
