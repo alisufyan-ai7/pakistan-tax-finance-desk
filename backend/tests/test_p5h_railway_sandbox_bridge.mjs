@@ -29,7 +29,7 @@ function fakeSdk({fail = "", mode = "ISOLATED"} = {}) {
             state.files.push({path, content: String(data), config});
           },
         },
-        async exec(command, options) {
+        exec(command, options) {
           state.commands.push({command, options});
           if (command.startsWith("set -eu")) {
             return {exitCode: fail === "setup" ? 1 : 0,
