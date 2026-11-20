@@ -180,6 +180,17 @@ test("matched original CSV bank movements appear under a partner but never as in
       candidate.rows[0],{...candidate.rows[1],event_hmac:candidate.rows[0].event_hmac}]}]},registry),false);
   assert.equal(ctx.validInvestmentBankCandidates({...evidence,repayments_verified:true},registry),false);
   assert.equal(ctx.validInvestmentBankCandidates({...evidence,outstanding_investment_balance_minor:3000},registry),false);
+  ctx.renderInvestmentPositionCards(registry,evidence);
+  const position=ids.get("investment-position-list").children;
+  assert.equal(ids.get("investment-position-panel").hidden,false);
+  assert.equal(position.length,1);
+  assert.equal(position[0].children[2].children.length,5);
+  assert.equal(position[0].children[2].children[0].children[1].textContent,"Not verified");
+  assert.equal(position[0].children[2].children[3].children[1].textContent,"Not verified");
+  assert.match(position[0].children[3].textContent,/NOT confirmed capital or repayment/);
+  assert.match(position[0].children[3].textContent,/PKR 20.00/);
+  assert.match(position[0].children[3].textContent,/PKR 50.00/);
+  assert.equal(position[0].children[5].children[1].children.length,2);
   const copy={...evidence,source_reconciliation_verified:false,groups:[]};
   assert.equal(ctx.validInvestmentBankCandidates(copy,registry),true);
   assert.equal(ctx.validInvestmentBankCandidates({...copy,groups:[candidate]},registry),false);
