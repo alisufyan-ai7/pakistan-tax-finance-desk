@@ -34,7 +34,23 @@
       <div class="top-actions"><span id="connection-pill" class="state">Checking Drive</span><button id="install-owner-app" type="button" class="manage install-owner">Install app</button><button id="connect-readonly-documents" class="manage" type="button" hidden>Connect read-only documents</button><span id="readonly-connection-status" class="muted" hidden></span><a href="/owner-login" class="manage">Manage account</a></div>
     </header>
     <main class="main">
-      <div class="greeting"><div><h2>Welcome to your Personal CFO</h2><p>Real documents from your approved Google Drive folder. Financial totals appear only after source verification.</p></div><button id="refresh-all" type="button" class="primary">Refresh documents</button></div>
+      <div class="greeting"><div><h2>Your money, clearly explained</h2><p>Choose a period to see verified bank activity and investment evidence. Missing statements never count as zero.</p></div><button id="refresh-all" type="button" class="primary">Refresh documents</button></div>
+      <section id="finance-period-controls" class="finance-period-controls" aria-label="Choose financial reporting period">
+        <div class="period-fields">
+          <label for="finance-period-mode">Time view
+            <select id="finance-period-mode">
+              <option value="all">All available evidence</option>
+              <option value="month">Month</option>
+              <option value="year">Calendar year</option>
+              <option value="tax-year">Pakistan tax year (Jul–Jun)</option>
+            </select>
+          </label>
+          <label for="finance-period-value" id="finance-period-value-label" hidden>Selected period
+            <select id="finance-period-value" disabled></select>
+          </label>
+        </div>
+        <p id="finance-period-status" aria-live="polite">Source-backed reporting; current balances and personal spending remain unknown until verified.</p>
+      </section>
       <p id="owner-install-help" class="status" role="status" hidden></p>
       <p id="app-status" class="status" role="status" aria-live="polite">Checking your connection…</p>
       <section id="view-home" class="view" aria-labelledby="view-heading">
@@ -45,6 +61,14 @@
           <article class="metric"><span>Owner's recorded sold-property profit share</span><strong id="home-property-profit-share">PKR —</strong><small id="home-property-profit-context">Recorded sale profits, not bank-confirmed cash received.</small></article>
         </div>
         <p class="home-unknown-facts">Not yet established from complete evidence: <strong>today's total available cash, this month's classified income and spending, outstanding investment principal, and expected future returns.</strong> Unverified amounts are not presented as zero.</p>
+        <section class="panel period-evidence" id="home-financial-period-panel" aria-labelledby="home-financial-period-heading">
+          <div class="panel-heading">
+            <div><span class="micro">SELECTED PERIOD · ORIGINAL BANK EVIDENCE</span><h3 id="home-financial-period-heading">Available bank activity</h3></div>
+            <button type="button" class="text-button" data-go="accounts">Explore accounts</button>
+          </div>
+          <p id="home-financial-period-coverage" class="muted">Checking verified monthly source evidence…</p>
+          <ul id="home-financial-period-list" class="document-list" aria-label="Bank movement summaries for the selected period"></ul>
+        </section>
         <section id="home-historical-evidence" class="panel" hidden aria-labelledby="home-historical-title">
           <div class="panel-heading">
             <div><span class="micro">VERIFIED SOURCE OBSERVATIONS</span><h3 id="home-historical-title">Historical bank statements</h3></div>
@@ -116,6 +140,11 @@
         </section>
       </section>
       <section id="view-accounts" class="view" hidden>
+        <section class="panel period-evidence" aria-labelledby="account-period-heading">
+          <div class="panel-heading"><h3 id="account-period-heading">Account activity in selected period</h3><span class="label-neutral">Verified historical movements</span></div>
+          <p id="account-period-coverage" class="muted">Select a period above to inspect supported months.</p>
+          <ul id="account-period-list" class="document-list" aria-label="Dated bank observations in selected period"></ul>
+        </section>
         <section class="panel">
           <div class="panel-heading"><div><span class="micro">DOCUMENT-SOURCED HISTORY</span><h3>Historical account statements</h3></div><span class="label-neutral">Not current bank balances</span></div>
           <p class="muted">Only historical balances explicitly reconciled from original bank statements appear here. Internal transfers, actual income, personal spending and current balances remain unverified until separately reconciled.</p>
@@ -131,6 +160,11 @@
       </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>
       <section id="view-investments" class="view" hidden>
+        <section class="panel period-evidence" aria-labelledby="investment-period-heading">
+          <div class="panel-heading"><h3 id="investment-period-heading">Investment-related bank activity</h3><span class="label-neutral">Purpose needs confirmation</span></div>
+          <p id="investment-period-coverage" class="muted">Show dated candidate transfers for the chosen period. These are not verified investments, repayments or returns.</p>
+          <ul id="investment-period-list" class="document-list" aria-label="Candidate investment movements by partner for selected period"></ul>
+        </section>
         <section id="investment-partner-groups" class="panel" hidden>
           <div class="panel-heading"><h3>Investment partners & ventures</h3><span class="label-neutral">Your declared relationships</span></div>
           <p class="muted">Partners are grouped once; separate ventures stay separate. A bank payment is not automatically capital invested, and unverified balances and returns remain unknown.</p>
