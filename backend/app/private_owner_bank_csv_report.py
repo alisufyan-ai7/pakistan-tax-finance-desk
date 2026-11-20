@@ -1,8 +1,9 @@
 """P6: real, readonly, single-owner bank CSV evidence from pinned Google Drive.
 
-No bank identities, raw CSV contents, credentials, account numbers or transaction
-narratives are logged, persisted, or included in the owner JSON. This endpoint
-reports only historical bank movements, NOT personal income or spending.
+No bank identities, raw CSV contents, credentials or account numbers are
+logged or persisted. Optional P7 rows contain masked owner-only descriptions
+through existing MFA/private no-store JSON, never public logs or GitHub.
+A bank movement is NOT automatically personal income or spending.
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from .private_original_source_preflight import _inventory
 from .private_owner_google_media_read import read_pinned_google_source_once, _bounded_google_media
 from .private_bank_csv_reconciler import reconcile_private_bank_csv, PrivateBankCsvBlocked
 from .private_bank_csv_transaction_classifier import classify_reconciled_private_bank_csv
+from .private_owner_bank_csv_transaction_rows import project_reconciled_bank_csv_transactions
 from .private_offline_bank_pdf_receipts import (verify_pinned_offline_receipts, PrivateOfflineBahlBlocked)
 
 _OWNER = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
@@ -96,6 +98,17 @@ def get_private_bank_csv_overview(
                     raise ValueError()
                 parsed = reconcile_private_bank_csv(blob.data)
                 classification = classify_reconciled_private_bank_csv(blob.data, report=parsed)
+                transactions = None
+                if os.getenv("P7_OWNER_TRANSACTION_ROWS_ENABLED") == "1":
+                    # This owner-only projection never changes the already
+                    # accepted statement summary. 600+ lines need reviewed
+                    # pagination, not silently truncated or guessed.
+                    try:
+                        transactions = project_reconciled_bank_csv_transactions(
+                            blob.data,report=parsed,
+                            source_hmac=_index("file",item.id),hmac_index=_index)
+                    except PrivateBankCsvBlocked:
+                        transactions = None
             except (PrivateBankCsvBlocked, ValueError, Exception):
                 needs_review_count += 1
                 continue
@@ -107,6 +120,7 @@ def get_private_bank_csv_overview(
                 "source_name": item.name,
                 "source_sha256_verified": True,
                 "content_retained_on_server": False,
+                **({"transactions": transactions} if transactions is not None else {}),
             })
         # P6D is optional, separately attested offline evidence. A stale
         # or invalid PDF receipt NEVER blocks an already reconciled CSV and
