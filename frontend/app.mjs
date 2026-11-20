@@ -21,6 +21,7 @@ const hashResults = byId("source-hash-results");
 const historicalReportList = byId("historical-bahl-reports");
 const historicalReadiness = byId("historical-bahl-readiness");
 const historicalBankReports = new Map();
+let bankCsvRefreshEpoch = 0;
 let nextSourceBatch = 0;
 let sourceCheckedCount = 0;
 let sourceExpectedTotal = null;
@@ -84,6 +85,8 @@ function rejectSession() {
   // after a private session expires or the source evidence is invalidated.
   byId("home-historical-evidence-list").replaceChildren();
   byId("home-historical-evidence").hidden = true;
+  bankCsvRefreshEpoch++;
+  clearBankCsvEvidence();
   // Source inventory is owner-private: drop every filename from the Home queue
   // when the MFA session is no longer authorized.
   byId("home-document-priority-list").replaceChildren();
@@ -274,6 +277,8 @@ async function refreshMetadata() {
     hashResults.replaceChildren();
     historicalBankReports.clear();
     renderHistoricalBankReports();
+    bankCsvRefreshEpoch++;
+    clearBankCsvEvidence();
     hashStatus.textContent =
       "Drive metadata refreshed. Recheck original documents to verify current file bytes.";
     checkOriginals.textContent = "Check original documents";
@@ -581,6 +586,139 @@ function renderHistoricalBankReports() {
 // Home uses ONLY the existing strict verifiedHistoricalBahl-accepted results.
 // Never sum dated statements (period overlap/ownership may be unresolved),
 // label historical closing as current cash, or cache values in browser storage.
+// Private, no-cache source-backed CSV bank observations, not personal income
+// or expenses. Exact schema/amount continuity is validated again in browser.
+const CSV_BANK_CONTRACT="personal_cfo_owner_bank_csv_overview_v1";
+function validBankCsvSource(result) {
+  if (!result || result.contract!=="personal_cfo_p6_reconciled_bank_csv_v1" ||
+      result.source_type!=="BANK_CSV_EXACT_RUNNING_BALANCES" ||
+      !HMAC_SHA.test(result.source_hmac) || !HMAC_SHA.test(result.source_content_hmac) ||
+      typeof result.source_name!=="string" || !result.source_name.toLowerCase().endsWith(".csv") ||
+      result.source_name.length>512 || result.source_sha256_verified!==true ||
+      result.content_retained_on_server!==false || result.original_source_modified!==false ||
+      result.all_running_balances_reconciled!==true || result.printed_closing_reconciled!==true ||
+      result.historical_only!==true || result.owner_review_required!==true ||
+      result.current_available_balance_minor!==null || result.personal_income_minor!==null ||
+      result.personal_expenses_minor!==null || result.investment_current_market_value_minor!==null ||
+      !/^20[0-4][0-9]-[01][0-9]-[0-3][0-9]$/.test(result.statement_start) ||
+      !/^20[0-4][0-9]-[01][0-9]-[0-3][0-9]$/.test(result.statement_end) ||
+      result.statement_start>result.statement_end ||
+      !Number.isInteger(result.transaction_count) || result.transaction_count<1 ||
+      result.transaction_count>5000 || !Array.isArray(result.months) || result.months.length<1 ||
+      result.months.length>120) return false;
+  const money=["opening_minor","closing_minor","gross_bank_debits_minor","gross_bank_credits_minor"];
+  if(!money.every(key=>Number.isSafeInteger(result[key]) && result[key]>=0 &&
+      result[key]<=1000000000000000))return false;
+  if(result.opening_minor+result.gross_bank_credits_minor-
+      result.gross_bank_debits_minor!==result.closing_minor)return false;
+  let debit=0,credit=0,count=0,last="",lastBalance=null;
+  for(const month of result.months){
+    if(!month || typeof month.month!=="string" ||
+        !/^20[0-4][0-9]-(?:0[1-9]|1[0-2])$/.test(month.month) ||
+        month.month<=last ||
+        !Number.isInteger(month.transaction_count) || month.transaction_count<1 ||
+        month.transaction_count>5000)return false;
+    for(const key of ["gross_bank_debits_minor","gross_bank_credits_minor",
+        "last_reported_balance_minor","bank_labelled_profit_minor","bank_labelled_profit_tax_minor"])
+      if(!Number.isSafeInteger(month[key]) || month[key]<0 ||
+          month[key]>1000000000000000)return false;
+    if(month.bank_labelled_profit_minor>month.gross_bank_credits_minor ||
+       month.bank_labelled_profit_tax_minor>month.gross_bank_debits_minor)return false;
+    debit+=month.gross_bank_debits_minor;credit+=month.gross_bank_credits_minor;
+    count+=month.transaction_count;lastBalance=month.last_reported_balance_minor;
+    last=month.month;
+  }
+  return debit===result.gross_bank_debits_minor &&
+    credit===result.gross_bank_credits_minor &&
+    count===result.transaction_count && lastBalance===result.closing_minor &&
+    result.statement_end.startsWith(last);
+}
+function validBankCsvOverview(data) {
+  return !!(data && data.contract===CSV_BANK_CONTRACT &&
+    data.source_inventory_complete===true &&
+    data.approved_source_folder===true &&
+    data.originals_modified===false &&
+    data.content_retained_on_server===false &&
+    data.historical_only===true &&
+    data.all_account_coverage_verified===false &&
+    data.personal_income_minor===null &&
+    data.personal_expenses_minor===null &&
+    data.current_available_balance_minor===null &&
+    Number.isInteger(data.csv_sources_found) && data.csv_sources_found>=0 &&
+    data.csv_sources_found<=10 &&
+    Number.isInteger(data.csv_sources_requiring_review) &&
+    data.csv_sources_requiring_review>=0 &&
+    Array.isArray(data.reports) && data.reports.length<=10 &&
+    data.reports.length+data.csv_sources_requiring_review===data.csv_sources_found &&
+    data.reports.every(validBankCsvSource) &&
+    new Set(data.reports.map(x=>x.source_hmac)).size===data.reports.length);
+}
+function clearBankCsvEvidence() {
+  byId("home-bank-csv-list").replaceChildren();
+  byId("account-bank-csv-list").replaceChildren();
+  byId("home-bank-csv-evidence").hidden=true;
+  byId("account-bank-csv-section").hidden=true;
+}
+function renderBankCsvReportList(id,reports) {
+  const list=byId(id);
+  list.replaceChildren();
+  for(const report of reports) {
+    const li=document.createElement("li");
+    const name=document.createElement("strong");
+    name.textContent=report.source_name;
+    const dated=document.createElement("small");
+    dated.textContent="Historical closing balance "+
+      historicalMoney.format(report.closing_minor/100)+" as of "+report.statement_end+
+      " · "+report.transaction_count+" reconciled transactions · source SHA-256 verified";
+    const summary=document.createElement("small");
+    summary.textContent="Entire statement: gross credits "+
+      historicalMoney.format(report.gross_bank_credits_minor/100)+
+      "; gross debits "+historicalMoney.format(report.gross_bank_debits_minor/100)+
+      ". These are bank movements, not classified income or expenses.";
+    const table=document.createElement("table");
+    table.className="bank-csv-monthly";
+    const head=document.createElement("thead");
+    const heading=document.createElement("tr");
+    for(const label of ["Month","Gross credits","Gross debits","Month-end observed"]) {
+      const th=document.createElement("th");th.scope="col";th.textContent=label;
+      heading.appendChild(th);
+    }
+    head.appendChild(heading);table.appendChild(head);
+    const body=document.createElement("tbody");
+    for(const month of report.months){
+      const tr=document.createElement("tr");
+      for(const value of [month.month, historicalMoney.format(month.gross_bank_credits_minor/100),
+          historicalMoney.format(month.gross_bank_debits_minor/100),
+          historicalMoney.format(month.last_reported_balance_minor/100)]){
+        const td=document.createElement("td");td.textContent=value;tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    table.appendChild(body);
+    li.append(name,dated,summary,table);
+    list.appendChild(li);
+  }
+}
+async function loadBankCsvOverview() {
+  const epoch=++bankCsvRefreshEpoch;
+  clearBankCsvEvidence();
+  if(!safeToken(csrfToken))return;
+  try {
+    const data=await get("/api/finance/bank/csv-overview");
+    if(epoch!==bankCsvRefreshEpoch || !safeToken(csrfToken))return;
+    if(!validBankCsvOverview(data))throw Error("Untrusted source-backed bank overview");
+    if(!data.reports.length)return;
+    renderBankCsvReportList("home-bank-csv-list",data.reports);
+    renderBankCsvReportList("account-bank-csv-list",data.reports);
+    byId("home-bank-csv-evidence").hidden=false;
+    byId("account-bank-csv-section").hidden=false;
+  }catch{
+    // Default-off source route, expired grant, unsupported format, or
+    // unverified original: do not invent a figure or disclose source bytes.
+    clearBankCsvEvidence();
+  }
+}
+
 function renderHomeHistoricalEvidence() {
   const section=byId("home-historical-evidence");
   const list=byId("home-historical-evidence-list");
@@ -829,7 +967,10 @@ async function start() {
     byId("connection-pill").textContent = connected ? "Drive metadata connected" : "Drive not connected";
     await loadReadOnlyGrantStatus();
     await loadOwnerReviewReadiness();
-    if (connected) await refreshMetadata();
+    if (connected) {
+      await refreshMetadata();
+      await loadBankCsvOverview();
+    }
     else showStatus("Your owner session is active. Connect the approved Google Drive folder from Manage account.");
   } catch {
     if (!app.hidden) showStatus("Cannot verify your private session right now.");
@@ -840,5 +981,8 @@ for (const btn of document.querySelectorAll("[data-view], [data-go]")) {
   btn.addEventListener("click",()=>go(btn.dataset.view || btn.dataset.go));
 }
 byId("document-search").addEventListener("input",renderDocuments);
-refreshButton.addEventListener("click",()=>void refreshMetadata());
+refreshButton.addEventListener("click",async()=>{
+  await refreshMetadata();
+  await loadBankCsvOverview();
+});
 void start();
