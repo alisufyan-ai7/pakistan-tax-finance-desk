@@ -9,7 +9,7 @@ function element(){return {children:[],hidden:true,textContent:"",
  replaceChildren(...xs){this.children=xs;}};}
 function harness(){
   const js=read("app.mjs");
-  const a=js.indexOf("function validPrivatePropertyOverview(data) {");
+  const a=js.indexOf("function validInvestmentRelationshipRegistry(reg, hasPropertyReport) {");
   const b=js.indexOf("// Private, no-cache source-backed CSV bank observations",a);
   assert.ok(a>0 && b>a,"separate in-memory property evidence contract");
   const ids=new Map(["home-property-investment-list","property-investment-detail-list",
