@@ -255,7 +255,12 @@ async function main() {
       ))) {
     throw new SandboxBridgeBlocked("API_PREFLIGHT", false, false, false);
   }
-  const { Sandbox } = await import("railway");
+  let Sandbox;
+  try {
+    ({ Sandbox } = await import("railway"));
+  } catch {
+    throw new SandboxBridgeBlocked("SDK_IMPORT", false, false, false);
+  }
   if (statusOnly) {
     process.stdout.write(JSON.stringify(await inspectSandboxInventory(Sandbox)) + "\n");
     return;
