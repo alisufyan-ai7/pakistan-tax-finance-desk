@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {runIsolatedSandbox} from "../app/p5h_railway_sandbox_bridge.mjs";
+import {runIsolatedSandbox, inspectSandboxInventory, SandboxBridgeBlocked, safeFailureReport} from "../app/p5h_railway_sandbox_bridge.mjs";
 
 const GOOD_PROBE = {
   network_denied: true,
@@ -117,4 +117,96 @@ test("setup, source, parse, missing isolation, and bad owner request fail closed
   const invalid = {document_b64: "%%%/", document_password: "synthetic"};
   await assert.rejects(runIsolatedSandbox(invalid, Sandbox));
   assert.equal(state.created, 1); // prior rejected mode only
+});
+
+
+test("read-only inventory never creates VM and reports only safe counts", async () => {
+  const {Sandbox, state} = fakeSdk();
+  Sandbox.list = async () => [
+    {id: "fake-one", status: "RUNNING"},
+    {id: "fake-finished", status: "DESTROYED"},
+  ];
+  const result = await inspectSandboxInventory(Sandbox);
+  assert.equal(result.active_sandbox_count, 1);
+  assert.equal(result.new_sandbox_created, false);
+  assert.equal(result.original_document_read, false);
+  assert.equal(state.created, 0);
+});
+
+test("pre-existing live VM fails BEFORE another paid create", async () => {
+  const {Sandbox, state} = fakeSdk();
+  Sandbox.list = async () => [{id: "fake-existing", status: "RUNNING"}];
+  await assert.rejects(
+    runIsolatedSandbox(null, Sandbox, {probeOnly: true}),
+    error => error instanceof SandboxBridgeBlocked &&
+      error.stage === "API_PREFLIGHT" &&
+      error.createAttempted === false,
+  );
+  assert.equal(state.created, 0);
+});
+
+test("safe stage and cleanup state on failed trusted setup", async () => {
+  const {Sandbox, state} = fakeSdk({fail: "setup"});
+  await assert.rejects(
+    runIsolatedSandbox(null, Sandbox, {probeOnly: true}),
+    error => error instanceof SandboxBridgeBlocked &&
+      error.stage === "GUEST_SETUP" &&
+      error.createAttempted === true &&
+      error.createdConfirmed === true &&
+      error.destroyedVerified === true &&
+      !JSON.stringify(error).includes("synthetic-only-password"),
+  );
+  assert.equal(state.destroyed, 1);
+});
+
+test("create-time uncertain VM state is not falsely reported destroyed", async () => {
+  const {Sandbox, state} = fakeSdk();
+  Sandbox.create = async () => { throw new Error("fake secret runtime failure"); };
+  await assert.rejects(
+    runIsolatedSandbox(null, Sandbox, {probeOnly: true}),
+    error => error instanceof SandboxBridgeBlocked &&
+      error.stage === "SANDBOX_CREATE" &&
+      error.createAttempted === true &&
+      error.createdConfirmed === false &&
+      error.destroyedVerified === false &&
+      !error.message.includes("secret"),
+  );
+  assert.equal(state.created, 0);
+});
+
+test("cleanup uncertainty overrides successful synthetic proof", async () => {
+  const {Sandbox, state} = fakeSdk();
+  const create = Sandbox.create;
+  Sandbox.create = async (...args) => {
+    const guest = await create(...args);
+    guest.destroy = async () => {throw new Error("synthetic sensitive guest failure");};
+    return guest;
+  };
+  await assert.rejects(
+    runIsolatedSandbox(null, Sandbox, {probeOnly: true}),
+    error => error instanceof SandboxBridgeBlocked &&
+      error.stage === "CLEANUP_UNVERIFIED" &&
+      error.createdConfirmed === true &&
+      error.destroyedVerified === false,
+  );
+  assert.equal(state.created, 1);
+});
+
+
+test("safe failure JSON does not leak upstream errors or misstate PDF read", () => {
+  const createError = new SandboxBridgeBlocked("SANDBOX_CREATE", true, false, false);
+  assert.deepEqual(safeFailureReport(createError), {
+    contract: "personal_cfo_p5h_sandbox_safe_failure_v1",
+    status: "BLOCKED",
+    stage: "SANDBOX_CREATE",
+    vm_create_attempted: true,
+    vm_creation_confirmed: false,
+    vm_destruction_verified: false,
+    original_document_read: false,
+    bank_runtime_activated: false,
+  });
+  const parseError = new SandboxBridgeBlocked("GUEST_PARSE", true, true, true);
+  assert.equal(safeFailureReport(parseError).original_document_read, null);
+  assert.equal(safeFailureReport(new Error("SYNTHETIC_SECRET")).stage, "PRE_REQUEST_UNKNOWN");
+  assert.ok(!JSON.stringify(safeFailureReport(new Error("SYNTHETIC_SECRET"))).includes("SECRET"));
 });
