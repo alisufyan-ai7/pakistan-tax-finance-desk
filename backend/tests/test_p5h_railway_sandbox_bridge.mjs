@@ -39,10 +39,12 @@ function fakeSdk({fail = "", mode = "ISOLATED"} = {}) {
             return {exitCode: fail === "jail" ? 1 : 0,
               stdout: "P5H_JAIL_BOOTED\n",
               timedOut: false, truncated: false};
+          }
           if (command.endsWith(" python-import")) {
             return {exitCode: fail === "python" ? 1 : 0,
               stdout: "P5H_PYPDF_IMPORTED\n",
               timedOut: false, truncated: false};
+          }
           if (command.endsWith(" probe")) {
             const data = {...GOOD_PROBE};
             if (fail === "probe") data.network_denied = false;
