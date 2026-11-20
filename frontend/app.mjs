@@ -2,6 +2,7 @@
  * real one-folder Drive metadata only. NO demo financial figures or local storage.
  * Every provider filename becomes textContent, never HTML. */
 import { summarizeSourceReview } from "./document-review-summary.mjs";
+import { repeatingBankCandidates } from "./finance-patterns.mjs";
 import {safePeriod,periodContainsDate,periodContainsMonth,periodTitle,periodMonths,observedPeriods,sourcePeriodSummary,candidatePeriodEvidence} from "./finance-period.mjs";
 const byId = id => document.getElementById(id);
 const allowedViews = new Set(["home","documents","accounts","transactions","spending","investments","tax"]);
@@ -177,6 +178,43 @@ function renderMonthlyBankTrend(){
     ". A statement may omit inactive months; missing coverage remains unknown. "+
     "Other banks are not included in this chart.";
 }
+function renderRecurringBankCandidates(){
+  // Only use transactionSources which passed the strict owner-source proof
+  // and independent row-level balance continuity checks before storage in RAM.
+  const selected=repeatingBankCandidates(
+    periodEvidence.transactionSources,financialPeriod);
+  const list=byId("spending-recurring-list");
+  list.replaceChildren();
+  byId("spending-recurring-heading").textContent=
+    periodTitle(financialPeriod)+" · recurring activity candidates";
+  byId("spending-recurring-coverage").textContent=
+    selected.length+" possible repeated movement pattern(s) from "+
+    periodEvidence.transactionSources.length+" verified CSV source(s). "+
+    "Patterns require at least three observed months in the same statement. "+
+    "Their purpose, future recurrence and bill due dates remain unverified.";
+  if(!selected.length){
+    const li=document.createElement("li");
+    li.textContent="No repeated 3-month bank pattern found in the supported records for "+
+      periodTitle(financialPeriod)+". This does not mean all bills are paid or absent.";
+    list.appendChild(li);
+    return;
+  }
+  for(const item of selected){
+    const li=document.createElement("li");
+    li.className="recurring-candidate";
+    const strong=document.createElement("strong");
+    strong.textContent=(item.direction==="OUTBOUND"?"Repeated money out ":"Repeated money in ")+
+      historicalMoney.format(item.amount_minor/100);
+    const detail=document.createElement("small");
+    detail.textContent=item.description+" · "+item.source_name;
+    const dates=document.createElement("small");
+    dates.textContent=item.observed_month_count+" distinct months observed · "+
+      item.first_observed+" to "+item.last_observed+
+      " · purpose and next due date unknown";
+    li.append(strong,detail,dates);
+    list.appendChild(li);
+  }
+}
 function renderFinancialPeriodEvidence(){
   const period=financialPeriod;
   const title=periodTitle(period);
@@ -274,6 +312,7 @@ function renderFinancialPeriodEvidence(){
   renderOwnerReviewQueue();
   renderSourceSpendingAndTax();
   renderMonthlyBankTrend();
+  renderRecurringBankCandidates();
   if(periodEvidence.bankReports.length)
     renderHomeBankCsvMetrics(periodEvidence.bankReports);
   renderHomePropertyProfitPeriod();
@@ -2116,6 +2155,14 @@ for(const id of ["transaction-search","transaction-direction-filter",
 byId("transaction-show-more").addEventListener("click",()=>{
   transactionVisibleLimit+=200;
   renderTransactionExplorer();
+});
+byId("home-review-open-all").addEventListener("click",()=>{
+  byId("transaction-category-filter").value="REVIEW_REQUIRED";
+  byId("transaction-search").value="";
+  transactionVisibleLimit=200;
+  renderTransactionExplorer();
+  go("transactions");
+  closeMobileMore();
 });
 byId("monthly-trend-source").addEventListener("change",renderMonthlyBankTrend);
 byId("document-search").addEventListener("input",renderDocuments);
