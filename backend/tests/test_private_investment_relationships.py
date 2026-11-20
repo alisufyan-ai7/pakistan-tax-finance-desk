@@ -63,7 +63,7 @@ def test_default_empty_private_config_is_safe(monkeypatch):
     lambda o:o["groups"][1]["ventures"][0].update(id="book_venture"),
     lambda o:o["groups"][0]["ventures"][0].update(category="fictional_currency"),
     lambda o:o["groups"][0]["ventures"][0].update(confirmed_invested_principal_minor=100),
-    lambda o:o["groups"][0].update(title="Fake\\nheader"),
+    lambda o:o["groups"][0].update(title="Fake\nheader"),
     lambda o:o.update(groups=[]),
     lambda o:o["groups"][0]["ventures"].append({
         "id":"second_property","title":"Unreconciled property","category":"property"}),
