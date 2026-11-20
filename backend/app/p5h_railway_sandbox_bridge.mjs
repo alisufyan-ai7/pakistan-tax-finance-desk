@@ -270,21 +270,29 @@ async function main() {
   process.stdout.write(result + "\n");
 }
 
+/** Safe diagnostic output is intentionally not a financial/source report. */
+export function safeFailureReport(error) {
+  const info = error instanceof SandboxBridgeBlocked ? error : null;
+  const mayHaveReadPdf = !info ||
+    ["GUEST_PARSE", "GUEST_JSON", "CLEANUP_UNVERIFIED"].includes(info.stage);
+  return {
+    contract: "personal_cfo_p5h_sandbox_safe_failure_v1",
+    status: "BLOCKED",
+    stage: info?.stage ?? "PRE_REQUEST_UNKNOWN",
+    vm_create_attempted: info?.createAttempted ?? false,
+    vm_creation_confirmed: info?.createdConfirmed ?? false,
+    vm_destruction_verified: info?.destroyedVerified ?? false,
+    // Null means unknown: never claim a real PDF was untouched if the
+    // parsing stage or cleanup may have been reached.
+    original_document_read: mayHaveReadPdf ? null : false,
+    bank_runtime_activated: false,
+  };
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch(error => {
-    // Emit only static phase/cleanup facts. Never print host/SDK error,
-    // stderr, guest stdout, original bytes, password or token.
-    const info = error instanceof SandboxBridgeBlocked ? error : null;
-    process.stdout.write(JSON.stringify({
-      contract: "personal_cfo_p5h_sandbox_safe_failure_v1",
-      status: "BLOCKED",
-      stage: info?.stage ?? "PRE_REQUEST_UNKNOWN",
-      vm_create_attempted: info?.createAttempted ?? false,
-      vm_creation_confirmed: info?.createdConfirmed ?? false,
-      vm_destruction_verified: info?.destroyedVerified ?? false,
-      original_document_read: false,
-      bank_runtime_activated: false,
-    }) + "\n");
+    // Never print host/SDK error, stderr, guest stdout, original or password.
+    process.stdout.write(JSON.stringify(safeFailureReport(error)) + "\n");
     process.exitCode = 1;
   });
 }
