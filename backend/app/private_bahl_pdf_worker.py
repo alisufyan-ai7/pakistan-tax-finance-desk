@@ -182,19 +182,45 @@ def inspect_private_bahl_pdf(
     root=str(Path(__file__).resolve().parents[1])
     try:
         with tempfile.TemporaryDirectory(prefix="cfo-bahl-private-reader-") as cwd:
-            if os.getenv("P5E_OWNER_HISTORICAL_REPORT_PILOT") == "1":
-                # Live historical report ALWAYS requires an OS network/filesystem
-                # jail; missing bubblewrap or incompatible kernel fails CLOSED.
+            remote=os.getenv("P5H_REMOTE_VM_WORKER_ACTIVE") == "1"
+            if remote:
+                # This specific provider creates a disposable Railway VM with
+                # NO host credentials inside the guest. Actual PDF bytes and
+                # password travel from the owner API through ephemeral stdin
+                # ONLY after the trusted jailed Python runtime passes probe.
+                # Never fall back to in-process parsing on VM/SDK failure.
+                if (os.getenv("P5H_REMOTE_VM_G3_REVIEWED") != "1"
+                    or os.getenv("APP_DATA_MODE") != "synthetic"
+                    or not os.getenv("RAILWAY_API_TOKEN")
+                    or not os.getenv("RAILWAY_ENVIRONMENT_ID")):
+                    raise ValueError()
+                command=[
+                    "/usr/local/bin/node",
+                    str(Path(__file__).with_name("p5h_railway_sandbox_bridge.mjs")),
+                ]
+                env={
+                    "PATH":"/usr/local/bin:/usr/bin:/bin",
+                    "P5H_REMOTE_VM_WORKER_ACTIVE":"1",
+                    "P5H_REMOTE_VM_G3_REVIEWED":"1",
+                    "RAILWAY_API_TOKEN":os.environ["RAILWAY_API_TOKEN"],
+                    "RAILWAY_ENVIRONMENT_ID":os.environ["RAILWAY_ENVIRONMENT_ID"],
+                }
+                worker_timeout=235
+            elif os.getenv("P5E_OWNER_HISTORICAL_REPORT_PILOT") == "1":
+                # The known-to-fail ordinary Railway container remains
+                # fail-closed. This flag does not authorize an unjailed child.
                 command=jailed_bahl_python_command(
                     executable=sys.executable,root=root,child_script=_CHILD)
+                worker_timeout=14
             else:
-                # Preserved only for unexposed fixture-parser unit tests.
+                # Preserved only for unexposed fictional fixture unit tests.
                 command=[sys.executable,"-I","-B","-c",_CHILD,root]
+                worker_timeout=14
             result=subprocess.run(
                 command,
                 input=payload,stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                cwd=cwd,env=env,timeout=14,check=False,
+                cwd=cwd,env=env,timeout=worker_timeout,check=False,
                 preexec_fn=_limits,start_new_session=True,
             )
         if result.returncode != 0 or len(result.stdout)>_MAX_JSON:
