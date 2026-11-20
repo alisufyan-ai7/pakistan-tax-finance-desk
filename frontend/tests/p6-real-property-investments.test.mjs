@@ -15,7 +15,9 @@ function harness(){
   const ids=new Map(["home-property-investment-list","property-investment-detail-list",
   "home-property-investments","property-investment-detail",
   "property-cost-chart","investment-partner-list","investment-partner-groups",
-  "property-investment-detail-heading"].map(n=>[n,element()]));
+  "property-investment-detail-heading",
+  "home-held-property-cost","home-held-property-context",
+  "home-property-profit-share","home-property-profit-context"].map(n=>[n,element()]));
   const ctx={HMAC_SHA:/^[a-f0-9]{64}$/,byId:id=>{assert.ok(ids.has(id));return ids.get(id);},
    document:{createElement:()=>element()},historicalMoney:{format:v=>"PKR "+v.toFixed(2)},
    propertyRefreshEpoch:0,safeToken:()=>true,csrfToken:"x".repeat(45),get:async()=>{}};
@@ -59,8 +61,13 @@ test("property register source-backed costs, gains and owner share rendered only
   assert.match(ids.get("home-property-investment-list").children[0].children[1].textContent,/PKR 36.00/);
   assert.equal(ctx.validPrivatePropertyOverview({...data,reports:[{...source,market_value_minor:9999}]}),false);
   assert.equal(ctx.validPrivatePropertyOverview({...data,reports:[{...source,owner_recorded_sale_profit_share_minor:100}]}),false);
+  assert.equal(ids.get("home-held-property-cost").textContent,"PKR 600.00");
+  assert.equal(ids.get("home-property-profit-share").textContent,"PKR 36.00");
+  assert.match(ids.get("home-property-profit-context").textContent,/not confirmed cash/);
   ctx.clearPropertyInvestmentEvidence();
   assert.equal(ids.get("home-property-investments").hidden,true);
+  assert.equal(ids.get("home-held-property-cost").textContent,"PKR —");
+  assert.equal(ids.get("home-property-profit-share").textContent,"PKR —");
 });
 test("source private names cannot inject HTML, browser storage or public route",()=>{
   const js=read("app.mjs"),html=read("app.html"),ng=read("nginx.railway.conf"),dock=read("Dockerfile");
