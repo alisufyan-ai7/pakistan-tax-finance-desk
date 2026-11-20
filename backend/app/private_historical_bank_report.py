@@ -32,6 +32,13 @@ class PrivateHistoricalBankReportBlocked(ValueError):
 
 
 def _gate(owner: str, subject: str, password: str | None):
+    # The alternative guest VM must have its OWN independent Python+pypdf
+    # containment acceptance. The standard service's bwrap still cannot boot.
+    os_jail_accepted = os.getenv("P5C_BAHL_OS_JAIL_ENFORCED") == "1"
+    vm_jail_accepted = (
+        os.getenv("P5H_REMOTE_VM_WORKER_ACTIVE") == "1"
+        and os.getenv("P5H_REMOTE_VM_G3_REVIEWED") == "1"
+    )
     if (os.getenv("APP_DATA_MODE")!="synthetic"
         or type(owner) is not str or _OWNER.fullmatch(owner) is None
         or owner!=os.getenv("P1W_OWNER_REF")
@@ -42,10 +49,10 @@ def _gate(owner: str, subject: str, password: str | None):
         or any(os.getenv(k)!="1" for k in (
             "P5E_OWNER_HISTORICAL_REPORT_PILOT",
             "P5E_G3_ISOLATED_BANK_READER_REVIEWED",
-            "P5C_BAHL_OS_JAIL_ENFORCED",
             "P5A_ORIGINAL_HASH_PILOT",
             "P3A_PRIVATE_SOURCE_MEDIA_ENABLED",
-        ))):
+        ))
+        or not (os_jail_accepted or vm_jail_accepted)):
         raise PrivateHistoricalBankReportBlocked("Private historical report disabled")
 
 
