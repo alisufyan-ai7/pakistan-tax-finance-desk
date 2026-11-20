@@ -156,6 +156,15 @@ def _limits():
     resource.setrlimit(resource.RLIMIT_NOFILE,(36,36))
 
 
+def _vm_bridge_limits():
+    """Trusted SDK host only; hostile PDF parses inside isolated VM child."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_CPU,(45,45))
+    resource.setrlimit(resource.RLIMIT_AS,(4*1024**3,4*1024**3))
+    resource.setrlimit(resource.RLIMIT_FSIZE,(0,0))
+    resource.setrlimit(resource.RLIMIT_NOFILE,(64,64))
+
+
 def inspect_private_bahl_pdf(
     *, raw_pdf: bytes, password: str | None = None,
     approved_isolated_read: bool = False,
@@ -221,7 +230,8 @@ def inspect_private_bahl_pdf(
                 input=payload,stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 cwd=cwd,env=env,timeout=worker_timeout,check=False,
-                preexec_fn=_limits,start_new_session=True,
+                preexec_fn=_vm_bridge_limits if remote else _limits,
+                start_new_session=True,
             )
         if result.returncode != 0 or len(result.stdout)>_MAX_JSON:
             raise ValueError()
