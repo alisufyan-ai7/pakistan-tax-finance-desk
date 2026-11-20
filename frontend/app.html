@@ -10,6 +10,7 @@
   <link rel="manifest" href="/owner-manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/owner-premium.css">
   <script type="module" src="/owner-pwa.mjs"></script>
   <script type="module" src="/app.mjs"></script>
 </head>
@@ -35,7 +36,7 @@
       <div class="top-actions"><span id="connection-pill" class="state">Checking Drive</span><button id="install-owner-app" type="button" class="manage install-owner">Install app</button><button id="connect-readonly-documents" class="manage" type="button" hidden>Connect read-only documents</button><span id="readonly-connection-status" class="muted" hidden></span><a href="/owner-login" class="manage">Manage account</a></div>
     </header>
     <main class="main">
-      <div class="greeting"><div><h2>Your money, clearly explained</h2><p>Choose a period to see verified bank activity and investment evidence. Missing statements never count as zero.</p></div><button id="refresh-all" type="button" class="primary">Refresh documents</button></div>
+      <div class="greeting"><div><span class="hero-eyebrow">YOUR PERSONAL FINANCIAL PICTURE</span><h2>Know where your money stands.</h2><p>Bank activity, investments and next decisions—in one private place. Choose a period below. We show only what your original records support.</p></div><button id="refresh-all" type="button" class="primary">↻ Refresh financial evidence</button></div>
       <section id="finance-period-controls" class="finance-period-controls" aria-label="Choose financial reporting period">
         <div class="period-fields">
           <label for="finance-period-mode">Time view
@@ -56,12 +57,18 @@
       <p id="app-status" class="status" role="status" aria-live="polite">Checking your connection…</p>
       <section id="view-home" class="view" aria-labelledby="view-heading">
         <div class="metrics" id="home-source-evidence-metrics" aria-label="Actual verified evidence from your approved sources">
-          <article class="metric"><span>Latest CSV statement balance</span><strong id="home-latest-bank-balance">PKR —</strong><small id="home-latest-bank-context">Checking original bank CSV. Historical only, not cash available today.</small></article>
-          <article class="metric"><span>Bank-labelled profit</span><strong id="home-bank-profit">PKR —</strong><small id="home-bank-profit-context">Source-verified bank profit only; not total income.</small></article>
-          <article class="metric"><span>Held property purchase cost</span><strong id="home-held-property-cost">PKR —</strong><small id="home-held-property-context">Recorded cost in your property register; not market value.</small></article>
-          <article class="metric"><span>Owner's recorded sold-property profit share</span><strong id="home-property-profit-share">PKR —</strong><small id="home-property-profit-context">Recorded sale profits, not bank-confirmed cash received.</small></article>
+          <article class="metric"><span>Latest available bank snapshot</span><strong id="home-latest-bank-balance">PKR —</strong><small id="home-latest-bank-context">Checking original bank CSV. Historical only, not cash available today.</small><span class="metric-marker">Historical · one source</span></article>
+          <article class="metric"><span>Bank profit · chosen period</span><strong id="home-bank-profit">PKR —</strong><small id="home-bank-profit-context">Source-verified bank profit only; not total income.</small><span class="metric-marker">Source confirmed</span></article>
+          <article class="metric"><span>Recorded property cost</span><strong id="home-held-property-cost">PKR —</strong><small id="home-held-property-context">Recorded cost in your property register; not market value.</small><span class="metric-marker">Latest register value</span></article>
+          <article class="metric"><span>Property sale profit · chosen period</span><strong id="home-property-profit-share">PKR —</strong><small id="home-property-profit-context">Recorded sale profits, not bank-confirmed cash received.</small><span class="metric-marker">Register allocation</span></article>
         </div>
         <p class="home-unknown-facts">Not yet established from complete evidence: <strong>today's total available cash, this month's classified income and spending, outstanding investment principal, and expected future returns.</strong> Unverified amounts are not presented as zero.</p>
+        <nav class="dashboard-shortcuts" aria-label="Quick access to your finances">
+          <button type="button" data-go="accounts"><span><span class="shortcut-mark" aria-hidden="true">▦</span> Accounts</span><span aria-hidden="true">↗</span></button>
+          <button type="button" data-go="transactions"><span><span class="shortcut-mark" aria-hidden="true">⇄</span> Transactions</span><span aria-hidden="true">↗</span></button>
+          <button type="button" data-go="investments"><span><span class="shortcut-mark" aria-hidden="true">◈</span> Investments</span><span aria-hidden="true">↗</span></button>
+          <button type="button" data-go="spending"><span><span class="shortcut-mark" aria-hidden="true">◷</span> Spending & bills</span><span aria-hidden="true">↗</span></button>
+        </nav>
         <section class="panel period-evidence" id="home-financial-period-panel" aria-labelledby="home-financial-period-heading">
           <div class="panel-heading">
             <div><span class="micro">SELECTED PERIOD · ORIGINAL BANK EVIDENCE</span><h3 id="home-financial-period-heading">Available bank activity</h3></div>
@@ -94,6 +101,9 @@
           <p class="muted" id="home-review-coverage">Checking supported source transactions for items needing classification.</p>
           <ul id="home-review-list" class="document-list" aria-label="Recent source-backed transactions needing your review"></ul>
         </section>
+        <details class="advanced-source-drawer" id="home-source-drawer">
+          <summary>Original source evidence and verification <small>Statement details, document coverage and audit receipts</small></summary>
+          <div class="advanced-source-content">
         <section id="home-historical-evidence" class="panel" hidden aria-labelledby="home-historical-title">
           <div class="panel-heading">
             <div><span class="micro">VERIFIED SOURCE OBSERVATIONS</span><h3 id="home-historical-title">Historical bank statements</h3></div>
@@ -146,7 +156,8 @@
           <p id="home-document-priority-summary" class="muted" aria-live="polite"></p>
           <ul id="home-document-priority-list" class="document-list" aria-label="Priority files from approved Drive metadata"></ul>
         </section>
-        <section class="panel"><div class="panel-heading"><h3>Financial timeline</h3><span class="label-neutral">Awaiting verified transactions</span></div><div class="empty-chart">We will plot your real income, expenses and bank movement after statement evidence is reconciled. No fictional figures appear here.</div></section>
+        </div>
+        </details>
       </section>
       <section id="view-documents" class="view" hidden>
         <section class="panel"><div class="panel-heading"><div><span class="micro">READ-ONLY SOURCE TRIAGE</span><h3>Review readiness</h3></div></div>
@@ -269,19 +280,41 @@
           <button type="button" class="text-button" data-go="documents">Review tax evidence in Documents</button>
         </section>
       </section>
-      <footer class="footer">Personal CFO · One-owner private workspace · No original source content imported</footer>
+      <footer class="footer">Personal CFO · Private, evidence-led finance · Original Drive documents stay read-only · Historical facts are not live balances.</footer>
     </main>
   </div>
 </div>
-<nav id="bottom-nav" class="bottom-nav" aria-label="Mobile navigation" hidden>
-  <button type="button" data-view="home" class="selected">⌂ <span>Home</span></button>
-  <button type="button" data-view="accounts">▦ <span>Banks</span></button>
-  <button type="button" data-view="transactions">⇅ <span>Activity</span></button>
-  <button type="button" data-view="investments">◎ <span>Invest</span></button>
-  <button type="button" data-view="spending">⇄ <span>Spend</span></button>
-  <button type="button" data-view="tax">▧ <span>Tax</span></button>
-  <button type="button" data-view="documents">▤ <span>Docs</span></button>
+<nav id="mobile-more-menu" class="mobile-more-menu" aria-label="More finance pages" hidden>
+  <button type="button" data-view="spending">Spending & bills</button>
+  <button type="button" data-view="tax">Tax & wealth</button>
+  <button type="button" data-view="documents">Documents</button>
 </nav>
+<nav id="bottom-nav" class="bottom-nav" aria-label="Mobile navigation" hidden>
+  <button type="button" data-view="home" class="selected"><span class="nav-glyph" aria-hidden="true">⌂</span><span>Home</span></button>
+  <button type="button" data-view="accounts"><span class="nav-glyph" aria-hidden="true">▦</span><span>Banks</span></button>
+  <button type="button" data-view="transactions"><span class="nav-glyph" aria-hidden="true">⇅</span><span>Activity</span></button>
+  <button type="button" data-view="investments"><span class="nav-glyph" aria-hidden="true">◎</span><span>Invest</span></button>
+  <button type="button" id="mobile-more-toggle" aria-controls="mobile-more-menu" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">⋯</span><span>More</span></button>
+</nav>
+<dialog id="transaction-detail-dialog" class="transaction-dialog" aria-labelledby="transaction-detail-title">
+  <div class="transaction-dialog-head"><h2 id="transaction-detail-title">Transaction details</h2><button type="button" id="transaction-detail-close" aria-label="Close transaction details">×</button></div>
+  <div class="transaction-dialog-body">
+    <h3 id="transaction-detail-amount">PKR —</h3>
+    <dl class="transaction-detail-meta">
+      <dt>Bank date</dt><dd id="transaction-detail-date">—</dd>
+      <dt>Bank description</dt><dd id="transaction-detail-description">—</dd>
+      <dt>Bank source</dt><dd id="transaction-detail-source">—</dd>
+      <dt>Statement row</dt><dd id="transaction-detail-row">—</dd>
+      <dt>Historical running balance</dt><dd id="transaction-detail-balance">—</dd>
+      <dt>Evidence classification</dt><dd id="transaction-detail-category">—</dd>
+    </dl>
+    <p class="review-note" id="transaction-detail-review">Transaction purpose is not established from the bank entry alone. Saving a classification awaits the encrypted review-ledger release.</p>
+  </div>
+  <div class="transaction-dialog-foot">
+    <button type="button" id="transaction-detail-documents">See source documents</button>
+    <button type="button" id="transaction-detail-done">Done</button>
+  </div>
+</dialog>
 <noscript>Enable JavaScript to verify your owner session. Private financial details are never included in this page.</noscript>
 </body>
 </html>
