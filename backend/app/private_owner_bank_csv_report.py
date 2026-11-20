@@ -106,7 +106,9 @@ def get_private_bank_csv_overview(
                     try:
                         transactions = project_reconciled_bank_csv_transactions(
                             blob.data,report=parsed,
-                            source_hmac=_index("file",item.id),hmac_index=_index)
+                            source_hmac=_index("file",item.id),
+                            expected_source_sha256=blob.sha256,
+                            hmac_index=_index)
                     except PrivateBankCsvBlocked:
                         transactions = None
             except (PrivateBankCsvBlocked, ValueError, Exception):
