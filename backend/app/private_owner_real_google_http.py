@@ -242,8 +242,8 @@ def create_review_only_private_google_http_gateway(
 
 
     if enable_bank_csv:
-        if not enable_content_oauth or not enable_source_preflight:
-            raise PrivateOwnerGoogleHttpBlocked("Owner bank CSV needs approved source consent")
+        if not enable_content_oauth:
+            raise PrivateOwnerGoogleHttpBlocked("Owner bank CSV needs approved read-only content grant")
         _reviewed_content_http()
         from .private_owner_bank_csv_report import (
             PrivateBankCsvReportBlocked, get_private_bank_csv_overview,
