@@ -100,6 +100,7 @@
           </div>
           <p class="muted" id="home-review-coverage">Checking supported source transactions for items needing classification.</p>
           <ul id="home-review-list" class="document-list" aria-label="Recent source-backed transactions needing your review"></ul>
+          <button type="button" id="home-review-open-all" class="review-all-button">Review all unclear entries <span aria-hidden="true">↗</span></button>
         </section>
         <details class="advanced-source-drawer" id="home-source-drawer">
           <summary>Original source evidence and verification <small>Statement details, document coverage and audit receipts</small></summary>
@@ -218,6 +219,7 @@
             <label for="transaction-category-filter">Evidence status
               <select id="transaction-category-filter">
                 <option value="all">All classifications</option>
+                <option value="REVIEW_REQUIRED">All entries requiring review</option>
                 <option value="BANK_PROFIT">Bank-labelled profit</option>
                 <option value="BANK_WITHHOLDING">Profit tax</option>
                 <option value="BANK_CHARGE">Bank fee / levy</option>
@@ -236,6 +238,15 @@
           <div class="panel-heading"><h3 id="spending-observation-heading">Source-verified bank charges and income clues</h3><button type="button" class="text-button" data-go="transactions">Review Activity</button></div>
           <p id="spending-source-coverage" class="muted">Bank-labelled events will appear for the selected month or year after source verification. Personal spending is not yet fully classified.</p>
           <ul id="spending-source-list" class="document-list" aria-label="Bank profit, withholding, fees and unclassified source movements"></ul>
+        </section>
+        <section class="panel" id="spending-recurring-candidates" aria-labelledby="spending-recurring-heading">
+          <div class="panel-heading">
+            <div><span class="micro">REPEATED TRANSACTIONS · SOURCE CANDIDATES</span><h3 id="spending-recurring-heading">Possible recurring bank activity</h3></div>
+            <button type="button" class="text-button" data-go="transactions">Inspect Activity</button>
+          </div>
+          <p id="spending-recurring-coverage" class="muted">Checking previously verified individual bank rows across distinct months.</p>
+          <ul id="spending-recurring-list" class="recurring-candidate-list" aria-label="Repeated movements needing owner classification"></ul>
+          <p class="review-note">A repeated bank debit is not necessarily a household bill. No upcoming due date, overdue bill or recurring expense is asserted until the agreement and payment purpose are verified.</p>
         </section>
         <section class="panel">
           <h3>Actual household spending and upcoming bills</h3>
