@@ -127,7 +127,7 @@ def verify_pinned_offline_receipts(
                 metadata_transport=metadata_transport,
                 media_transport=media_transport,
             )
-            # DO NOT import pypdf here. The earlier reconciliation happened
+            # No PDF interpreter is invoked here. Reconciliation happened
             # offline and is bound to the SHA of the exact current source.
             if (blob.extension != ".pdf"
                 or not hmac.compare_digest(blob.sha256, rec["sha256"])):
