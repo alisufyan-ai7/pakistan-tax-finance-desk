@@ -161,6 +161,8 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             state["engine"] = None
             engine.dispose()
 
+    if bank_csv and (not google_content or not source_preflight):
+        raise PrivateOwnerLoginServiceBlocked("Bank CSV requires source and content approval")
     if historical_bahl and (not google_content or not source_preflight):
         raise PrivateOwnerLoginServiceBlocked("Historical banking requires content and original verification")
     if review_comments and not google_content:
@@ -183,6 +185,7 @@ def create_review_only_private_owner_login_service(*, google_metadata: bool = Fa
             enable_source_preflight=source_preflight,
             enable_review_comments=review_comments,
             enable_historical_bahl=historical_bahl,
+            enable_bank_csv=bank_csv,
         )
     return create_private_owner_http_gateway(
         private_session, lifespan=lifespan,
