@@ -55,6 +55,11 @@ function harness(){
     byId:id=>{assert.ok(lookup.has(id),id);return lookup.get(id);},
     document:{createElement:()=>node()},
     historicalMoney:{format:n=>"PKR "+n.toFixed(2)},
+    financialPeriod:{mode:"all",value:"all"},
+    periodContainsMonth:()=>true,
+    periodContainsDate:()=>true,
+    periodTitle:()=>"All available evidence",
+    periodEvidence:{properties:[]},
     periodEvidence:{transactionSources:[]},
     financialPeriod:{mode:"all",value:"all"},
     periodContainsDate:()=>true,
@@ -164,11 +169,23 @@ test("Home uses only latest reconciled statement, not an all-bank current balanc
   assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR 125.00");
   assert.match(lookup.get("home-latest-bank-context").textContent,/2026-01-02/);
   assert.match(lookup.get("home-latest-bank-context").textContent,/not today's cash/);
-  assert.equal(lookup.get("home-bank-profit").textContent,"");
-  const classified={...first,classification:{bank_profit_received_minor:321}};
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
+  const classified={...first,classification:{months:[{month:"2026-01",bank_profit_received_minor:321}]}};
   ctx.renderHomeBankCsvMetrics([classified]);
   assert.equal(lookup.get("home-bank-profit").textContent,"PKR 3.21");
   assert.match(lookup.get("home-bank-profit-context").textContent,/not total personal income/);
+  ctx.financialPeriod={mode:"month",value:"2025-07"};
+  ctx.periodContainsMonth=(m)=>m==="2025-07";
+  ctx.periodTitle=()=>"July 2025";
+  ctx.renderHomeBankCsvMetrics([classified]);
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
+  ctx.financialPeriod={mode:"month",value:"2026-01"};
+  ctx.periodContainsMonth=(m)=>m==="2026-01";
+  ctx.periodTitle=()=>"January 2026";
+  ctx.renderHomeBankCsvMetrics([classified]);
+  assert.equal(lookup.get("home-bank-profit").textContent,"PKR 3.21");
+  assert.match(lookup.get("home-bank-profit-context").textContent,/January 2026/);
+
   ctx.clearBankCsvEvidence();
   assert.equal(lookup.get("home-latest-bank-balance").textContent,"PKR —");
   assert.equal(lookup.get("home-bank-profit").textContent,"PKR —");
