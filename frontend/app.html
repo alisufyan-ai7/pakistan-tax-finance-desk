@@ -61,6 +61,15 @@
           <p class="muted">Real, SHA-256-verified bank CSV statements only. Balances are valid on their last transaction dates; gross credits and debits are not personal income or spending. This does not represent today's balance or complete bank coverage.</p>
           <ul id="home-bank-csv-list" class="document-list" aria-label="Verified historical CSV bank balances"></ul>
         </section>
+        <section id="home-attested-bahl-pdf" class="panel" hidden aria-labelledby="home-attested-bahl-title">
+          <div class="panel-heading">
+            <div><span class="micro">SHA-VERIFIED OFFLINE RECONCILIATION</span><h3 id="home-attested-bahl-title">Bank AL Habib historical PDF statements</h3></div>
+            <button class="text-button" type="button" data-go="accounts">View account evidence</button>
+          </div>
+          <p class="muted">Original files were reconciled offline; this app independently rechecks the original Drive file's version and SHA-256 before showing dated observations. It does not parse PDFs in the live server, establish today's balances, or classify income and expenses.</p>
+          <ul id="home-attested-bahl-list" class="document-list" aria-label="Offline-reconciled historical bank PDF statements"></ul>
+          <p id="home-attested-bahl-review" class="muted" hidden></p>
+        </section>
         <section id="home-property-investments" class="panel" hidden aria-labelledby="home-property-title">
           <div class="panel-heading"><div><span class="micro">VERIFIED SOURCE REGISTER</span><h3 id="home-property-title">Property investments & recorded sale profits</h3></div><button class="text-button" data-go="investments" type="button">View investments</button></div>
           <p class="muted">Private source-register values: recorded investment costs and sold-property profits, not current market valuations, cash proceeds or taxable income.</p>
@@ -112,6 +121,11 @@
           <p class="muted">Only historical balances explicitly reconciled from original bank statements appear here. Internal transfers, actual income, personal spending and current balances remain unverified until separately reconciled.</p>
           <p class="muted" id="historical-bahl-readiness" aria-live="polite">In Documents, verify the original bank statements and select one to analyze. PDF passwords are requested only in the private session if needed.</p>
           <ul id="historical-bahl-reports" class="document-list" aria-label="Historical bank statement balances and gross movements"></ul>
+          <div id="account-attested-bahl-pdf" hidden>
+            <h3>Bank AL Habib PDFs · verified offline source snapshots</h3>
+            <p class="muted">These historical observations are bound to their original file SHA. They are not an automated PDF import, nor today's spendable cash.</p>
+            <ul id="account-attested-bahl-list" class="document-list" aria-label="BAHL PDF statement evidence"></ul>
+          </div>
           <div id="account-bank-csv-section" hidden><h3>Verified CSV bank statements</h3><p class="muted">Each amount is dated to its supported source; no current cash or classified expenses are inferred.</p><ul id="account-bank-csv-list" class="document-list" aria-label="Verified CSV account statement details"></ul></div>
         </section>
       </section>
