@@ -17,7 +17,8 @@ function harness(){
   "property-cost-chart","investment-partner-list","investment-partner-groups",
   "property-investment-detail-heading",
   "home-held-property-cost","home-held-property-context",
-  "home-property-profit-share","home-property-profit-context"].map(n=>[n,element()]));
+  "home-property-profit-share","home-property-profit-context",
+  "investment-position-panel","investment-position-list"].map(n=>[n,element()]));
   const ctx={HMAC_SHA:/^[a-f0-9]{64}$/,byId:id=>{assert.ok(ids.has(id));return ids.get(id);},
    document:{createElement:()=>element()},historicalMoney:{format:v=>"PKR "+v.toFixed(2)},
    propertyRefreshEpoch:0,safeToken:()=>true,csrfToken:"x".repeat(45),get:async()=>{}};
