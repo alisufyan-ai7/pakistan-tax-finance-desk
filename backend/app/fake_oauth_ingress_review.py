@@ -125,6 +125,7 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
         "/api/finance/review/comment": ("POST", "/internal/finance/review/comment"),
         "/api/finance/review/history": ("POST", "/internal/finance/review/history"),
         "/api/finance/historical/bahl": ("POST", "/internal/finance/historical/bahl"),
+        "/api/finance/bank/csv-overview": ("GET", "/internal/finance/bank/csv-overview"),
     }
     discovered = re.findall(
         r"^\s*location = (/api/finance[^ ]*) \{",
@@ -146,12 +147,14 @@ def audit_current_public_nginx(*, nginx_source: str) -> dict:
             'if ($p4c_content_ingress != "1") { return 404; }',
             ('if ($p5h_bahl_ingress != "1") { return 404; }'
              if path == "/api/finance/historical/bahl" else
+             'if ($p6a_bank_csv_ingress != "1") { return 404; }'
+             if path == "/api/finance/bank/csv-overview" else
              'if ($p5d_review_ingress != "1") { return 404; }'),
             'if ($request_method != "' + method + '") { return 405; }',
             'proxy_pass http://$private_google_upstream' + internal + ';',
             'access_log off;', 'error_log /dev/null crit;',
         )
-        if path == "/api/finance/historical/bahl":
+        if path in ("/api/finance/historical/bahl", "/api/finance/bank/csv-overview"):
             required += ('if ($p5a_source_ingress != "1") { return 404; }',)
         if any(value not in body for value in required):
             raise FakeOAuthIngressBlocked("Owner review route controls absent")

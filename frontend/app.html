@@ -52,6 +52,14 @@
           <p class="muted">Actual values from individually reconciled source statements, shown only for the dated period covered. These are not today's available cash, personal income or expenses. Results clear when your private session ends or original documents are rechecked.</p>
           <ul id="home-historical-evidence-list" class="document-list" aria-label="Verified historical statement observations"></ul>
         </section>
+        <section id="home-bank-csv-evidence" class="panel" hidden aria-labelledby="home-bank-csv-title">
+          <div class="panel-heading">
+            <div><span class="micro">SOURCE-RECONCILED BANK HISTORY</span><h3 id="home-bank-csv-title">Historical balances and monthly bank movements</h3></div>
+            <button class="text-button" type="button" data-go="accounts">View accounts</button>
+          </div>
+          <p class="muted">Real, SHA-256-verified bank CSV statements only. Balances are valid on their last transaction dates; gross credits and debits are not personal income or spending. This does not represent today's balance or complete bank coverage.</p>
+          <ul id="home-bank-csv-list" class="document-list" aria-label="Verified historical CSV bank balances"></ul>
+        </section>
         <div class="two-columns">
           <section class="panel">
             <div class="panel-heading"><div><span class="micro">SOURCE COVERAGE</span><h3>Your Drive documents</h3></div><button type="button" class="text-button" data-go="documents">View documents</button></div>
@@ -98,6 +106,7 @@
           <p class="muted">Only historical balances explicitly reconciled from original bank statements appear here. Internal transfers, actual income, personal spending and current balances remain unverified until separately reconciled.</p>
           <p class="muted" id="historical-bahl-readiness" aria-live="polite">In Documents, verify the original bank statements and select one to analyze. PDF passwords are requested only in the private session if needed.</p>
           <ul id="historical-bahl-reports" class="document-list" aria-label="Historical bank statement balances and gross movements"></ul>
+          <div id="account-bank-csv-section" hidden><h3>Verified CSV bank statements</h3><p class="muted">Each amount is dated to its supported source; no current cash or classified expenses are inferred.</p><ul id="account-bank-csv-list" class="document-list" aria-label="Verified CSV account statement details"></ul></div>
         </section>
       </section>
       <section id="view-spending" class="view" hidden><section class="panel"><h3>Spending & bills</h3><p>Monthly spending, recurring bills and expense changes are unavailable until transactions have been verified and transfers excluded.</p></section></section>

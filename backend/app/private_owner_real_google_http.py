@@ -126,6 +126,7 @@ def create_review_only_private_google_http_gateway(
     enable_source_preflight: bool = False,
     enable_review_comments: bool = False,
     enable_historical_bahl: bool = False,
+    enable_bank_csv: bool = False,
 ):
     """HTTP routes exist ONLY on this separately instantiated private app.
 
@@ -239,6 +240,35 @@ def create_review_only_private_google_http_gateway(
             }
 
 
+
+    if enable_bank_csv:
+        if not enable_content_oauth or not enable_source_preflight:
+            raise PrivateOwnerGoogleHttpBlocked("Owner bank CSV needs approved source consent")
+        _reviewed_content_http()
+        from .private_owner_bank_csv_report import (
+            PrivateBankCsvReportBlocked, get_private_bank_csv_overview,
+        )
+
+        @app.get("/internal/finance/bank/csv-overview")
+        async def owner_bank_csv_overview(request: Request):
+            owner = _boundary(request, mutation=False)
+            try:
+                with session_factory() as db:
+                    verify_private_owner_session(
+                        db, owner_ref=owner,
+                        token=request.cookies.get(_COOKIE, ""),
+                        mutation=False,
+                    )
+            except PrivateOwnerIdentityBlocked:
+                raise HTTPException(401, "Owner MFA required") from None
+            try:
+                result = get_private_bank_csv_overview(
+                    session_factory=session_factory, owner_ref=owner,
+                    transport=transport,
+                )
+            except PrivateBankCsvReportBlocked:
+                raise HTTPException(503, "Private bank source needs review") from None
+            return JSONResponse(result)
 
     if enable_historical_bahl:
         if not enable_content_oauth or not enable_source_preflight:

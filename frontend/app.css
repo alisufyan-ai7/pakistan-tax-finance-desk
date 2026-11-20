@@ -56,3 +56,10 @@
 /* Owner-only actionable Drive metadata review; no financial values or cache. */
 .home-file-action{align-self:flex-start;padding:5px 0;text-align:left}
 #home-document-priority-summary{margin:0 0 12px}
+
+
+/* P6 real source-backed history: date-scoped, never a current-balance KPI. */
+.bank-csv-monthly{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;display:block;overflow-x:auto}
+.bank-csv-monthly th,.bank-csv-monthly td{padding:9px 11px;border-bottom:1px solid #e0e7eb;text-align:right;white-space:nowrap}
+.bank-csv-monthly th:first-child,.bank-csv-monthly td:first-child{text-align:left}
+.bank-csv-monthly th{color:#53697e;font-weight:650}
