@@ -211,7 +211,19 @@ function renderRecurringBankCandidates(){
     dates.textContent=item.observed_month_count+" distinct months observed · "+
       item.first_observed+" to "+item.last_observed+
       " · purpose and next due date unknown";
-    li.append(strong,detail,dates);
+    const inspect=document.createElement("button");
+    inspect.type="button";inspect.className="text-button";
+    inspect.textContent="View matching bank entries";
+    inspect.addEventListener("click",()=>{
+      byId("transaction-search").value=item.description;
+      byId("transaction-source-filter").value=item.source_hmac;
+      byId("transaction-direction-filter").value=item.direction;
+      byId("transaction-category-filter").value="all";
+      transactionVisibleLimit=200;
+      renderTransactionExplorer();
+      go("transactions");
+    });
+    li.append(strong,detail,dates,inspect);
     list.appendChild(li);
   }
 }
@@ -346,7 +358,11 @@ function renderOwnerReviewQueue(){
     const details=document.createElement("small");
     details.textContent=row.description+" · "+row.source_name+
       " · "+(row.category==="TRANSFER_CANDIDATE"?"possible transfer":"purpose unknown");
-    li.append(title,details);list.appendChild(li);
+    const inspect=document.createElement("button");
+    inspect.type="button";inspect.className="text-button";
+    inspect.textContent="Inspect bank entry";
+    inspect.addEventListener("click",()=>openTransactionDetail(row));
+    li.append(title,details,inspect);list.appendChild(li);
   }
 }
 function renderSourceSpendingAndTax(){
@@ -2126,7 +2142,12 @@ document.addEventListener("keydown",event=>{
 byId("transaction-detail-close").addEventListener("click",closeTransactionDetail);
 byId("transaction-detail-done").addEventListener("click",closeTransactionDetail);
 byId("transaction-detail-documents").addEventListener("click",()=>{
+  const sourceName=byId("transaction-detail-source").textContent;
   closeTransactionDetail();
+  if(sourceName && sourceName!=="—"){
+    byId("document-search").value=sourceName;
+    renderDocuments();
+  }
   go("documents");
 });
 byId("transaction-detail-dialog").addEventListener("close",closeTransactionDetail);

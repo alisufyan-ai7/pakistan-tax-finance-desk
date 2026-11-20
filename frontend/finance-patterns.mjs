@@ -52,7 +52,8 @@ export function repeatingBankCandidates(sources,period,{minimumMonths=3}={}){
       const dated=[...g.events].sort((a,b)=>a.date.localeCompare(b.date) ||
         a.ordinal-b.ordinal);
       return {
-        source_name:g.source_name,description:g.description,
+        source_name:g.source_name,source_hmac:g.source_hmac,
+        description:g.description,
         direction:g.direction,amount_minor:g.amount_minor,
         observed_month_count:g.observedMonths.size,
         first_observed:dated[0].date,last_observed:dated.at(-1).date,
