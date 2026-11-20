@@ -139,3 +139,14 @@ def test_wrong_owner_or_invalid_password_rejected(scope,monkeypatch):
         )
     with pytest.raises(b.PrivateHistoricalBankReportBlocked):
         analyze(scope,password="bad\npassword")
+
+
+
+def test_separately_reviewed_ephemeral_vm_can_replace_failed_standard_os_jail(scope,monkeypatch):
+    monkeypatch.setenv("P5C_BAHL_OS_JAIL_ENFORCED","0")
+    monkeypatch.setenv("P5H_REMOTE_VM_WORKER_ACTIVE","1")
+    monkeypatch.setenv("P5H_REMOTE_VM_G3_REVIEWED","1")
+    assert analyze(scope)["status"]=="PASSWORD_REQUIRED"
+    monkeypatch.setenv("P5H_REMOTE_VM_G3_REVIEWED","0")
+    with pytest.raises(b.PrivateHistoricalBankReportBlocked):
+        analyze(scope)
